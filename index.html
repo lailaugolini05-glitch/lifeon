@@ -1375,7 +1375,7 @@ function presentationCard(){
     : `<section class="card"><h3>Presentation mode</h3><p class="small muted">Show LifeOn full of example people, places and invites, for a demo. Your real data stays as it is.</p><button class="ghost small" data-enter-demo style="align-self:flex-start">Start presentation mode</button></section>`;
 }
 // ================= routing =================
-const ALL_ROUTES = ["today","explore","friends","shop","team","me","study","learn","agenda","train","eat","remind","block"];
+const ALL_ROUTES = ["today","explore","friends","shop","team","me","study","learn","agenda","train","eat","remind"];
 function tabs(){
   const t = [];
   if (meP()) t.push(["today","Today"],["explore","Nearby"],["friends","Friends"]);
@@ -1412,7 +1412,6 @@ function render(){
   else if (r==="train") { v.innerHTML = viewTrain(); bindTrain(); }
   else if (r==="eat") { v.innerHTML = viewEat(); bindEat(); }
   else if (r==="remind") { v.innerHTML = viewRemind(); bindRemind(); }
-  else if (r==="block") { v.innerHTML = viewBlock(); bindBlock(); }
   else if (r==="explore") { v.innerHTML = viewExplore(); bindExplore(); }
   else if (r==="friends") { v.innerHTML = viewFriends(); bindFriends(); }
   else { v.innerHTML = viewMe(); bindMe(); }
@@ -1691,7 +1690,7 @@ function openFocus(kind, preMode, taskLabel, prePlan, preType, blockId, interval
       ${f.task?`<div class="card"><p class="small muted">Working on</p><b>${esc(f.task)}</b></div>`:""}
       ${kind==="move" ? `<div class="card"><p class="small" style="font-weight:700">What are you doing?</p><div class="chips" id="fType">${MOVE_TYPES.map(t=>`<button type="button" class="chip" data-v="${t}" aria-pressed="${f.type===t}">${t}</button>`).join("")}</div><p class="small muted">${["Walk","Run","Bike"].includes(f.type) ? "Like Strava: GPS records your route, distance and speed. Keep LifeOn open (the screen stays on). Points only if the GPS confirms it." : "Points only at a partner place: choose At a partner place and check in with the code on the poster."}</p><p class="small" style="font-weight:700">Music? Start it first, then come back and press Start</p>${musicChips(f.type==="Run" ? "running" : f.type==="Bike" ? "cycling" : f.type==="Yoga" ? "yoga" : "workout")}</div>` : `<div class="card"><p class="small muted">Locked during the session</p>
         <div class="blocked">${(p.blocked||[]).map(a=>`<span>${ICON.lock}${esc(a)}</span>`).join("") || `<span>No apps chosen yet. Pick them in Me.</span>`}</div>
-        <p class="small muted">Open any other app for more than 10 seconds and the session stops.${f.plan.startsWith("pomo")?" During Pomodoro breaks you're free.":""} Keep the screen on, phone face down. <a class="link" href="#block" data-close-flow>Turn on real blocking</a>.${kind==="study"||kind==="work" ? " LifeOn will beep 1–2 times to check you're there, and at the end you'll write what you did." : ""}</p></div>`}
+        <p class="small muted">Open any other app for more than 10 seconds and the session stops.${f.plan.startsWith("pomo")?" During Pomodoro breaks you're free.":""} Keep the screen on, phone face down.${kind==="study"||kind==="work" ? " LifeOn will beep 1–2 times to check you're there, and at the end you'll write what you did." : ""}</p></div>`}
       <div class="card"><p class="small" style="font-weight:700">How long?</p>
         <div class="chips" id="fPlan">${KIND_PLANS[kind].map(k=>`<button type="button" class="chip" data-v="${k}" aria-pressed="${f.plan===k}">${esc(PLANS[k].label)}</button>`).join("")}</div>
         <p class="small" style="font-weight:700">Where?</p>
@@ -2098,7 +2097,6 @@ function viewMe(){
   ${activityList()}
   ${accountCard()}
   ${presentationCard()}
-  <section class="card"><h3>Real blocking</h3><p class="small muted">Lock Instagram, TikTok and YouTube for real with your phone's own tools, together with LifeOn.</p><a class="btn small" href="#block" style="align-self:flex-start;background:var(--night);color:var(--night-ink)">${ICON.lock} Set it up</a></section>
   <section class="card"><h3>Notifications and reminders</h3><p class="small muted">Study sessions, invites, a daily nudge and your own reminders.</p><a class="btn small ghostlink" href="#remind" style="align-self:flex-start">${ICON.bell} Open</a></section>
   <form class="card" id="goalForm"><h3>Weekly goals</h3><p class="small muted">Set your own targets. They show as rings on Today.</p><div class="grid3"><label for="gF">Focus hours<input id="gF" type="number" min="1" max="60" value="${g.focus}"></label><label for="gM">Workouts<input id="gM" type="number" min="0" max="21" value="${g.move}"></label><label for="gP">Points<input id="gP" type="number" min="50" max="1050" step="50" value="${g.points}"></label></div><button class="ghost small" type="submit" style="align-self:flex-start">Save goals</button></form>
   <form class="card" id="meForm"><h2>Settings</h2>
@@ -3061,8 +3059,7 @@ function scrollCard(){
     ${diff!=null ? `<p style="font-weight:700">${diff > 0 ? "You won back " + fmtMin(diff) + " a day. That's " + Math.round(diff*7/60) + " hours a week." : diff < 0 ? "A bit more than when you started. One Focus session today?" : "Same as when you started. Let's lower it."}</p>` : ""}
     <form id="scrollForm" class="row"><input id="scrollMin" type="number" min="0" max="1200" inputmode="numeric" placeholder="Today's social minutes" aria-label="Today's minutes on social media" value="${log[today()] != null ? log[today()] : ""}"><button class="small" type="submit">Save</button></form>
     <p class="small muted">Find it in Screen Time (iPhone) or Digital Wellbeing (Android). The App Store version will read it automatically.</p>
-    ${((p.blockHits||{})[today()]) ? `<p class="small">Today you tried to open a locked app <b>${p.blockHits[today()]}</b> ${p.blockHits[today()]===1 ? "time" : "times"}.</p>` : ""}
-    <a class="btn small" href="#block" style="align-self:flex-start;background:var(--night);color:var(--night-ink)">${ICON.lock} Turn on real blocking</a></section>`;
+    ${((p.blockHits||{})[today()]) ? `<p class="small">Today you tried to open a locked app <b>${p.blockHits[today()]}</b> ${p.blockHits[today()]===1 ? "time" : "times"}.</p>` : ""}</section>`;
 }
 function bindScroll(){ const f = $("#scrollForm"); if (f) f.onsubmit = async e => { e.preventDefault(); const v = Number($("#scrollMin").value); if (!(v >= 0)) return; const np = clone(meP()); np.screen = {...(np.screen||{}), [today()]: Math.round(v)}; const cut = dkey(Date.now() - 120*864e5); np.screen = Object.fromEntries(Object.entries(np.screen).filter(([k]) => k >= cut)); if (await writeMe(np)) toast(v < (Number(np.baseline)||180) ? "Saved. Less than when you started: well done!" : "Saved. Let's bring it down together."); }; }
 function toolsCard(){
@@ -3191,7 +3188,7 @@ checkInterrupted();
 })();
 </script>
 <script>
-// Offline support + automatic updates (version 202611022128)
+// Offline support + automatic updates (version 202611022129)
 if ("serviceWorker" in navigator && location.protocol === "https:") {
   navigator.serviceWorker.register("sw.js").catch(function(){});
   var reloaded = false;
