@@ -241,6 +241,13 @@ body.ob-dark, body.ob-dark .app{background:var(--night);color:var(--night-ink)}
 .plans{display:flex;flex-direction:column;gap:10px}
 .plan .feat{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;opacity:.8}
 #routeMap{height:200px;border-radius:16px;overflow:hidden;background:color-mix(in srgb, var(--night-ink) 8%, transparent)}
+.invtap{background:none;color:inherit;padding:0;text-align:left;font-weight:500;display:block;border-radius:0;box-shadow:none}
+.pick-plan{display:flex;flex-direction:column;align-items:stretch;text-align:left;gap:6px;border-radius:16px;padding:14px;font-weight:500;background:var(--sunk);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
+.pick-plan.pro{background:var(--plum);color:var(--plum-ink);box-shadow:none}
+.pick-plan.chosen{box-shadow:0 0 0 3px var(--accent)}
+.pick-plan .choose{font-weight:800;margin-top:4px}
+.pick-plan ul{margin:0;padding-left:18px;font-size:13px;display:flex;flex-direction:column;gap:3px}
+.bizbtn{width:100%;border-radius:999px;padding:14px;background:transparent;color:inherit;box-shadow:inset 0 0 0 2px currentColor;font-weight:800}
 .verify{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;padding:6px 12px;border-radius:999px}
 #map{height:300px;border-radius:14px;overflow:hidden;background:var(--sunk);z-index:0}
 .leaflet-popup-content{font-family:var(--body)}
@@ -975,6 +982,11 @@ const BIZ = {
 };
 const planOf = mid => BIZ[(state.billing[mid]||{}).plan] ? state.billing[mid].plan : "free";
 const planDef = mid => BIZ[planOf(mid)];
+function planSummary(){ const d = BIZ[state.bizPlan] || BIZ.starter; return `<b>Your plan: ${d.label} · €${d.price}/month${d.fee ? " + €"+d.fee.toFixed(2)+" per coupon used" : ""}</b><br>${esc(d.feats.slice(0,3).join(" · "))}${d.price ? "<br>First month free." : ""}`; }
+function planPicker(){
+  const sel = state.bizPlan || "starter";
+  return `<p class="small muted">Tap the plan you want. Everything below adapts to it, and you can change it any time.</p><div class="plans">${Object.entries(BIZ).map(([k,d])=>`<button type="button" class="pick-plan ${k==="pro"?"pro":""} ${sel===k?"chosen":""}" data-pick-plan="${k}" aria-pressed="${sel===k}"><span class="row between"><b style="font-size:17px">${d.label}</b>${k==="starter"?'<span class="chip hot">Small shops</span>':k==="pro"?'<span class="chip" style="background:var(--plum-ink);color:var(--plum)">Most popular</span>':""}</span><span class="price" style="font-family:var(--display);font-weight:800;font-size:26px">€${d.price} <span class="small" style="font-family:var(--body);font-weight:600">/ month</span></span><span class="small" style="opacity:.85">${esc(d.line)}</span><ul>${d.feats.map(x=>`<li>${esc(x)}</li>`).join("")}</ul><span class="choose">${sel===k ? "✓ Selected" : "Choose "+d.label}</span></button>`).join("")}</div><p class="small muted">First month free on every paid plan. Cancel any time. Prices without VAT. Pay yearly and get 2 months free.</p>`;
+}
 function planCards(cur, mid, requested){
   return `<div class="plans">${Object.entries(BIZ).map(([k,d])=>`<div class="plan ${k==="pro"?"pro":""}"><div class="row between"><b style="font-size:17px">${d.label}</b>${k===cur?'<span class="chip on">Your plan</span>':k==="starter"?'<span class="chip hot">Small shops</span>':k==="pro"?'<span class="chip" style="background:var(--plum-ink);color:var(--plum)">Most popular</span>':""}</div>
     <div class="price">€${d.price} <span class="small" style="font-family:var(--body);font-weight:600">/ month</span></div><p class="small" style="opacity:.85">${esc(d.line)}</p><ul>${d.feats.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>
@@ -1176,7 +1188,10 @@ function avatar(name){
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" rx="32" fill="#0F6B5E"/><text x="32" y="41" font-family="Arial" font-size="24" font-weight="700" fill="#fff" text-anchor="middle">${esc(ini)}</text></svg>`;
   return "data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg);
 }
-const DEMO_KEY = "lifeon-demo-v6", BANNER_KEY = "lifeon-banner-off";
+const DEMO_KEY = "lifeon-demo-v7", BANNER_KEY = "lifeon-banner-off";
+const MODE_KEY = "lifeon-mode", LOCAL_KEY = "lifeon-local-v1", CAL_KEY = "lifeon-calendar";
+const getMode = () => { try { return localStorage.getItem(MODE_KEY) || "local"; } catch(e){ return "local"; } };
+function setMode(m){ try { localStorage.setItem(MODE_KEY, m); } catch(e){} }
 const bannerOff = () => { try { return localStorage.getItem(BANNER_KEY) === "1"; } catch(e){ return false; } };
 async function makeDemo(){
   const me = "demo-me", now = Date.now(), H = 3600e3, D = 24*H;
@@ -1220,19 +1235,25 @@ async function makeDemo(){
   const billing = { d1:{status:"approved", plan:"pro"}, d2:{status:"approved", plan:"pro"}, d3:{status:"approved", plan:"pro"}, d4:{status:"approved", plan:"starter"}, [me]:{status:"approved", plan:"free"} };
   const teamkeys = { d1:{code:"CAFE24"}, d2:{code:"GYM77"}, d3:{code:"STUDY5"}, d4:{code:"RUN10"} };
   const groups = { DEMO42:{name:"Study group (example)", members:[me,"demo-1","demo-2","demo-3"], createdBy:me, createdAt:now-9*D, plans:[{by:"demo-1", text:"Studying at Example study café from 15:00. Who's in?", at: now-40*60e3}]} };
-  const data = {players, merchants, billing, teamkeys, groups};
+  const invites = {
+    iv1:{by:"demo-1", title:"Corporate Finance revision, 2 hours", kind:"study", mid:"d3", town:"Busto Arsizio", date:ex(1), time:"15:00", max:4, approval:true, audience:"public", note:"Bring last year's exam, we'll do it together.", requests:[], going:["demo-1"], declined:[], createdAt:now-3*H},
+    iv2:{by:"demo-3", title:"Sunset walk at Parco Alto Milanese", kind:"walk", place:"Parco Alto Milanese, main gate", lat:45.6058, lng:8.8796, town:"Castellanza", date:ex(2), time:"18:00", max:6, approval:false, audience:"public", requests:[], going:["demo-3","demo-2"], declined:[], createdAt:now-5*H},
+    iv3:{by:"demo-2", title:"Padel 2 vs 2: we need 1 player", kind:"sport", place:"Padel courts, Legnano", town:"Legnano", date:ex(3), time:"19:30", max:4, approval:true, audience:"public", requests:[], going:["demo-2","demo-1"], declined:[], createdAt:now-2*H},
+    iv4:{by:me, title:"Coffee and revision before class", kind:"coffee", mid:"d1", town:"Castellanza", date:ex(1), time:"10:30", max:3, approval:true, audience:"public", requests:["demo-3"], going:[me], declined:[], createdAt:now-H}
+  };
+  const data = {players, merchants, billing, teamkeys, groups, invites};
   try { const saved = JSON.parse(localStorage.getItem(DEMO_KEY) || "null"); if (saved && saved.players) Object.assign(data, saved); } catch(e){}
   const persist = () => { try { localStorage.setItem(DEMO_KEY, JSON.stringify(data)); } catch(e){} };
   const sampleShop = merchants[me], sampleBill = billing[me]; delete merchants[me]; delete billing[me];
   const priv = { shop:{code:"SHOP1"} };
   const subs = {}; const emit = c => (subs[c]||[]).forEach(f=>f(data[c]));
   return {
-    demo:true, me, canEdit:true, canWrite:true,
+    kind:"demo", demo:true, me, canEdit:true, canWrite:true,
     names: async ids => Object.fromEntries(ids.map(id=>{ const nm = (id===me && data.players[me] && data.players[me].name) || names[id] || "Someone"; return [id,{name:nm, avatarUrl:avatar(nm), isMe:id===me}]; })),
     async adopt(d){ data.players[me] = JSON.parse(JSON.stringify(d)); persist(); emit("players"); },
     async loadGuest(){ data.players[me] = JSON.parse(JSON.stringify(sampleMe)); if (!data.merchants[me]) { data.merchants[me] = JSON.parse(JSON.stringify(sampleShop)); data.billing[me] = {...sampleBill}; } persist(); emit("merchants"); emit("billing"); emit("players"); },
-    on(c, f){ (subs[c]=subs[c]||[]).push(f); f(data[c]); },
-    async save(c, id, body){ data[c][id] = JSON.parse(JSON.stringify(body)); persist(); emit(c); if (c==="players" && id===me) cloudSave(body); },
+    on(c, f){ (subs[c]=subs[c]||[]).push(f); f(data[c] || (data[c] = {})); },
+    async save(c, id, body){ (data[c] = data[c] || {})[id] = JSON.parse(JSON.stringify(body)); persist(); emit(c); },
     async remove(c, id){ delete data[c][id]; persist(); emit(c); },
     async getPrivate(k){ return priv[k]||null; }, async setPrivate(k, v){ priv[k] = v; },
     presence(){}, onLive(f){ f([{by:"demo-1", presence:{focusUntil: now + 32*60e3}}]); }
@@ -1249,7 +1270,7 @@ async function makeLive(){
   const q = {}; const serial = (k, fn) => (q[k] = (q[k]||Promise.resolve()).then(fn, fn));
   const toMap = s => { const m = {}; s.docs.forEach(d=>{ if (d.exists) m[d.id] = d.data(); }); return m; };
   return {
-    demo:false, me, canEdit, canWrite: cw !== false,
+    kind:"live", demo:false, me, canEdit, canWrite: cw !== false,
     names: async ids => { const ps = await user.profiles(ids); const out={}; ids.forEach(id=>{ const p=ps[id]||{}; out[id]={name:p.name||"Someone", avatarUrl:p.avatarUrl||avatar("?"), isMe:id===me}; }); return out; },
     on(c, f){ db.collection(c).onSnapshot(s=>f(toMap(s)), e=>{ console.warn(c, e && e.code); f({}); }); },
     save(c, id, body){ return serial(c+"/"+id, ()=>db.doc(c+"/"+id).set(body)); },
@@ -1263,8 +1284,8 @@ async function makeLive(){
 
 // ================= state =================
 let S = null;
-const COLS = ["players","merchants","billing","teamkeys","groups"];
-const state = { players:{}, merchants:{}, billing:{}, teamkeys:{}, groups:{}, ready:{}, live:[], exploreTab:"offers", cat:"all", shopTab:"results", teamTab:"apps", shopMid:null, myCode:null, setup:null, ob:{step:0, slide:0}, here:null, ideaSeed:Date.now() };
+const COLS = ["players","merchants","billing","teamkeys","groups","invites"];
+const state = { players:{}, merchants:{}, billing:{}, teamkeys:{}, groups:{}, invites:{}, friendsTab:"invites", osmCat:null, osmList:null, bizPlan:"starter", ready:{}, live:[], exploreTab:"offers", cat:"all", shopTab:"results", teamTab:"apps", shopMid:null, myCode:null, setup:null, ob:{step:0, slide:0}, here:null, ideaSeed:Date.now() };
 const meP = () => state.players[S.me];
 const profile = () => (meP()||{}).profile || "study";
 const myTown = () => (meP()||{}).town || "Castellanza";
@@ -1295,7 +1316,7 @@ const CLOUD = { url: "", anonKey: "" };
 let sbP = null, cloudUser = null;
 function loadScript(src){ return new Promise((res, rej) => { const sc = document.createElement("script"); sc.src = src; sc.onload = res; sc.onerror = rej; document.head.appendChild(sc); }); }
 function cloud(){
-  if (!CLOUD.url || !CLOUD.anonKey || (S && !S.demo)) return Promise.resolve(null);
+  if (!CLOUD.url || !CLOUD.anonKey || (S && S.kind==="live")) return Promise.resolve(null);
   if (!sbP) sbP = loadScript("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js").then(() => window.supabase.createClient(CLOUD.url, CLOUD.anonKey, {auth:{persistSession:true, autoRefreshToken:true, detectSessionInUrl:true}})).catch(() => { sbP = null; return null; });
   return sbP;
 }
@@ -1307,34 +1328,29 @@ async function authStart(kind, email){
   const {error} = await c.auth.signInWithOAuth({provider:kind, options:{redirectTo}});
   if (error) { ob.authMsg = (kind==="apple" ? "Apple" : "Google")+" sign-in isn't available yet. Try email, or continue on this phone."; render(); }
 }
-async function cloudSave(body){ if (!cloudUser) return; const c = await cloud(); if (!c) return; try { await c.from("players").upsert({id: cloudUser.id, data: body, updated_at: new Date().toISOString()}); } catch(e){} }
-async function cloudBoot(store){
-  const c = await cloud(); if (!c) return;
-  let session = null; try { session = (await c.auth.getSession()).data.session; } catch(e){}
-  if (!session) return;
-  cloudUser = session.user;
-  try { const {data:row} = await c.from("players").select("data").eq("id", cloudUser.id).maybeSingle(); if (row && row.data && row.data.profile) { await store.adopt(row.data); return; } } catch(e){}
-  const meta = cloudUser.user_metadata || {};
-  state.ob.name = meta.full_name || meta.name || (cloudUser.email||"").split("@")[0]; state.ob.signedIn = true;
-  if (!meP() || !meP().profile) { state.ob.step = 2; render(); } else cloudSave(meP());
-}
 function accountCard(){
-  if (!S.demo) return "";
-  if (cloudUser) return `<section class="card"><h3>Account</h3><p class="small muted">Signed in as ${esc(cloudUser.email || "your account")}. Your points are backed up.</p><button class="ghost small" id="signOut" style="align-self:flex-start">Sign out</button></section>`;
-  return `<section class="card"><h3>Account</h3><p class="small muted">You're using LifeOn on this phone only. Sign in to back up your points and use them on other devices.</p><button class="ghost small" id="goSignIn" style="align-self:flex-start">Sign in</button></section>`;
+  if (S.kind==="live") return "";
+  if (S.kind==="cloud") return `<section class="card"><h3>Account</h3><p class="small muted">Signed in as ${esc((cloudUser && cloudUser.email) || S.myName || "you")}. Your points, invites and groups are saved on the LifeOn server.</p><button class="ghost small" id="signOut" style="align-self:flex-start">Sign out</button></section>`;
+  return `<section class="card"><h3>Account</h3><p class="small muted">${S.kind==="demo" ? "You're in presentation mode with example data." : "You're using LifeOn on this phone only. Sign in so friends can join your invites and your points are saved."}</p><button class="ghost small" id="goSignIn" style="align-self:flex-start">Sign in</button></section>`;
+}
+function presentationCard(){
+  if (S.kind==="live") return "";
+  return S.kind==="demo"
+    ? `<section class="card"><h3>Presentation mode is on</h3><p class="small muted">Example people, places and invites. Your real data is not touched.</p><button class="ghost small" data-exit-demo style="align-self:flex-start">Back to my real app</button></section>`
+    : `<section class="card"><h3>Presentation mode</h3><p class="small muted">Show LifeOn full of example people, places and invites, for a demo. Your real data stays as it is.</p><button class="ghost small" data-enter-demo style="align-self:flex-start">Start presentation mode</button></section>`;
 }
 // ================= routing =================
-const ALL_ROUTES = ["today","explore","friends","shop","team","me","study","learn"];
+const ALL_ROUTES = ["today","explore","friends","shop","team","me","study","learn","agenda"];
 function tabs(){
   const t = [];
   if (meP()) t.push(["today","Today"],["explore","Nearby"],["friends","Friends"]);
-  const fresh = S.demo && meP() && meP().name;
+  const fresh = S.kind==="demo" && meP() && meP().name;
   if (state.merchants[S.me] && !fresh) t.push(["shop","My shop"]);
   if (S.canEdit && !fresh) t.push(["team","Team"]);
   if (meP()) t.push(["me","Me"]);
   return t;
 }
-let CUR = (() => { try { const h=(location.hash||"").slice(1); return ALL_ROUTES.includes(h) ? h : null; } catch(e){ return null; } })();
+let CUR = (() => { try { const h=(location.hash||"").slice(1); return ALL_ROUTES.includes(h) ? h : (/^invite=/.test(h) ? "friends" : null); } catch(e){ return null; } })();
 const route = () => ALL_ROUTES.includes(CUR) ? CUR : "today";
 function go(r){ if (!ALL_ROUTES.includes(r)) return; CUR = r; if (r==="shop" && !state.shopMid) state.shopMid = S.me; try { history.replaceState(null, "", "#"+r); } catch(e){} render(); try { window.scrollTo(0,0); } catch(e){} }
 window.addEventListener("hashchange", () => { const h = (location.hash||"").slice(1); if (h !== CUR && ALL_ROUTES.includes(h)) go(h); });
@@ -1344,7 +1360,7 @@ function renderTabs(){ const r = route(); const t = tabs(); $("#tabs").innerHTML
 function render(){
   if (!S) return;
   renderTabs();
-  $("#whereLabel").innerHTML = (meP()?esc(PROFILES[profile()]?.label||"")+" · "+esc(myTown()):"")+(S.demo?'<br><span class="chip ex" style="display:inline-block;margin-top:4px">Demo</span>':"");
+  $("#whereLabel").innerHTML = (meP()?esc(PROFILES[profile()]?.label||"")+" · "+esc(myTown()):"")+(S.kind==="demo"?'<br><span class="chip ex" style="display:inline-block;margin-top:4px">Demo</span>':"");
   const v = $("#view");
   if (!state.ready.players || !state.ready.merchants) { v.innerHTML = `<div class="card"><p class="muted">Loading…</p></div>`; return; }
   const r = route();
@@ -1357,21 +1373,30 @@ function render(){
   else if (r==="today") { v.innerHTML = viewToday(); bindToday(); }
   else if (r==="study") { v.innerHTML = viewStudy(); bindStudy(); }
   else if (r==="learn") { v.innerHTML = viewLearn(); bindLearn(); }
+  else if (r==="agenda") { v.innerHTML = viewAgenda(); bindAgenda(); }
   else if (r==="explore") { v.innerHTML = viewExplore(); bindExplore(); }
   else if (r==="friends") { v.innerHTML = viewFriends(); bindFriends(); }
   else { v.innerHTML = viewMe(); bindMe(); }
-  if (S.demo && !bannerOff() && !document.body.classList.contains("onboarding")) {
+  if (S.kind==="demo" && !bannerOff() && !document.body.classList.contains("onboarding")) {
     v.insertAdjacentHTML("afterbegin", '<div class="banner row between" style="align-items:flex-start"><span><b>Demo mode.</b> Example people and places, saved only on this device. Place codes: CAFE24, GYM77, STUDY5, RUN10.</span><span class="row" style="gap:6px;flex:none"><button class="ghost small" data-demo-reset>Reset</button><button class="ghost small" data-demo-hide aria-label="Hide this message">✕</button></span></div>');
     const rs = $("[data-demo-reset]", v); if (rs) rs.onclick = () => { if (rs.dataset.armed!=="1") { rs.dataset.armed="1"; rs.textContent="Sure?"; return; } try { localStorage.removeItem(DEMO_KEY); } catch(e){} location.reload(); };
     const hd = $("[data-demo-hide]", v); if (hd) hd.onclick = () => { try { localStorage.setItem(BANNER_KEY, "1"); } catch(e){} render(); };
   }
   $$("[data-guide]").forEach(b=>b.onclick=()=>openGuide());
+  $$("#view [data-inv-open]").forEach(b => b.onclick = () => openInvite(b.dataset.invOpen));
+  $$("#view [data-inv-join]").forEach(b => b.onclick = () => joinInvite(b.dataset.invJoin));
+  $$("#view [data-newinv]").forEach(b => b.onclick = () => openNewInvite());
+  $$("#view [data-goinv]").forEach(b => b.onclick = () => { state.friendsTab = "invites"; go("friends"); });
+  $$("#view [data-plan-start]").forEach(b => b.onclick = () => startPlanBlock(b.dataset.planStart));
+  $$("#view [data-exit-demo]").forEach(b => b.onclick = () => { setMode("local"); location.hash = ""; location.reload(); });
+  $$("#view [data-enter-demo]").forEach(b => b.onclick = async () => { const keep = {profile:profile(), town:myTown(), blocked:(meP()||{}).blocked}; setMode("demo"); const d = await makeDemo(); boot(d); await d.loadGuest(); const np = {...clone(meP()), ...keep}; delete np.name; await writeMe(np); go("today"); toast("Presentation mode: example data loaded"); });
   hydrateNames();
+  if (PENDING_INVITE && state.invites && state.invites[PENDING_INVITE] && meP() && meP().profile && !$(".flow")) { const id = PENDING_INVITE; PENDING_INVITE = null; openInvite(id); }
 }
 async function hydrateNames(root=document){
   const els = $$("[data-uid]", root); if (!els.length) return;
   const ps = await S.names([...new Set(els.map(e=>e.dataset.uid))]);
-  els.forEach(e => { const p = ps[e.dataset.uid]; if (!p) return; if (e.tagName==="IMG") e.src = p.avatarUrl; else e.textContent = p.isMe && !S.demo ? (p.name||"You")+" (you)" : p.name; });
+  els.forEach(e => { const p = ps[e.dataset.uid]; if (!p) return; if (e.tagName==="IMG") e.src = p.avatarUrl; else e.textContent = p.isMe && S.kind==="live" ? (p.name||"You")+" (you)" : p.name; });
 }
 function townOptions(sel){ return Object.keys(TOWNS).map(t=>`<option ${t===sel?"selected":""}>${esc(t)}</option>`).join(""); }
 function toggleChips(container, single){ if (!container) return; $$("[data-v]", container).forEach(b=>b.addEventListener("click",()=>{ if (single) $$("[data-v]", container).forEach(x=>x.setAttribute("aria-pressed","false")); b.setAttribute("aria-pressed", single ? "true" : String(b.getAttribute("aria-pressed")!=="true")); })); }
@@ -1387,7 +1412,7 @@ const INTRO = [
 function viewWelcome(){
   const ob = state.ob;
   document.body.classList.toggle("ob-dark", ob.step===0);
-  if (ob.step===1 && !S.demo) ob.step = 2;
+  if (ob.step===1 && (S.kind==="live" || S.kind==="cloud")) ob.step = 2;
   if (ob.step===0) { const sl = INTRO[ob.slide];
     return `<section class="ob ob-intro">
       <div class="ob-top"><span class="ob-logo">${MARK("#EE5A2F","#EAF4F1")}</span>Life<span style="color:var(--accent)">On</span><button class="ob-skip" data-ob="skip">Skip</button></div>
@@ -1395,7 +1420,7 @@ function viewWelcome(){
       <div style="display:flex;flex-direction:column;gap:12px"><h1>${esc(sl.title)}</h1><p>${esc(sl.text)}</p></div>
       <div class="ob-dots" aria-label="Step ${ob.slide+1} of ${INTRO.length}">${INTRO.map((_,i)=>`<i class="${i===ob.slide?"on":""}"></i>`).join("")}</div>
       <div style="display:flex;flex-direction:column;gap:10px"><button class="full" data-ob="next">${ob.slide<INTRO.length-1?"Next":"Get started"}</button>
-      <button class="ob-link" data-ob="shop">I have a business</button></div></section>`; }
+      <button class="bizbtn" data-ob="shop">I'm a business: see plans</button></div></section>`; }
   const bar = `<div class="ob-progress" aria-label="Step ${ob.step} of 4">${[1,2,3,4].map(i=>`<i class="${i<=ob.step?"on":""}"></i>`).join("")}</div>`;
   const back = `<button class="ghost small" data-ob="back" style="align-self:flex-start">‹ Back</button>`;
   if (ob.step===1) return `<section class="ob">${back}${bar}<h1>Welcome to LifeOn</h1><p class="muted">Sign in to keep your points safe and use them on every device.</p>
@@ -1409,7 +1434,7 @@ function viewWelcome(){
       <button class="ghost full" type="submit">Continue on this phone</button></form>
     <button class="ob-link" data-ob="guest" style="color:var(--ink)">Just looking? <u>Try as a guest with example data</u></button></section>`;
   if (ob.step===2) return `<section class="ob">${back}${bar}<h1>Who are you?</h1><p class="muted">LifeOn adapts to what you need. You can change it any time.</p>
-    ${[["study",ICON.book,"Student","Focus, study plan, Pomodoro, study techniques"],["work",ICON.brief,"Worker","Deep work, Top 3 of the day, lunch offline"],["active",ICON.walk,"I want to move more","Workouts with GPS, sport nearby, fitness rewards"],["free",ICON.leaf,"Less phone, more life","Ideas, events and places near you"]].map(([k,ic,t,d])=>`<button class="pick ${ob.profile===k?"sel":""}" data-prof="${k}"><span class="ico">${ic}</span><span><b>${t}</b><span class="s">${d}</span></span><span class="muted">›</span></button>`).join("")}</section>`;
+    ${[["study",ICON.book,"Student","Focus, study plan, Pomodoro, study techniques"],["work",ICON.brief,"Worker","Deep work, Top 3 of the day, lunch offline"],["active",ICON.walk,"I want to move more","Workouts with GPS, sport nearby, fitness rewards"],["free",ICON.leaf,"Less phone, more life","Ideas, events and places near you"],["business",ICON.shop,"I'm a business","Bring in customers: see plans and register"]].map(([k,ic,t,d])=>`<button class="pick ${ob.profile===k?"sel":""}" data-prof="${k}"><span class="ico">${ic}</span><span><b>${t}</b><span class="s">${d}</span></span><span class="muted">›</span></button>`).join("")}</section>`;
   if (ob.step===3) return `<section class="ob">${back}${bar}<h1>What distracts you?</h1><p class="muted">These apps are locked during your sessions.</p>
     <form class="card" id="obApps"><div class="chips" id="wApps">${SOCIAL.map(a=>`<button type="button" class="chip" data-v="${a}" aria-pressed="${(ob.apps||["Instagram","TikTok","YouTube"]).includes(a)}">${a}</button>`).join("")}</div>
       <label for="wBase">Minutes a day you spend on them<input id="wBase" type="number" inputmode="numeric" min="10" max="900" value="${ob.base||180}"></label>
@@ -1427,14 +1452,14 @@ function bindWelcome(){
   $$("[data-ob]", v).forEach(b=>b.onclick=async()=>{ const a = b.dataset.ob;
     if (a==="next") { if (ob.slide < INTRO.length-1) ob.slide++; else ob.step = 1; render(); }
     else if (a==="skip") { ob.step = 1; render(); }
-    else if (a==="back") { ob.step = Math.max(0, ob.step-1); if (ob.step===1 && !S.demo) ob.step = 0; render(); }
+    else if (a==="back") { ob.step = Math.max(0, ob.step-1); if (ob.step===1 && (S.kind==="live" || S.kind==="cloud")) ob.step = 0; render(); }
     else if (a==="shop") { document.body.classList.remove("ob-dark"); state.shopMid = S.me; go("shop"); }
-    else if (a==="guest") { ob.guest = true; ob.name = ""; ob.step = 2; render(); }
+    else if (a==="guest") { ob.guest = true; ob.name = ""; ob.step = 2; if (S.kind!=="demo") { setMode("demo"); boot(await makeDemo()); } else render(); }
     else if (a==="locate") { b.disabled = true; const n = await locate(); if (n) { ob.town = n.town; ob.locMsg = n.km > 15 ? "You're outside the pilot area, so we picked the closest town: "+n.town+"." : "Found you near "+n.town+"."; } else ob.locMsg = "We couldn't get your location. Choose your town below."; render(); }
     else if (a==="finish") { ob.town = $("#wTown").value; await finishOnboarding(); }
   });
-  $$("[data-prof]", v).forEach(b=>b.onclick=()=>{ ob.profile = b.dataset.prof; ob.step = 3; render(); });
-  const acc = $("#obAcc"); if (acc) acc.onsubmit = e => { e.preventDefault(); ob.guest = false; ob.name = $("#obName").value.trim(); ob.step = 2; render(); };
+  $$("[data-prof]", v).forEach(b=>b.onclick=()=>{ if (b.dataset.prof==="business") { document.body.classList.remove("ob-dark"); state.shopMid = S.me; go("shop"); return; } ob.profile = b.dataset.prof; ob.step = 3; render(); });
+  const acc = $("#obAcc"); if (acc) acc.onsubmit = e => { e.preventDefault(); ob.guest = false; ob.name = $("#obName").value.trim(); ob.step = 2; if (S.kind==="demo") { setMode("local"); boot(makeLocal()); } else render(); };
   $$("[data-auth]", v).forEach(b=>b.onclick=()=>{ const k = b.dataset.auth; if (k==="email") { ob.emailOpen = true; render(); } else authStart(k); });
   const om = $("#obMail"); if (om) om.onsubmit = e => { e.preventDefault(); authStart("email", $("#obEmail").value.trim()); };
   const ap = $("#obApps"); if (ap) { toggleChips($("#wApps"), false); ap.onsubmit = e => { e.preventDefault(); ob.apps = picked($("#wApps")); ob.base = Math.max(10, Number($("#wBase").value)||180); ob.step = 4; render(); }; }
@@ -1444,7 +1469,7 @@ async function finishOnboarding(){
   const ob = state.ob;
   if (ob.guest && S.loadGuest) await S.loadGuest();
   const p = { ...clone(meP()), profile: ob.profile||"study", blocked: ob.apps||["Instagram","TikTok","YouTube"], baseline: ob.base||180, town: ob.town||"Castellanza", joined: meP()?.joined || today() };
-  if (ob.name && S.demo) p.name = ob.name.slice(0,30); if (ob.guest) delete p.name;
+  if (ob.name && S.kind!=="live") p.name = ob.name.slice(0,30); if (ob.guest) delete p.name;
   for (const k of ["sessions","checkins","coupons"]) p[k] = p[k] || [];
   p.free = p.free || {}; p.ritual = p.ritual || {};
   if (await writeMe(p)) { const nm = ob.name; document.body.classList.remove("ob-dark"); state.ob = {step:0, slide:0}; go("today"); toast(ob.guest ? "Guest mode: example points and friends loaded" : "Welcome to LifeOn"+(nm?", "+nm:"")); }
@@ -1545,7 +1570,7 @@ function viewToday(){
       ${(()=>{ const done = (p.sessions||[]).some(s=>s.ok && s.kind==="evening" && s.min>=60 && inThisWeek(s.start)); return done?'<span class="chip on">Done this week</span>':'<span class="chip">Not yet</span>'; })()}</section>
     ${explorerCard()}`;
   }
-  return `<h1 class="hello">${hello()}</h1>${heroBlock(st)}${quickTiles()}${goalsBlock(st)}${main}
+  return `<h1 class="hello">${hello()}${S.kind==="cloud" && meP().name ? ", "+esc(meP().name) : ""}</h1>${heroBlock(st)}${quickTiles()}${dayAgendaCard()}${goalsBlock(st)}${invitesTodayCard()}${main}
   ${live.length?`<section class="card"><div class="row between"><h3>Focusing right now</h3><span class="live">${live.length} live</span></div><div class="list">${liveRows(live)}</div><button class="ghost full" data-join-focus>Join them</button></section>`:""}
   ${plans.length?`<section class="card"><h3>Plans from your groups</h3><div class="list">${plans.map(x=>`<div class="row" style="align-items:flex-start"><img class="ava" alt="" data-uid="${esc(x.by)}" src="${avatar("?")}"><div style="min-width:0"><div class="small"><b data-uid="${esc(x.by)}">Someone</b> · ${esc(x.g)}</div><div>${esc(x.text)}</div></div></div>`).join("")}</div></section>`:""}
   ${nearOffers.length?`<section class="card"><div class="row between"><h3>Open now near you</h3><a href="#explore" class="link small">All</a></div><div class="list">${nearOffers.map(offerRow).join("")}</div></section>`:""}`;
@@ -1571,16 +1596,28 @@ function viewStudy(){
   const tasks = s.tasks||[];
   return `<div class="row"><a href="#today" class="link small">‹ Today</a></div>
   <section class="card"><h2>Exams</h2>
-    ${exams.length?`<div class="list">${exams.map(e=>{ const d = daysTo(e.date); return `<div class="row between"><div><b>${esc(e.name)}</b><div class="small muted">${esc(fmtDate(e.date))} · ${d<0?"done":d===0?"today":d+" days"}</div></div><button class="ghost small" data-delexam="${esc(e.id)}" aria-label="Remove exam">Remove</button></div>`; }).join("")}</div>`:`<p class="muted small">No exams yet.</p>`}
-    <form id="examForm" class="row wrap"><input id="exName" maxlength="50" placeholder="Exam, e.g. Statistics" aria-label="Exam name" required style="flex:2 1 160px"><input id="exDate" type="date" aria-label="Exam date" required style="flex:1 1 130px"><button class="teal small" type="submit">Add</button></form></section>
+    ${exams.length?`<div class="list">${exams.map(e=>{ const d = daysTo(e.date); return `<div class="row between"><div><b>${esc(e.name)}</b><div class="small muted">${esc(fmtDate(e.date))} · ${d<0?"done":d===0?"today":d+" days"} · ${e.hours||20} h of study</div></div><button class="ghost small" data-delexam="${esc(e.id)}" aria-label="Remove exam">Remove</button></div>`; }).join("")}</div>`:`<p class="muted small">No exams yet.</p>`}
+    <form id="examForm" class="row wrap"><input id="exName" maxlength="50" placeholder="Exam, e.g. Statistics" aria-label="Exam name" required style="flex:2 1 160px"><input id="exDate" type="date" aria-label="Exam date" required style="flex:1 1 130px"><input id="exHours" type="number" min="1" max="300" value="20" aria-label="Hours of study needed" title="Hours of study needed" style="flex:0 1 90px"><button class="teal small" type="submit">Add</button></form></section>
   <section class="card"><h2>Tasks</h2><p class="small muted">Break the work into pieces you can finish in one Focus session.</p>
     ${tasks.length?`<div class="list">${tasks.map(t=>`<div class="task ${t.done?"done":""}"><input type="checkbox" data-t="${esc(t.id)}" ${t.done?"checked":""} aria-label="Done"><span style="flex:1;min-width:0">${esc(t.text)}${t.exam?` <span class="chip">${esc(exams.find(e=>e.id===t.exam)?.name||"")}</span>`:""}</span><button class="ghost small" data-focus-task="${esc(t.id)}" ${t.done?"disabled":""}>Focus</button></div>`).join("")}</div>`:`<p class="muted small">No tasks yet.</p>`}
     <form id="taskForm" class="row wrap"><input id="tkText" maxlength="80" placeholder="e.g. Chapter 3 summary" aria-label="Task" required style="flex:2 1 160px"><select id="tkExam" aria-label="Exam" style="flex:1 1 120px"><option value="">No exam</option>${exams.map(e=>`<option value="${esc(e.id)}">${esc(e.name)}</option>`).join("")}</select><button class="teal small" type="submit">Add</button></form></section>
+  ${planCard(s, exams)}
   <section class="card"><h3>Suggested rhythm</h3><p class="small muted">Two Pomodoro ×2 blocks a day (about 2 hours of real focus), plus a 10-minute review of yesterday's topic. Spread repetition over the days before each exam.</p><a class="link small" href="#learn">See all techniques</a></section>`;
 }
+function planCard(s, exams){
+  const pr = {wd:3, we:2, start:"15:00", ...(s.prefs||{})}; const plan = s.plan; const up = exams.filter(e => e.date > today());
+  const next = plan ? (plan.blocks||[]).filter(b => b.s > Date.now() - 3600e3).slice(0, 6) : [];
+  return `<section class="card"><h2>Automatic study plan</h2><p class="small muted">Set how long you can study. LifeOn spreads the hours until each exam, gives more time to the most urgent one, keeps the last 2 days for review and skips your lessons if you imported your timetable in Agenda.</p>
+    <div class="grid3"><label for="plWd">Weekdays (h)<input id="plWd" type="number" min="0" max="12" step="0.5" value="${pr.wd}"></label><label for="plWe">Weekend (h)<input id="plWe" type="number" min="0" max="12" step="0.5" value="${pr.we}"></label><label for="plStart">From<input id="plStart" type="time" value="${esc(pr.start)}"></label></div>
+    <button class="full" id="makePlan" ${up.length ? "" : "disabled"}>${plan ? "Update my plan" : "Make my plan"}</button>${up.length ? "" : `<p class="small muted">Add an exam first, with the hours of study it needs.</p>`}
+    ${plan ? `${plan.short ? `<div class="banner warn"><b>${plan.short} hours are missing.</b> Study a bit more each day, or start earlier.</div>` : `<div class="banner">Plan ready: ${(plan.blocks||[]).length} sessions until ${esc(fmtDate(up.length ? up[up.length-1].date : today()))}.</div>`}
+      ${next.length ? `<div class="list">${next.map(b => agendaRow({kind:"plan", s:b.s, e:b.s + b.mins*60e3, title:(b.kind==="review" ? "Review: " : "Study: ") + b.examName + " · " + esc(fmtDate(b.day)), id:b.id, done:b.done})).join("")}</div>` : ""}
+      <div class="row wrap"><a class="link small" href="#agenda">See it in Agenda</a></div>` : ""}</section>`;
+}
 function bindStudy(){
+  const mp = $("#makePlan"); if (mp) mp.onclick = async () => { const np = clone(meP()); np.study = np.study || {exams:[], tasks:[]}; const prefs = {wd:Number($("#plWd").value)||0, we:Number($("#plWe").value)||0, start:$("#plStart").value||"15:00"}; np.study.prefs = prefs; const res = buildPlan(np.study.exams||[], prefs); np.study.plan = {made:Date.now(), blocks:res.blocks, short:res.short}; if (await writeMe(np)) toast(res.blocks.length ? "Your plan is ready: "+res.blocks.length+" sessions" : "No time found: check your hours"); };
   const base = () => { const np = clone(meP()); np.study = np.study || {exams:[], tasks:[]}; np.study.exams = np.study.exams||[]; np.study.tasks = np.study.tasks||[]; return np; };
-  $("#examForm").onsubmit = async e => { e.preventDefault(); const np = base(); np.study.exams.push({id:rid(5), name:$("#exName").value.trim(), date:$("#exDate").value}); if (await writeMe(np)) toast("Exam added"); };
+  $("#examForm").onsubmit = async e => { e.preventDefault(); const np = base(); np.study.exams.push({id:rid(5), name:$("#exName").value.trim(), date:$("#exDate").value, hours:Math.max(1, Number($("#exHours").value)||20)}); if (await writeMe(np)) toast("Exam added"); };
   $("#taskForm").onsubmit = async e => { e.preventDefault(); const np = base(); np.study.tasks.push({id:rid(5), text:$("#tkText").value.trim(), exam:$("#tkExam").value, done:false, day:today()}); if (await writeMe(np)) toast("Task added"); };
   $$("[data-delexam]").forEach(b=>b.onclick=async()=>{ const np = base(); np.study.exams = np.study.exams.filter(x=>x.id!==b.dataset.delexam); await writeMe(np); });
   $$("[data-t]").forEach(c=>c.onchange=async()=>{ const np = base(); const t = np.study.tasks.find(x=>x.id===c.dataset.t); if (t){ t.done = c.checked; t.day = today(); } await writeMe(np); });
@@ -1596,10 +1633,10 @@ function bindLearn(){ $$("[data-try]").forEach(b=>b.onclick=()=>{ const t = TECH
 // ================= Focus =================
 let focusRun = null, unlock = { lockedUntil:0, strikes:0 };
 const SAFE_KEY = "lifeon-run";
-function openFocus(kind, preMode, taskLabel, prePlan, preType){
+function openFocus(kind, preMode, taskLabel, prePlan, preType, blockId){
   const p = meP(); const groups = myGroups();
   const places = Object.entries(state.merchants).filter(([mid])=>approved(mid)).sort((a,b)=>dist(a[1])-dist(b[1]));
-  const f = { kind, type: preType || MOVE_TYPES[0], plan: prePlan || KIND_PLANS[kind][0], mode: preMode || "solo", group: groups[0]?.[0] || "", venue: places[0]?.[0] || "", task: taskLabel || "" };
+  const f = { kind, blockId: blockId || null, type: preType || MOVE_TYPES[0], plan: prePlan || KIND_PLANS[kind][0], mode: preMode || "solo", group: groups[0]?.[0] || "", venue: places[0]?.[0] || "", task: taskLabel || "" };
   const el = flow(KIND_NAME[kind], true);
   const draw = () => {
     const fm = focusMins(f.plan);
@@ -1703,6 +1740,7 @@ function runFocus(el, f){
       else vNote = "Not verified (no GPS or check-in): no points this time";
     }
     const np = clone(meP()); np.sessions = [...(np.sessions||[]), s];
+    if (ok && run.blockId && np.study && np.study.plan) { const bl = (np.study.plan.blocks||[]).find(x => x.id === run.blockId); if (bl) bl.done = true; }
     await writeMe(np);
     el.innerHTML = `<div class="in" style="min-height:100%;justify-content:center;text-align:center">
       <h1 style="font-size:42px;line-height:1">${!ok ? "Session stopped" : (run.kind==="move" && run.mode!=="venue" && !s.verified) ? "Not verified" : "Done."}</h1>
@@ -1886,19 +1924,25 @@ function viewExplore(){
   const actsSorted = acts.slice().sort((a,b)=>((b.a.audience===prof)-(a.a.audience===prof)));
   let body = "";
   if (t==="offers") body = `<section class="card"><h2>Rewards near ${esc(myTown())}</h2><div class="chips">${Object.entries(CATS).map(([k,[l]])=>`<button type="button" class="chip" data-cat="${k}" aria-pressed="${state.cat===k}">${l}</button>`).join("")}</div>${shown.length?Object.keys(TIERS).map(tier=>{ const l = shown.filter(x=>x.o.tier===tier); return l.length?`<div style="display:flex;flex-direction:column;gap:10px"><div class="row between"><h3>${esc(TIERS[tier].label)}</h3><span class="small muted">${TIERS[tier].cost} pts</span></div><div class="list">${l.map(offerRow).join("")}</div></div>`:""; }).join(""):`<div class="empty"><p>Rewards from cafés, gyms and study places in the area will appear here.</p></div>`}</section>`;
-  if (t==="activities") body = `<section class="card"><h2>Happening near you</h2><p class="small muted">Courses, events, sport and workshops from local places, with LifeOn deals.</p>${actsSorted.length?`<div class="list">${activityCards(actsSorted, 20)}</div>`:`<div class="empty"><p>No activities yet. Local places will publish them here.</p></div>`}</section>`;
+  if (t==="activities") body = `<section class="card"><div class="row between"><h2>Invites near you</h2><button class="small" data-newinv>+ New</button></div>${(() => { const l = upcomingInvites().filter(([,iv]) => iv.by!==S.me).slice(0,5); return l.length ? `<div class="list">${l.map(([id,iv]) => inviteCard(id, iv)).join("")}</div>` : `<p class="small muted">No invites yet. Publish one: study session, run, padel, coffee.</p>`; })()}</section>
+  ${otherAppsCard()}
+  <section class="card"><h2>Happening near you</h2><p class="small muted">Courses, events, sport and workshops from local places, with LifeOn deals.</p>${actsSorted.length?`<div class="list">${activityCards(actsSorted, 20)}</div>`:`<div class="empty"><p>No activities yet. Local places will publish them here.</p></div>`}</section>`;
   if (t==="map") { const pl = mapPlaces();
     body = `<section class="card"><div class="row between"><h2>Around you</h2><button class="ghost small" id="locBtn">${ICON.pin} ${state.here?"Update":"Use my location"}</button></div>
       <div id="map" role="img" aria-label="Map of partner places"></div>
       <p class="small muted">${state.here?"Distances from where you are now.":"Distances from the centre of "+esc(myTown())+". Use your location for exact ones."} Map © OpenStreetMap contributors.</p></section>
     <section class="card"><h3>Partner places</h3>${pl.length?`<div class="list">${pl.map(([mid,m])=>`<div class="offer"><div class="ico">${ICON[m.kind]||ICON.other}</div><div style="min-width:0"><div class="t">${esc(m.name)}</div><div class="b">${esc(KIND[m.kind]||"")} · ${esc(placeDist(m))}</div></div><div style="display:flex;flex-direction:column;gap:6px"><a class="btn small ghostlink" href="${esc(mapsUrl(m))}" target="_blank" rel="noopener">Directions</a><button class="small" data-checkin="${esc(mid)}">Check in</button></div></div>`).join("")}</div>`:`<p class="muted small">No partner places yet.</p>`}</section>
-    <section class="card"><h3>More places nearby</h3><p class="small muted">Not partners yet, but good places to go. Opens Google Maps around you.</p><div class="chips">${NEAR_SEARCH.map(([q,l])=>`<a class="chip" href="${esc(searchUrl(q))}" target="_blank" rel="noopener">${l}</a>`).join("")}</div></section>`; }
+    <section class="card"><h3>Real places around you</h3><p class="small muted">Gyms, parks, libraries and more from OpenStreetMap. Tap one to get directions or invite friends there.</p>
+      <div class="chips">${Object.entries(OSM_CATS).map(([k,v])=>`<button type="button" class="chip" data-osm="${k}" aria-pressed="${state.osmCat===k}">${esc(v[0])}</button>`).join("")}</div>
+      <div id="osmList">${state.osmCat ? (state.osmList ? (state.osmList.length ? `<div class="list">${state.osmList.map(osmRow).join("")}</div>` : `<p class="small muted">Nothing found within 4 km.</p>`) : `<p class="small muted">Loading…</p>`) : ""}</div>
+      <p class="small muted">Data © OpenStreetMap contributors.</p></section>
+    ${otherAppsCard()}`; }
   if (t==="wallet") body = `<section class="card"><h2>Wallet</h2>${wallet.length?`<div class="list">${wallet.map(c=>{ const used = couponUsed(c); const live = c.liveCode && c.liveExp > Date.now() && !used;
       return `<div class="coupon ${used?"used":""}"><div><b>${esc(c.title)}</b><div class="small muted">${esc(c.venue)} · ${esc(c.town||"")} · ${esc(c.window||"")}</div></div>
       ${used?`<span class="chip">Used</span>`: live ? `<div class="row"><div class="qr" data-qr="${esc(c.liveCode)}"></div><div><div class="code">${esc(c.liveCode)}</div><div class="small muted" data-exp="${c.liveExp}">valid 5:00</div></div></div>` : `<button class="full" data-show="${esc(c.id)}">Show code at the counter</button>`}</div>`; }).join("")}</div>`
       : `<div class="empty"><p>No coupons yet. Spend points on a reward and it lands here.</p></div>`}</section>`;
   return `${heroBlock(st)}
-  <div class="seg" role="group" aria-label="Nearby">${[["offers","Rewards"],["map","Map"],["activities","Activities"],["wallet","Wallet"]].map(([k,l])=>`<button type="button" data-et="${k}" aria-pressed="${t===k}">${l}</button>`).join("")}</div>${body}`;
+  <div class="seg" role="group" aria-label="Nearby">${[["offers","Rewards"],["map","Places"],["activities","Events"],["wallet","Wallet"]].map(([k,l])=>`<button type="button" data-et="${k}" aria-pressed="${t===k}">${l}</button>`).join("")}</div>${body}`;
 }
 let expTimer = null;
 function mapPlaces(){ return Object.entries(state.merchants).filter(([mid])=>approved(mid)).sort((a,b)=>dist(a[1])-dist(b[1])); }
@@ -1918,6 +1962,8 @@ function bindExplore(){
   if ($("#map")) drawMap();
   const lb = $("#locBtn"); if (lb) lb.onclick = async () => { lb.disabled = true; const n = await locate(); if (!n) { lb.disabled = false; toast("Couldn't get your location. Check the permission in your browser settings."); return; } render(); };
   $$("#view [data-checkin]").forEach(b=>b.onclick=()=>checkIn(b.dataset.checkin));
+  $$("#view [data-osm]").forEach(b=>b.onclick=async()=>{ state.osmCat = b.dataset.osm; state.osmList = null; render(); try { state.osmList = await fetchOSM(state.osmCat); } catch(e){ state.osmList = []; toast("Couldn't load places right now. Try again in a minute."); } if (route()==="explore" && state.exploreTab==="map") render(); });
+  $$("#view [data-osm-inv]").forEach(b=>b.onclick=()=>{ const x = (state.osmList||[])[Number(b.dataset.osmInv)]; if (!x) return; const kind = {gym:"gym", sport:"sport", park:"walk", library:"study", cafe:"coffee", pool:"sport", culture:"event"}[state.osmCat] || "other"; openNewInvite({place:x.name, lat:x.lat, lng:x.lng, kind}); });
   $$("[data-et]").forEach(b=>b.onclick=()=>{ state.exploreTab=b.dataset.et; render(); });
   $$("button[data-cat]").forEach(b=>b.onclick=()=>{ state.cat=b.dataset.cat; render(); });
   bindOfferButtons();
@@ -1929,8 +1975,16 @@ function bindExplore(){
 
 // ================= friends =================
 function viewFriends(){
-  const mine = myGroups(); const live = liveFriends();
-  return `${live.length?`<section class="card"><div class="row between"><h3>Focusing right now</h3><span class="live">${live.length} live</span></div><div class="list">${liveRows(live)}</div><button class="ghost full" data-join-focus>Join them</button></section>`:""}
+  const mine = myGroups(); const live = liveFriends(); const ft = state.friendsTab;
+  const seg = `<div class="seg" role="group" aria-label="Friends">${[["invites","Invites"],["groups","Groups"]].map(([k,l])=>`<button type="button" data-ft="${k}" aria-pressed="${ft===k}">${l}</button>`).join("")}</div>`;
+  if (ft==="invites") {
+    const all = upcomingInvites(); const hosting = all.filter(([,iv]) => iv.by===S.me); const going = all.filter(([,iv]) => ["going","requested"].includes(myRole(iv)) && iv.by!==S.me); const near = all.filter(([,iv]) => myRole(iv)==="none");
+    return `${seg}<section class="card" style="background:var(--sport);color:var(--sport-ink)"><h2>Do things together</h2><p class="small" style="opacity:.92">Publish an invite: study session, run, padel, coffee. People nearby or your group ask to join, you say yes.</p><button class="full" data-newinv style="background:var(--sport-ink);color:var(--sport)">+ New invite</button></section>
+    ${hosting.length ? `<section class="card"><h3>Your invites</h3><div class="list">${hosting.map(([id,iv]) => inviteCard(id, iv)).join("")}</div></section>` : `<section class="card"><h3>How it works</h3><div class="steps"><div class="step"><span class="n">1</span><div><b>Publish</b><p class="small muted">What, where, when, how many people. Everyone nearby or just a group.</p></div></div><div class="step"><span class="n">2</span><div><b>People ask to join</b><p class="small muted">You see their names here and get a "want to join" alert on Today.</p></div></div><div class="step"><span class="n">3</span><div><b>Accept</b><p class="small muted">Accepted people get the details, directions and a calendar reminder.</p></div></div></div></section>`}
+    ${going.length ? `<section class="card"><h3>You're going</h3><div class="list">${going.map(([id,iv]) => inviteCard(id, iv)).join("")}</div></section>` : ""}
+    <section class="card"><h3>Invites near you</h3>${near.length ? `<div class="list">${near.map(([id,iv]) => inviteCard(id, iv)).join("")}</div>` : `<p class="small muted">${S.kind==="local" ? "Sign in from Me to see invites from people nearby." : "No invites nearby yet. Be the first!"}</p>`}</section>`;
+  }
+  return `${seg}${live.length?`<section class="card"><div class="row between"><h3>Focusing right now</h3><span class="live">${live.length} live</span></div><div class="list">${liveRows(live)}</div><button class="ghost full" data-join-focus>Join them</button></section>`:""}
   ${mine.length ? mine.map(([c,g])=>groupCard(c,g)).join("") : `<section class="card"><div class="empty"><h3>Better with friends</h3><p>Create a group, share the code and focus together. Everyone is ranked on their own progress.</p></div></section>`}
   <section class="card"><h3>Create or join a group</h3>
     <form id="newGroup" class="row"><input id="gName" maxlength="40" placeholder="e.g. LIUC study group" aria-label="Group name" required><button class="teal" type="submit" ${S.canWrite?"":"disabled"}>Create</button></form>
@@ -1945,6 +1999,8 @@ function groupCard(code, g){
     ${plans.length?`<div class="banner">${plans.map(x=>`<div><b data-uid="${esc(x.by)}">Someone</b>: ${esc(x.text)}</div>`).join("")}</div>`:""}</section>`;
 }
 function bindFriends(){
+  $$("[data-ft]").forEach(b=>b.onclick=()=>{ state.friendsTab = b.dataset.ft; render(); });
+  if (state.friendsTab==="invites") return;
   const j = $("[data-join-focus]"); if (j) j.onclick = () => openFocus(profile()==="work"?"work":profile()==="free"?"evening":"study", "group");
   $("#newGroup").onsubmit = async e => { e.preventDefault(); const name=$("#gName").value.trim(); if(!name) return; const code=rid(6);
     try { await S.save("groups", code, {name, members:[S.me], createdBy:S.me, createdAt:Date.now(), plans:[]}); toast("Group created. Share the code "+code); } catch(err){ toast("Couldn't create the group. Try again."); } };
@@ -1970,6 +2026,7 @@ function viewMe(){
   ${progressBlock(st)}
   ${activityList()}
   ${accountCard()}
+  ${presentationCard()}
   <form class="card" id="goalForm"><h3>Weekly goals</h3><p class="small muted">Set your own targets. They show as rings on Today.</p><div class="grid3"><label for="gF">Focus hours<input id="gF" type="number" min="1" max="60" value="${g.focus}"></label><label for="gM">Workouts<input id="gM" type="number" min="0" max="21" value="${g.move}"></label><label for="gP">Points<input id="gP" type="number" min="50" max="1050" step="50" value="${g.points}"></label></div><button class="ghost small" type="submit" style="align-self:flex-start">Save goals</button></form>
   <form class="card" id="meForm"><h2>Settings</h2>
     <div><p class="small" style="font-weight:700;margin-bottom:8px">Apps locked during Focus</p><div class="chips" id="mApps">${SOCIAL.map(a=>`<button type="button" class="chip" data-v="${a}" aria-pressed="${(p.blocked||[]).includes(a)}">${a}</button>`).join("")}</div></div>
@@ -1997,14 +2054,14 @@ function viewMe(){
     <p class="small muted">Coming with the App Store version: steps and workouts from Apple Health and Google Fit, and real app blocking with Screen Time.</p></section>
   <section class="card"><h3>Your data</h3><div class="list small"><div>No ads, ever.</div><div>Your screen time stays on your phone: LifeOn only knows if a session was completed.</div><div>Friends see only your name, points and streak.</div><div>Shops see that a coupon was used, not your name.</div></div><div class="row wrap"><button class="ghost small" data-guide>How LifeOn works</button><button class="ghost small" id="delMe" style="color:var(--bad)">Delete my data</button></div></section>
   <section class="card"><h3>About locking apps</h3><p class="small muted">In this pilot LifeOn runs in the browser. During Focus the other apps are locked by one rule: leave LifeOn and the session stops. To unlock early you must pass 3 brain challenges in a row with 3 lives; lose them all and you wait 5 minutes, then 10. The iPhone and Android versions will lock the chosen apps for real.</p></section>
-  ${(state.merchants[S.me] && !(S.demo && meP().name))?"":`<section class="card"><h3>Have a business?</h3><p class="small muted">Bring new customers in your quiet hours.</p><button class="ghost small" id="goShop" style="align-self:flex-start">Register your business</button></section>`}`;
+  ${(state.merchants[S.me] && !(S.kind==="demo" && meP().name))?"":`<section class="card"><h3>Have a business?</h3><p class="small muted">Bring new customers in your quiet hours.</p><button class="ghost small" id="goShop" style="align-self:flex-start">Register your business</button></section>`}`;
 }
 function bindMe(){
   toggleChips($("#mApps"), false);
   $("#goalForm").onsubmit = async e => { e.preventDefault(); const np = clone(meP()); np.goals = {focus:Math.max(1, Number($("#gF").value)||1), move:Math.max(0, Number($("#gM").value)||0), points:Math.max(50, Number($("#gP").value)||50)}; if (await writeMe(np)) toast("Goals saved"); };
   const dm = $("#delMe"); if (dm) dm.onclick = async () => { if (dm.dataset.armed!=="1") { dm.dataset.armed="1"; dm.textContent="Tap again to delete everything"; return; } try { await S.remove("players", S.me); toast("Your data has been deleted"); } catch(e){ toast("Couldn't delete. Try again."); } };
   $$("#mProf [data-v]").forEach(b=>b.onclick=async()=>{ const np = clone(meP()); np.profile = b.dataset.v; if (await writeMe(np)) toast("Profile: "+PROFILES[np.profile].label); });
-  const so = $("#signOut"); if (so) so.onclick = async () => { const c = await cloud(); try { await c.auth.signOut(); } catch(e){} cloudUser = null; toast("Signed out. Your data stays on this phone."); render(); };
+  const so = $("#signOut"); if (so) so.onclick = async () => { const c = await cloud(); try { await c.auth.signOut(); } catch(e){} cloudUser = null; setMode("local"); location.hash = ""; location.reload(); };
   const gs2 = $("#goSignIn"); if (gs2) gs2.onclick = () => { state.ob = {step:1, slide:0, emailOpen:false}; const el = flow("Sign in"); el.innerHTML = `<div class="in"><div class="row between"><h2>Sign in</h2><button class="ghost small" data-close>Close</button></div><p class="muted">Keep your points safe and use them on every device.</p><button class="authbtn apple" data-a="apple">Continue with Apple</button><button class="authbtn google" data-a="google">Continue with Google</button><form id="siMail" class="card" style="gap:10px"><label for="siEmail">Or with your email<input id="siEmail" type="email" required placeholder="you@email.com"></label><button class="full" type="submit">Send me a sign-in link</button></form><div id="siMsg"></div></div>`; $("[data-close]", el).onclick = () => el.remove(); const msg = () => { const m = state.ob.authMsg; $("#siMsg", el).innerHTML = m ? `<div class="banner">${esc(m)}</div>` : ""; }; $$("[data-a]", el).forEach(b=>b.onclick=async()=>{ await authStart(b.dataset.a); msg(); }); $("#siMail", el).onsubmit = async e => { e.preventDefault(); await authStart("email", $("#siEmail", el).value.trim()); msg(); }; };
   const ml = $("#meLoc"); if (ml) ml.onclick = async () => { ml.disabled = true; const n = await locate(); ml.disabled = false; if (n) { $("#mTown").value = n.town; toast("Near "+n.town+". Tap Save to keep it."); } else toast("Couldn't get your location."); };
   $("#meForm").onsubmit = async e => { e.preventDefault(); const np = clone(meP()); np.blocked = picked($("#mApps")); np.town = $("#mTown").value; np.baseline = Math.max(10, Number($("#mBase").value)||np.baseline); if (await writeMe(np)) toast("Saved"); };
@@ -2038,19 +2095,19 @@ function viewShop(){
   if (!m) {
     if (mid !== S.me) return `<section class="card"><p class="muted">This place no longer exists.</p></section>`;
     return `<section class="card" style="background:var(--teal);color:var(--teal-ink)"><h2>Bring people in when you're empty</h2><p class="small" style="opacity:.9">LifeOn users earn points by putting the phone down. They spend them at places like yours, in the hours you choose.</p></section>
+    <section class="card"><h2>1. Choose your plan</h2>${planPicker()}</section>
     <section class="card"><h2>How it works for you</h2><div class="steps">
       <div class="step"><span class="n">1</span><div><b>Publish a reward</b><p class="small muted">A free coffee, −20%, a trial class. Only in the hours you choose, with a weekly limit.</p></div></div>
       <div class="step"><span class="n">2</span><div><b>People come in</b><p class="small muted">They find you on the map and in "I'm bored", check in with the code on your poster and show a 5-minute coupon.</p></div></div>
       <div class="step"><span class="n">3</span><div><b>See if it pays</b><p class="small muted">Visits, new customers and estimated profit, every month.</p></div></div></div></section>
-    <section class="card"><h2>Plans and prices</h2>${planCards(null, null)}</section>
-    <form class="card" id="regForm"><h2>Register your business</h2>
+    <form class="card" id="regForm"><h2>2. Register your business</h2>
       <label for="rName">Business name<input id="rName" maxlength="60" required placeholder="e.g. Bar Centrale"></label>
       <div class="grid2"><label for="rKind">Type<select id="rKind">${Object.entries(KIND).map(([k,l])=>`<option value="${k}">${esc(l)}</option>`).join("")}</select></label><label for="rTown">Town<select id="rTown">${townOptions("Castellanza")}</select></label></div>
       <label for="rAddr">Address<input id="rAddr" maxlength="100" required placeholder="Street and number"></label>
       <div class="grid2"><label for="rPiva">VAT number (Partita IVA)<input id="rPiva" inputmode="numeric" maxlength="11" required placeholder="11 digits"></label><label for="rAteco">ATECO code<input id="rAteco" maxlength="8" required placeholder="e.g. 56.30.00"></label></div>
       <label for="rContact">Phone or email for the LifeOn team<input id="rContact" maxlength="80" required></label>
       <label for="rTicket">Average spend per customer (€)<input id="rTicket" type="number" min="1" max="500" step="0.5" value="6"></label>
-      <label for="rPlan">Plan<select id="rPlan">${Object.entries(BIZ).map(([k,d])=>`<option value="${k}" ${k==="starter"?"selected":""}>${d.label} · €${d.price}/month${d.fee?" + €"+d.fee.toFixed(2)+" per coupon":""}</option>`).join("")}</select></label>
+      <div class="banner" id="planSummary">${planSummary()}</div>
       <p class="small muted">We check your VAT number and ATECO code before you go live. Paid plans start with a free month.</p>
       <button class="full" type="submit" ${S.canWrite?"":"disabled"}>Send registration</button></form>`;
   }
@@ -2115,13 +2172,14 @@ function viewShop(){
 }
 function bindShop(){
   const mid = state.shopMid || S.me; const m = state.merchants[mid]; const mine = mid===S.me;
+  $$("[data-pick-plan]").forEach(b=>b.onclick=()=>{ state.bizPlan = b.dataset.pickPlan; $$("[data-pick-plan]").forEach(x=>{ const on = x.dataset.pickPlan===state.bizPlan; x.classList.toggle("chosen", on); x.setAttribute("aria-pressed", String(on)); const ch = $(".choose", x); if (ch) ch.textContent = on ? "✓ Selected" : "Choose "+BIZ[x.dataset.pickPlan].label; }); const ps = $("#planSummary"); if (ps) ps.innerHTML = planSummary(); });
   const rf = $("#regForm"); if (rf) { rf.onsubmit = async e => { e.preventDefault();
     const piva = $("#rPiva").value.replace(/\s/g,""), ateco = $("#rAteco").value.trim();
     if (!pivaValid(piva)) { toast("That VAT number doesn't look valid. Check the 11 digits."); return; }
     if (!atecoValid(ateco)) { toast("ATECO code format: e.g. 56.30.00"); return; }
     const code = rid(5);
-    const doc = {name:$("#rName").value.trim(), kind:$("#rKind").value, town:$("#rTown").value, address:$("#rAddr").value.trim(), piva, ateco, contact:$("#rContact").value.trim(), avgTicket:Number($("#rTicket").value)||6, codeHash: await sha(code), owner:S.me, createdAt:Date.now(), offers:{}, activities:{}, redeemed:[], planRequested: $("#rPlan").value};
-    if (await saveShop(S.me, doc)) { try { await S.setPrivate("shop", {code}); state.myCode = code; } catch(e){} if (S.demo) { await S.save("billing", S.me, {status:"approved", plan: doc.planRequested || "free", since: Date.now()}); toast("Demo: your shop is approved straight away"); } else toast("Registration sent. We'll check it soon."); } }; return; }
+    const doc = {name:$("#rName").value.trim(), kind:$("#rKind").value, town:$("#rTown").value, address:$("#rAddr").value.trim(), piva, ateco, contact:$("#rContact").value.trim(), avgTicket:Number($("#rTicket").value)||6, codeHash: await sha(code), owner:S.me, createdAt:Date.now(), offers:{}, activities:{}, redeemed:[], planRequested: state.bizPlan || "starter"};
+    if (await saveShop(S.me, doc)) { try { await S.setPrivate("shop", {code}); state.myCode = code; } catch(e){} if (S.kind==="demo" || S.kind==="local") { await S.save("billing", S.me, {status:"approved", plan: doc.planRequested || "free", since: Date.now()}); toast("Demo: your shop is approved straight away"); } else toast("Registration sent. We'll check it soon."); } }; return; }
   if (!m) return;
   $$("[data-st]").forEach(b=>b.onclick=()=>{ state.shopTab=b.dataset.st; render(); });
   $$("#view [data-qr]").forEach(el => { try { if (window.QRCode) new QRCode(el, {text:el.dataset.qr, width:200, height:200, colorDark:"#13201C", colorLight:"#ffffff"}); } catch(e){} });
@@ -2220,6 +2278,335 @@ function bindTeam(){
     } catch(e){ toast("Couldn't add examples."); ex.disabled = false; } };
 }
 
+// ================= cloud store (Supabase) =================
+async function makeCloud(){
+  const c = await cloud(); if (!c) return null;
+  let session = null; try { session = (await c.auth.getSession()).data.session; } catch(e){}
+  if (!session) return null;
+  const uid = session.user.id; cloudUser = session.user;
+  let team = false; try { const r = await c.rpc("is_team"); team = !!r.data; } catch(e){}
+  const cache = {}, subs = {}, loading = {};
+  const emit = col => (subs[col]||[]).forEach(f => f(cache[col] || {}));
+  const load = async col => {
+    if (col==="teamkeys" && !team) { cache[col] = {}; return; }
+    const {data, error} = await c.from(col).select("id,data");
+    if (error) throw error;
+    cache[col] = Object.fromEntries((data||[]).map(r => [r.id, r.data]));
+  };
+  const ch = c.channel("lifeon-db");
+  for (const col of ["players","merchants","billing","groups","invites"]) ch.on("postgres_changes", {event:"*", schema:"public", table:col}, payload => {
+    const m = cache[col] = cache[col] || {};
+    if (payload.eventType === "DELETE") { if (payload.old && payload.old.id) delete m[payload.old.id]; }
+    else if (payload.new && payload.new.id) m[payload.new.id] = payload.new.data;
+    emit(col);
+  });
+  ch.subscribe();
+  const live = c.channel("lifeon-live", {config:{presence:{key:uid}}}); let liveCb = null;
+  live.on("presence", {event:"sync"}, () => { const st = live.presenceState(); liveCb && liveCb(Object.entries(st).map(([k,v]) => ({by:k, presence:v[v.length-1]}))); });
+  live.subscribe();
+  const meta = session.user.user_metadata || {};
+  const myName = meta.full_name || meta.name || (session.user.email||"").split("@")[0] || "You";
+  if (!state.ob.name) state.ob.name = myName;
+  const fail = error => Object.assign(new Error(error.message || "error"), {code: /row-level|permission|violates/i.test(error.message||"") ? "invalid_argument" : "unavailable"});
+  return {
+    kind:"cloud", demo:false, me:uid, canEdit:team, canWrite:true, myName,
+    names: async ids => Object.fromEntries(ids.map(id => { const nm = ((cache.players||{})[id]||{}).name || (id===uid ? myName : "Someone"); return [id, {name:nm, avatarUrl:(id===uid && meta.avatar_url) || avatar(nm), isMe:id===uid}]; })),
+    on(col, f){ (subs[col] = subs[col] || []).push(f); if (cache[col]) f(cache[col]); else { if (!loading[col]) loading[col] = load(col).catch(() => { cache[col] = {}; }); loading[col].then(() => f(cache[col]||{})); } },
+    async save(col, id, body){
+      const row = {id, data:body, updated_at:new Date().toISOString()};
+      if (col==="merchants") row.owner = body.owner===uid ? uid : null;
+      if (col==="invites") row.owner = body.by;
+      const {error} = await c.from(col).upsert(row); if (error) throw fail(error);
+      (cache[col] = cache[col] || {})[id] = body; emit(col);
+    },
+    async remove(col, id){ const {error} = await c.from(col).delete().eq("id", id); if (error) throw fail(error); if (cache[col]) delete cache[col][id]; emit(col); },
+    async getPrivate(k){ try { const {data} = await c.from("private").select("data").eq("owner", uid).eq("key", k).maybeSingle(); return data ? data.data : null; } catch(e){ return null; } },
+    async setPrivate(k, v){ await c.from("private").upsert({owner:uid, key:k, data:v}); },
+    presence(patch){ try { live.track(patch||{}); } catch(e){} },
+    onLive(f){ liveCb = f; }
+  };
+}
+function makeLocal(){
+  const me = "local-me";
+  const data = {players:{}, merchants:{}, billing:{}, teamkeys:{}, groups:{}, invites:{}};
+  try { const saved = JSON.parse(localStorage.getItem(LOCAL_KEY) || "null"); if (saved) Object.assign(data, saved); } catch(e){}
+  let priv = {}; try { priv = JSON.parse(localStorage.getItem(LOCAL_KEY+"-p") || "{}"); } catch(e){}
+  const persist = () => { try { localStorage.setItem(LOCAL_KEY, JSON.stringify(data)); localStorage.setItem(LOCAL_KEY+"-p", JSON.stringify(priv)); } catch(e){} };
+  const subs = {}; const emit = c => (subs[c]||[]).forEach(f => f(data[c]));
+  return {
+    kind:"local", demo:false, me, canEdit:false, canWrite:true,
+    names: async ids => Object.fromEntries(ids.map(id => { const nm = (data.players[id] && data.players[id].name) || (id===me ? "You" : "Someone"); return [id, {name:nm, avatarUrl:avatar(nm), isMe:id===me}]; })),
+    dump: () => data,
+    on(c, f){ (subs[c] = subs[c] || []).push(f); f(data[c] || (data[c] = {})); },
+    async save(c, id, body){ (data[c] = data[c] || {})[id] = JSON.parse(JSON.stringify(body)); persist(); emit(c); },
+    async remove(c, id){ if (data[c]) delete data[c][id]; persist(); emit(c); },
+    async getPrivate(k){ return priv[k] || null; }, async setPrivate(k, v){ priv[k] = v; persist(); },
+    presence(){}, onLive(f){ f([]); }
+  };
+}
+
+// ================= invites =================
+const INV_KINDS = {study:["Study together","book"], coffee:["Coffee or lunch","cafe"], walk:["Walk or run","walk"], sport:["Sport: padel, football…","gym"], gym:["Gym session","gym"], event:["Event or night out","spark"], other:["Something else","friends"]};
+let PENDING_INVITE = (() => { try { const m = (location.hash||"").match(/invite=([A-Za-z0-9_-]+)/); return m ? m[1] : null; } catch(e){ return null; } })();
+const invIcon = iv => ICON[(INV_KINDS[iv.kind]||INV_KINDS.other)[1]] || ICON.friends;
+function invVisible(iv){ if (iv.by===S.me) return true; if (iv.audience==="group") return myGroups().some(([c]) => c===iv.group); return true; }
+function upcomingInvites(){ return Object.entries(state.invites||{}).filter(([,iv]) => iv && !iv.cancelled && iv.date >= today() && invVisible(iv)).sort((a,b) => (a[1].date+a[1].time).localeCompare(b[1].date+b[1].time)); }
+function invPlace(iv){ const m = iv.mid && state.merchants[iv.mid]; return m ? m.name : (iv.place || iv.town || "Place to be decided"); }
+function invCoords(iv){ const m = iv.mid && state.merchants[iv.mid]; if (m) return m; if (typeof iv.lat==="number") return {lat:iv.lat, lng:iv.lng, town:iv.town||myTown(), name:iv.place}; return null; }
+function invDist(iv){ const c = invCoords(iv); return c ? placeDist(c) : (iv.town ? distLabel(iv.town) : ""); }
+function myRole(iv){ if (iv.by===S.me) return "host"; if ((iv.going||[]).includes(S.me)) return "going"; if ((iv.requests||[]).includes(S.me)) return "requested"; if ((iv.declined||[]).includes(S.me)) return "declined"; return "none"; }
+const spotsLeft = iv => Math.max(0, (iv.max||10) - (iv.going||[]).length);
+const inviteLink = id => location.origin + location.pathname + "#invite=" + id;
+const invStart = iv => new Date(iv.date + "T" + (iv.time || "12:00")).getTime();
+function inviteCard(id, iv){
+  const role = myRole(iv), left = spotsLeft(iv), req = (iv.requests||[]).length;
+  const action = role==="host" ? `<button class="small ${req?"":"ghost"}" data-inv-open="${esc(id)}">${req ? req+" want to join" : "Manage"}</button>`
+    : role==="going" ? `<span class="chip on">You're going</span>` : role==="requested" ? `<span class="chip">Waiting for OK</span>` : role==="declined" ? `<span class="chip">Not this time</span>`
+    : left <= 0 ? `<span class="chip">Full</span>` : `<button class="small" data-inv-join="${esc(id)}">${iv.approval ? "Ask to join" : "Join"}</button>`;
+  return `<div class="offer"><div class="ico">${invIcon(iv)}</div><button class="invtap" data-inv-open="${esc(id)}" style="min-width:0"><span class="t" style="display:block">${esc(iv.title)}</span><span class="b" style="display:block">${esc(fmtDate(iv.date))} · ${esc(iv.time)} · ${esc(invPlace(iv))}${invDist(iv) ? " · "+esc(invDist(iv)) : ""}</span><span class="small muted" style="display:block">by <span data-uid="${esc(iv.by)}">Someone</span> · ${(iv.going||[]).length}/${iv.max||10} going${iv.audience==="group" ? " · group only" : ""}</span></button><div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">${action}</div></div>`;
+}
+async function updInvite(id, fn, ok){ const iv = clone(state.invites[id]); if (!iv) return false; fn(iv); try { await S.save("invites", id, iv); if (ok) toast(ok); return true; } catch(e){ toast("Couldn't update the invite. Check your connection."); return false; } }
+async function joinInvite(id){
+  const iv = state.invites[id]; if (!iv) return;
+  if (spotsLeft(iv) <= 0) { toast("This invite is full"); return; }
+  if (iv.approval) await updInvite(id, x => { x.requests = [...new Set([...(x.requests||[]), S.me])]; x.declined = (x.declined||[]).filter(u => u!==S.me); }, "Request sent. You'll see here when the host says yes.");
+  else await updInvite(id, x => { x.going = [...new Set([...(x.going||[]), S.me])]; }, "You're in! It's in your agenda.");
+}
+function shareInvite(id){
+  const iv = state.invites[id]; if (!iv) return;
+  const text = `Join me on LifeOn: ${iv.title}, ${fmtDate(iv.date)} at ${iv.time}, ${invPlace(iv)}.`;
+  const url = inviteLink(id);
+  if (navigator.share) { navigator.share({title:"LifeOn invite", text, url}).catch(() => {}); return; }
+  window.open("https://wa.me/?text=" + encodeURIComponent(text + " " + url), "_blank", "noopener");
+}
+function openInvite(id){
+  const iv = state.invites[id]; if (!iv) { toast("This invite doesn't exist any more"); return; }
+  const el = flow("Invite"); el.style.zIndex = 25;
+  const draw = () => {
+    const cur = state.invites[id]; if (!cur) { el.remove(); return; }
+    const role = myRole(cur), c = invCoords(cur), s0 = invStart(cur);
+    el.innerHTML = `<div class="in"><div class="row between"><h2>Invite</h2><button class="ghost small" data-close>Close</button></div>
+      <div class="card"><div class="row"><div class="ico">${invIcon(cur)}</div><div><h3>${esc(cur.title)}</h3><p class="small muted">${esc((INV_KINDS[cur.kind]||INV_KINDS.other)[0])} · by <span data-uid="${esc(cur.by)}">Someone</span></p></div></div>
+        <div class="list small"><div><b>When</b> · ${esc(fmtDate(cur.date))} at ${esc(cur.time)}</div><div><b>Where</b> · ${esc(invPlace(cur))}${invDist(cur) ? " · "+esc(invDist(cur)) : ""}</div><div><b>People</b> · ${(cur.going||[]).length} of ${cur.max||10} · ${cur.approval ? "the host approves who joins" : "open to everyone"}${cur.audience==="group" ? " · only for a group" : ""}</div>${cur.note ? `<div>${esc(cur.note)}</div>` : ""}</div>
+        <div class="row wrap">${c ? `<a class="btn small ghostlink" href="${esc(mapsUrl(c))}" target="_blank" rel="noopener">${ICON.pin} Directions</a>` : ""}${role==="host"||role==="going" ? `<a class="btn small ghostlink" href="${esc(gcalUrl(cur.title, s0, s0+90*60e3, "LifeOn invite", invPlace(cur)))}" target="_blank" rel="noopener">${ICON.cal} Google Calendar</a><button class="ghost small" data-ics>${ICON.cal} Apple / Outlook</button>` : ""}<button class="ghost small" data-share>Share</button></div></div>
+      <div class="card"><h3>Going</h3>${(cur.going||[]).length ? `<div class="list">${cur.going.map(u => `<div class="row"><img class="ava" alt="" data-uid="${esc(u)}" src="${avatar("?")}"><span data-uid="${esc(u)}" style="font-weight:700">Someone</span>${u===cur.by ? '<span class="chip">Host</span>' : ""}</div>`).join("")}</div>` : `<p class="small muted">Nobody yet.</p>`}</div>
+      ${role==="host" ? `<div class="card"><h3>Want to join · ${(cur.requests||[]).length}</h3>${(cur.requests||[]).length ? `<div class="list">${cur.requests.map(u => `<div class="row between"><div class="row"><img class="ava" alt="" data-uid="${esc(u)}" src="${avatar("?")}"><span data-uid="${esc(u)}" style="font-weight:700">Someone</span></div><div class="row" style="gap:6px"><button class="teal small" data-acc="${esc(u)}">Accept</button><button class="ghost small" data-dec="${esc(u)}">Decline</button></div></div>`).join("")}</div>` : `<p class="small muted">When someone asks to join, you'll see them here. Share the invite to get people.</p>`}</div>
+        <button class="ghost full" data-cancel style="color:var(--bad)">Cancel this invite</button>`
+      : role==="going" ? `<button class="ghost full" data-leave>I can't come any more</button>`
+      : role==="requested" ? `<p class="banner">You asked to join. The host will answer soon.</p>`
+      : role==="declined" ? `<p class="banner">The host couldn't take you this time.</p>`
+      : spotsLeft(cur) <= 0 ? `<p class="banner">This invite is full.</p>` : `<button class="full" data-join>${cur.approval ? "Ask to join" : "Join"}</button>`}</div>`;
+    $("[data-close]", el).onclick = () => { el.remove(); render(); };
+    const sh = $("[data-share]", el); if (sh) sh.onclick = () => shareInvite(id);
+    const ic = $("[data-ics]", el); if (ic) ic.onclick = () => downloadICS([{id, s:s0, e:s0+90*60e3, title:cur.title, loc:invPlace(cur)}], "lifeon-invite.ics");
+    const jn = $("[data-join]", el); if (jn) jn.onclick = async () => { await joinInvite(id); draw(); };
+    const lv = $("[data-leave]", el); if (lv) lv.onclick = async () => { await updInvite(id, x => { x.going = (x.going||[]).filter(u => u!==S.me); }, "Removed. The host can see a spot is free."); draw(); };
+    $$("[data-acc]", el).forEach(b => b.onclick = async () => { const u = b.dataset.acc; if (spotsLeft(state.invites[id]) <= 0) { toast("No spots left. Raise the number of people first."); return; } await updInvite(id, x => { x.requests = (x.requests||[]).filter(v => v!==u); x.going = [...new Set([...(x.going||[]), u])]; }, "Accepted"); draw(); });
+    $$("[data-dec]", el).forEach(b => b.onclick = async () => { const u = b.dataset.dec; await updInvite(id, x => { x.requests = (x.requests||[]).filter(v => v!==u); x.declined = [...new Set([...(x.declined||[]), u])]; }, "Declined"); draw(); });
+    const cn = $("[data-cancel]", el); if (cn) cn.onclick = async () => { if (cn.dataset.armed!=="1") { cn.dataset.armed = "1"; cn.textContent = "Tap again to cancel it"; return; } if (await updInvite(id, x => { x.cancelled = true; }, "Invite cancelled")) { el.remove(); render(); } };
+    hydrateNames(el);
+  };
+  draw();
+}
+function openNewInvite(pre){
+  pre = pre || {};
+  const places = Object.entries(state.merchants).filter(([mid]) => approved(mid)).sort((a,b) => dist(a[1]) - dist(b[1]));
+  const groups = myGroups();
+  const nh = new Date(Date.now() + 3600e3); const f = {kind: pre.kind || "coffee", where: pre.place ? "custom" : (places[0] ? places[0][0] : "custom"), place: pre.place || "", lat: pre.lat, lng: pre.lng, date: today(), time: pad(nh.getHours()) + ":00", max: 4, audience: "public", group: groups[0] ? groups[0][0] : "", approval: true, title: pre.title || ""};
+  const el = flow("New invite"); el.style.zIndex = 25;
+  const draw = () => {
+    el.innerHTML = `<div class="in"><div class="row between"><h2>New invite</h2><button class="ghost small" data-close>Close</button></div>
+      <div class="card steps" style="gap:10px"><div class="step"><span class="n">1</span><div><b>Publish it</b><p class="small muted">What, where and when. People nearby or your group see it.</p></div></div><div class="step"><span class="n">2</span><div><b>People ask to join</b><p class="small muted">You get their names in Friends → Invites.</p></div></div><div class="step"><span class="n">3</span><div><b>You say yes</b><p class="small muted">Accepted people see the details and get it in their agenda.</p></div></div></div>
+      <form class="card" id="nvForm">
+        <div><p class="small" style="font-weight:700;margin-bottom:8px">What</p><div class="chips" id="nvKind">${Object.entries(INV_KINDS).map(([k,v]) => `<button type="button" class="chip" data-v="${k}" aria-pressed="${f.kind===k}">${esc(v[0])}</button>`).join("")}</div></div>
+        <label for="nvTitle">Title<input id="nvTitle" maxlength="70" required value="${esc(f.title)}" placeholder="${f.kind==="study" ? "e.g. Statistics revision, 2 hours" : f.kind==="walk" ? "e.g. 5 km walk at the park" : f.kind==="sport" ? "e.g. Padel 2 vs 2, need 1 player" : "e.g. Coffee after class"}"></label>
+        <label for="nvWhere">Where<select id="nvWhere">${places.map(([id,m]) => `<option value="${esc(id)}" ${f.where===id?"selected":""}>${esc(m.name)} · ${esc(placeDist(m))} (partner)</option>`).join("")}<option value="custom" ${f.where==="custom"?"selected":""}>Another place…</option></select></label>
+        ${f.where==="custom" ? `<label for="nvPlace">Place<input id="nvPlace" maxlength="80" value="${esc(f.place)}" placeholder="e.g. Parco Alto Milanese, main gate"></label>` : ""}
+        <div class="grid2"><label for="nvDate">Day<input id="nvDate" type="date" min="${today()}" value="${esc(f.date)}" required></label><label for="nvTime">Time<input id="nvTime" type="time" value="${esc(f.time)}" required></label></div>
+        <label for="nvMax">How many people, you included<input id="nvMax" type="number" min="2" max="50" value="${f.max}"></label>
+        <label for="nvAud">Who can see it<select id="nvAud"><option value="public" ${f.audience==="public"?"selected":""}>Everyone on LifeOn nearby</option>${groups.map(([c,g]) => `<option value="g:${esc(c)}" ${f.audience==="group"&&f.group===c?"selected":""}>Only my group: ${esc(g.name)}</option>`).join("")}</select></label>
+        <label class="row" style="flex-direction:row;color:var(--ink);font-weight:500"><input type="checkbox" id="nvAppr" ${f.approval?"checked":""}> I want to approve who joins</label>
+        <label for="nvNote">Note (optional)<input id="nvNote" maxlength="120" placeholder="e.g. Bring your notes, I'll bring snacks"></label>
+        <button class="full" type="submit">Publish invite</button>
+        ${S.kind==="local" ? `<p class="small muted">You're not signed in, so only people you send the link to will know about it, and they can't join in the app yet. Sign in from Me to let others join.</p>` : ""}</form></div>`;
+    const keep = () => { const t = $("#nvTitle", el); if (t) f.title = t.value; const p = $("#nvPlace", el); if (p) f.place = p.value; const d = $("#nvDate", el); if (d) f.date = d.value; const tm = $("#nvTime", el); if (tm) f.time = tm.value; const mx = $("#nvMax", el); if (mx) f.max = Number(mx.value)||4; const a = $("#nvAppr", el); if (a) f.approval = a.checked; };
+    $("[data-close]", el).onclick = () => el.remove();
+    $$("#nvKind [data-v]", el).forEach(b => b.onclick = () => { keep(); f.kind = b.dataset.v; draw(); });
+    $("#nvWhere", el).onchange = e => { keep(); f.where = e.target.value; draw(); };
+    $("#nvForm", el).onsubmit = async e => {
+      e.preventDefault(); keep();
+      const aud = $("#nvAud", el).value; const m = f.where!=="custom" ? state.merchants[f.where] : null;
+      const iv = {by:S.me, title:f.title.trim(), kind:f.kind, date:f.date, time:f.time, max:Math.min(50, Math.max(2, f.max)), approval:f.approval, audience: aud.startsWith("g:") ? "group" : "public", group: aud.startsWith("g:") ? aud.slice(2) : "", note:($("#nvNote", el).value||"").trim(), going:[S.me], requests:[], declined:[], createdAt:Date.now(), town: m ? m.town : myTown()};
+      if (m) iv.mid = f.where; else { iv.place = (f.place||"").trim() || "Place to be decided"; if (typeof f.lat==="number") { iv.lat = f.lat; iv.lng = f.lng; } }
+      if (!iv.title) { toast("Give your invite a title"); return; }
+      const id = "i" + rid(8);
+      try { await S.save("invites", id, iv); el.remove(); toast("Invite published"); state.friendsTab = "invites"; openInvite(id); } catch(err){ toast("Couldn't publish. Check your connection."); }
+    };
+  };
+  draw();
+}
+function invitesTodayCard(){
+  const all = upcomingInvites(); const mine = all.filter(([,iv]) => iv.by===S.me); const reqs = mine.reduce((s,[,iv]) => s + (iv.requests||[]).length, 0);
+  const near = all.filter(([,iv]) => iv.by!==S.me && myRole(iv)==="none").slice(0,2);
+  return `<section class="card"><div class="row between"><h3>Invites</h3><a class="link small" href="#friends">All</a></div>
+    ${reqs ? `<button class="banner" data-goinv style="text-align:left;border:0;width:100%"><b>${reqs} ${reqs===1?"person wants":"people want"} to join your invites.</b> Tap to answer.</button>` : ""}
+    ${near.length ? `<div class="list">${near.map(([id,iv]) => inviteCard(id, iv)).join("")}</div>` : `<p class="small muted">Study together, a run, padel, a coffee: publish an invite and people nearby can ask to join.</p>`}
+    <button class="ghost full" data-newinv>+ New invite</button></section>`;
+}
+
+// ================= real places (OpenStreetMap) =================
+const OSM_CATS = {gym:["Gyms","dumbbell",'nwr["leisure"="fitness_centre"]["name"];nwr["leisure"="sports_centre"]["name"]'], sport:["Sport & padel","dumbbell",'nwr["leisure"="pitch"]["name"];nwr["leisure"="sports_hall"]["name"];nwr["sport"="padel"]["name"]'], park:["Parks & trails","leaf",'nwr["leisure"="park"]["name"];nwr["leisure"="nature_reserve"]["name"]'], library:["Libraries","book",'nwr["amenity"="library"]'], cafe:["Cafés","cafe",'nwr["amenity"="cafe"]["name"]'], pool:["Pools","walk",'nwr["leisure"="swimming_pool"]["name"]["access"!="private"];nwr["sport"="swimming"]["name"]'], culture:["Culture","culture",'nwr["amenity"~"theatre|cinema|arts_centre"]["name"];nwr["tourism"="museum"]["name"]']};
+const osmCache = {};
+async function fetchOSM(cat){
+  const c = state.here ? [state.here.lat, state.here.lng] : (TOWNS[myTown()] || TOWNS.Castellanza);
+  const key = cat + ":" + c.map(x => x.toFixed(3)).join(","); if (osmCache[key]) return osmCache[key];
+  const parts = OSM_CATS[cat][2].split(";").filter(Boolean).map(q => q + `(around:4000,${c[0]},${c[1]});`).join("");
+  const q = `[out:json][timeout:20];(${parts});out center 80;`;
+  const r = await fetch("https://overpass-api.de/api/interpreter?data=" + encodeURIComponent(q)); if (!r.ok) throw new Error("osm");
+  const j = await r.json(); const seen = new Set();
+  const list = (j.elements||[]).map(el => ({name:(el.tags && el.tags.name) || OSM_CATS[cat][0], lat: el.lat != null ? el.lat : el.center && el.center.lat, lng: el.lon != null ? el.lon : el.center && el.center.lon, tags: el.tags || {}}))
+    .filter(x => x.lat && !seen.has(x.name) && seen.add(x.name)).map(x => ({...x, d: hav(c, [x.lat, x.lng])})).sort((a,b) => a.d - b.d).slice(0, 25);
+  osmCache[key] = list; return list;
+}
+function osmRow(x, i){
+  const t = x.tags || {}; const addr = [t["addr:street"], t["addr:housenumber"]].filter(Boolean).join(" ");
+  const d = x.d < 1 ? Math.max(50, Math.round(x.d*20)*50) + " m" : (Math.round(x.d*10)/10) + " km";
+  return `<div class="offer"><div class="ico">${ICON[OSM_CATS[state.osmCat][1]] || ICON.pin}</div><div style="min-width:0"><div class="t">${esc(x.name)}</div><div class="b">${esc(d)}${addr ? " · "+esc(addr) : ""}${t.opening_hours ? " · "+esc(t.opening_hours) : ""}</div></div><div style="display:flex;flex-direction:column;gap:6px"><a class="btn small ghostlink" href="https://www.google.com/maps/dir/?api=1&destination=${x.lat},${x.lng}" target="_blank" rel="noopener">Directions</a><button class="small" data-osm-inv="${i}">Invite</button></div></div>`;
+}
+const townSlug = t => t.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, "-");
+function otherAppsCard(){
+  const t = myTown(), c = state.here ? [state.here.lat, state.here.lng] : TOWNS[t];
+  const links = [["Events (Eventbrite)", `https://www.eventbrite.it/d/italy--${townSlug(t)}/events/`], ["Groups and meetups (Meetup)", `https://www.meetup.com/find/?location=it--${encodeURIComponent(t)}&source=EVENTS`], ["This week in "+t+" (Google)", `https://www.google.com/search?q=${encodeURIComponent("eventi "+t+" questa settimana")}`], ["Padel and tennis courts (Playtomic)", "https://playtomic.io/"], ["Trails nearby (Google Maps)", `https://www.google.com/maps/search/${encodeURIComponent("sentieri")}/@${c[0].toFixed(4)},${c[1].toFixed(4)},12z`], ["Running and cycling clubs (Strava)", "https://www.strava.com/clubs"]];
+  return `<section class="card"><h3>More events and people, in other apps</h3><p class="small muted">Found something? Come back and publish an invite so friends can join you.</p><div class="chips">${links.map(([l,u]) => `<a class="chip" href="${esc(u)}" target="_blank" rel="noopener">${esc(l)}</a>`).join("")}</div></section>`;
+}
+
+// ================= calendar & agenda =================
+function loadCal(){ try { return JSON.parse(localStorage.getItem(CAL_KEY) || "null") || {events:[], sources:[]}; } catch(e){ return {events:[], sources:[]}; } }
+function saveCal(c){ try { localStorage.setItem(CAL_KEY, JSON.stringify(c)); return true; } catch(e){ toast("This calendar is too big to keep on this device"); return false; } }
+const icsTime = t => new Date(t).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+const gcalUrl = (title, s, e, details, loc) => `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${icsTime(s)}/${icsTime(e)}&details=${encodeURIComponent(details||"")}&location=${encodeURIComponent(loc||"")}`;
+function downloadICS(items, name){
+  const e2 = x => String(x||"").replace(/[\\,;]/g, m => "\\" + m).replace(/\n/g, "\\n");
+  const lines = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//LifeOn//EN","CALSCALE:GREGORIAN"];
+  for (const it of items) lines.push("BEGIN:VEVENT", "UID:" + it.id + "@lifeon.app", "DTSTAMP:" + icsTime(Date.now()), "DTSTART:" + icsTime(it.s), "DTEND:" + icsTime(it.e), "SUMMARY:" + e2(it.title), "LOCATION:" + e2(it.loc), "END:VEVENT");
+  lines.push("END:VCALENDAR");
+  try { const blob = new Blob([lines.join("\r\n")], {type:"text/calendar"}); const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500); toast("Calendar file ready: open it to add the events"); } catch(e){ toast("Couldn't create the file here"); }
+}
+function parseICS(text){
+  const lines = text.replace(/\r?\n[ \t]/g, "").split(/\r?\n/); const evs = []; let ev = null;
+  const pd = v => { const m = String(v).match(/(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})(Z)?)?/); if (!m) return null; if (!m[4]) return {t:new Date(+m[1], +m[2]-1, +m[3]).getTime(), allDay:true}; return {t: m[7] ? Date.UTC(+m[1], +m[2]-1, +m[3], +m[4], +m[5], +m[6]) : new Date(+m[1], +m[2]-1, +m[3], +m[4], +m[5], +m[6]).getTime(), allDay:false}; };
+  const un = v => v.replace(/\\n/gi, " ").replace(/\\([,;\\])/g, "$1");
+  for (const line of lines) {
+    if (line === "BEGIN:VEVENT") { ev = {}; continue; }
+    if (line === "END:VEVENT") { if (ev && ev.s) evs.push(ev); ev = null; continue; }
+    if (!ev) continue;
+    const i = line.indexOf(":"); if (i < 0) continue;
+    const key = line.slice(0, i).split(";")[0].toUpperCase(), val = line.slice(i + 1);
+    if (key === "DTSTART") { const d = pd(val); if (d) { ev.s = d.t; ev.allDay = d.allDay; } }
+    else if (key === "DTEND") { const d = pd(val); if (d) ev.e = d.t; }
+    else if (key === "SUMMARY") ev.title = un(val);
+    else if (key === "LOCATION") ev.loc = un(val);
+    else if (key === "RRULE") ev.rrule = val;
+    else if (key === "EXDATE") { ev.ex = ev.ex || []; val.split(",").forEach(x => { const d = pd(x); if (d) ev.ex.push(d.t); }); }
+  }
+  const from = Date.now() - 864e5, to = Date.now() + 120*864e5, res = [];
+  const DAYMAP = {MO:1, TU:2, WE:3, TH:4, FR:5, SA:6, SU:0};
+  for (const e of evs) {
+    const dur = (e.e || e.s + 3600e3) - e.s;
+    const push = s => { if (s >= from && s <= to && !(e.ex||[]).some(x => Math.abs(x - s) < 60e3)) res.push({s, e:s + dur, title:e.title || "Event", loc:e.loc || "", allDay:!!e.allDay}); };
+    if (!e.rrule) { push(e.s); continue; }
+    const r = Object.fromEntries(e.rrule.split(";").map(kv => kv.split("=")));
+    const step = Number(r.INTERVAL || 1), until = r.UNTIL ? (pd(r.UNTIL) || {}).t : null, count = r.COUNT ? Number(r.COUNT) : 1e9;
+    const sd = new Date(e.s); const byday = r.BYDAY ? r.BYDAY.split(",").map(x => DAYMAP[x.slice(-2)]).filter(x => x !== undefined) : null;
+    let n = 0, stop = false;
+    for (let i = 0; i < 600 && !stop; i++) {
+      let occ = [];
+      if (r.FREQ === "DAILY") occ = [new Date(sd.getFullYear(), sd.getMonth(), sd.getDate() + i*step, sd.getHours(), sd.getMinutes()).getTime()];
+      else if (r.FREQ === "WEEKLY") { const wk = new Date(sd.getFullYear(), sd.getMonth(), sd.getDate() + i*7*step, sd.getHours(), sd.getMinutes()); occ = (byday || [sd.getDay()]).map(dw => { const d = new Date(wk); d.setDate(wk.getDate() + ((dw - wk.getDay() + 7) % 7)); return d.getTime(); }).sort((a,b) => a - b); }
+      else { push(e.s); break; }
+      for (const t of occ) { if (t < e.s) continue; if ((until && t > until) || n >= count || t > to) { stop = true; break; } n++; push(t); }
+    }
+  }
+  return res.sort((a,b) => a.s - b.s).slice(0, 3000);
+}
+function importICS(text, label){
+  const evs = parseICS(text);
+  if (!evs.length) { toast("No events found for the next months in that calendar"); return false; }
+  const cal = loadCal(); const id = "c" + rid(5);
+  cal.sources = [...(cal.sources||[]), {id, label, count:evs.length, at:Date.now()}];
+  cal.events = [...(cal.events||[]), ...evs.map(e => ({...e, src:id}))].sort((a,b) => a.s - b.s);
+  if (saveCal(cal)) { toast(evs.length + " events imported"); return true; } return false;
+}
+function agendaItems(fromDay, days){
+  const out = []; const start = new Date(fromDay + "T00:00").getTime(), end = start + days*864e5;
+  for (const e of (loadCal().events||[])) if (e.s < end && (e.e || e.s) >= start) out.push({kind:"cal", s:e.s, e:e.e, title:e.title, loc:e.loc, allDay:e.allDay});
+  const p = meP() || {};
+  for (const ex of ((p.study||{}).exams||[])) { const t = new Date(ex.date + "T09:00").getTime(); if (t >= start && t < end) out.push({kind:"exam", s:t, e:t + 2*3600e3, title:"Exam: " + ex.name, allDay:true}); }
+  for (const b of (((p.study||{}).plan||{}).blocks||[])) if (b.s >= start && b.s < end) out.push({kind:"plan", s:b.s, e:b.s + b.mins*60e3, title:(b.kind==="review" ? "Review: " : "Study: ") + b.examName, id:b.id, done:b.done, mins:b.mins});
+  for (const [id, iv] of Object.entries(state.invites||{})) { if (!iv || iv.cancelled) continue; const role = myRole(iv); if (role!=="host" && role!=="going") continue; const t = invStart(iv); if (t >= start && t < end) out.push({kind:"invite", s:t, e:t + 90*60e3, title:iv.title, loc:invPlace(iv), id}); }
+  return out.sort((a,b) => a.s - b.s);
+}
+const AG_COL = {cal:"var(--muted)", exam:"var(--bad)", plan:"var(--accent)", invite:"var(--sport)"};
+const AG_LBL = {cal:"Calendar", exam:"Exam", plan:"Study plan", invite:"Invite"};
+const hm = t => { const d = new Date(t); return pad(d.getHours()) + ":" + pad(d.getMinutes()); };
+function agendaRow(it){
+  const act = it.kind==="plan" ? (it.done ? `<span class="chip on">Done</span>` : `<button class="small" data-plan-start="${esc(it.id)}">Start</button>`) : it.kind==="invite" ? `<button class="ghost small" data-inv-open="${esc(it.id)}">Open</button>` : "";
+  return `<div class="row between" style="align-items:flex-start"><div class="row" style="align-items:flex-start;gap:10px;min-width:0"><span style="width:4px;align-self:stretch;border-radius:4px;background:${AG_COL[it.kind]}"></span><div style="min-width:0"><b style="${it.done ? "text-decoration:line-through;opacity:.6" : ""}">${esc(it.title)}</b><div class="small muted">${it.allDay ? "All day" : hm(it.s) + (it.e ? "–" + hm(it.e) : "")} · ${AG_LBL[it.kind]}${it.loc ? " · " + esc(it.loc) : ""}</div></div></div>${act}</div>`;
+}
+function dayAgendaCard(){
+  const items = agendaItems(today(), 1).filter(it => it.allDay || (it.e || it.s) > Date.now() - 3600e3).slice(0, 5);
+  return `<section class="card"><div class="row between"><h3>Your day</h3><a class="link small" href="#agenda">Agenda</a></div>
+    ${items.length ? `<div class="list">${items.map(agendaRow).join("")}</div>` : `<p class="small muted">Nothing planned. ${profile()==="study" ? "Import your university timetable or make a study plan in Agenda." : "Import your calendar or publish an invite."}</p>`}</section>`;
+}
+function viewAgenda(){
+  const cal = loadCal(); const days = [...Array(7)].map((_, i) => dkey(addDays(new Date(), i)));
+  const items = agendaItems(today(), 7);
+  return `<div class="row"><a href="#today" class="link small">‹ Today</a></div>
+  <section class="card"><h2>Agenda</h2><p class="small muted">Your lessons, study plan, exams and invites in one place, for the next 7 days.</p>
+    ${days.map(k => { const its = items.filter(it => dkey(it.s) === k); return `<div style="display:flex;flex-direction:column;gap:8px"><h3 style="font-size:14px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)">${k===today() ? "Today" : esc(fmtDate(k))}</h3>${its.length ? `<div class="list">${its.map(agendaRow).join("")}</div>` : `<p class="small muted">Free</p>`}</div>`; }).join("")}</section>
+  <section class="card"><h3>Connect your calendar</h3><p class="small muted">Import your university timetable or your personal calendar as an .ics file. Most university portals have an "Export" or "iCal" option on the timetable page; Google Calendar: Settings → Import & export → Export; Outlook: Calendar → Share → ICS. Your calendar stays on this phone.</p>
+    <label class="btn small ghostlink" style="align-self:flex-start;cursor:pointer">${ICON.cal} Import .ics file<input type="file" id="icsFile" accept=".ics,text/calendar" hidden></label>
+    <form id="icsUrlForm" class="row wrap"><input id="icsUrl" type="url" placeholder="…or paste a calendar link (https://…ics)" aria-label="Calendar link" style="flex:2 1 200px"><button class="teal small" type="submit">Add</button></form>
+    ${(cal.sources||[]).length ? `<div class="list">${cal.sources.map(s => `<div class="row between"><span class="small"><b>${esc(s.label)}</b> · ${s.count} events</span><button class="ghost small" data-cal-del="${esc(s.id)}">Remove</button></div>`).join("")}</div>` : ""}</section>
+  <section class="card"><h3>Send LifeOn to your calendar</h3><p class="small muted">Your study plan and invites for the next 60 days, as a file for Apple Calendar, Google Calendar or Outlook.</p><button class="ghost small" id="icsOut" style="align-self:flex-start">${ICON.cal} Download calendar file</button></section>`;
+}
+function bindAgenda(){
+  const fi = $("#icsFile"); if (fi) fi.onchange = async () => { const file = fi.files && fi.files[0]; if (!file) return; const text = await file.text(); if (importICS(text, file.name.replace(/\.ics$/i, ""))) render(); };
+  const uf = $("#icsUrlForm"); if (uf) uf.onsubmit = async e => { e.preventDefault(); let u = $("#icsUrl").value.trim(); if (!u) return; u = u.replace(/^webcal:/i, "https:"); try { const r = await fetch(u); if (!r.ok) throw 0; const text = await r.text(); if (importICS(text, new URL(u).hostname)) render(); } catch(err){ toast("That site doesn't let apps read the link directly. Download the .ics file and use Import."); } };
+  $$("[data-cal-del]").forEach(b => b.onclick = () => { const cal = loadCal(); cal.sources = (cal.sources||[]).filter(s => s.id !== b.dataset.calDel); cal.events = (cal.events||[]).filter(e => e.src !== b.dataset.calDel); saveCal(cal); render(); });
+  const out = $("#icsOut"); if (out) out.onclick = () => { const its = agendaItems(today(), 60).filter(it => it.kind==="plan" || it.kind==="invite").map(it => ({id:(it.id||rid(6)) + "-" + it.s, s:it.s, e:it.e || it.s + 3600e3, title:it.title, loc:it.loc || ""})); if (!its.length) { toast("Nothing to export yet: make a study plan or join an invite"); return; } downloadICS(its, "lifeon.ics"); };
+}
+
+// ================= study planner =================
+const daysBetween = (a, b) => Math.round((new Date(b + "T12:00") - new Date(a + "T12:00")) / 864e5);
+function buildPlan(exams, prefs){
+  const ex = exams.filter(e => e.date > today()).map(e => ({id:e.id, name:e.name, date:e.date, need:Math.max(1, Number(e.hours) || 20) * 60})).sort((a,b) => a.date.localeCompare(b.date));
+  const blocks = []; if (!ex.length) return {blocks, short:0};
+  const last = ex[ex.length - 1].date, cal = (loadCal().events || []).filter(e => !e.allDay);
+  for (let d = new Date(); dkey(d) < last; d = addDays(d, 1)) {
+    const k = dkey(d), wd = (d.getDay() + 6) % 7; let cap = (wd >= 5 ? Number(prefs.we) : Number(prefs.wd)) * 60; if (!(cap > 0)) continue;
+    const [hh, mm] = String(prefs.start || "15:00").split(":").map(Number);
+    let t = new Date(d.getFullYear(), d.getMonth(), d.getDate(), hh || 0, mm || 0).getTime();
+    if (k === today() && t < Date.now()) t = Math.ceil(Date.now() / (15*60e3)) * 15*60e3;
+    const dayEnd = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 22, 30).getTime();
+    let guard = 0;
+    while (cap >= 25 && guard++ < 40) {
+      const clash = cal.find(e => e.s < t + 50*60e3 && (e.e || e.s + 3600e3) > t); if (clash) { t = (clash.e || clash.s + 3600e3) + 10*60e3; continue; }
+      if (t + 25*60e3 > dayEnd) break;
+      const open = ex.filter(e => e.date > k && e.need > 0); if (!open.length) break;
+      open.sort((a,b) => b.need / Math.max(1, daysBetween(k, b.date)) - a.need / Math.max(1, daysBetween(k, a.date)));
+      const pick = open[0]; const mins = Math.min(50, cap, pick.need);
+      blocks.push({id:rid(6), day:k, s:t, mins, examId:pick.id, examName:pick.name, kind: daysBetween(k, pick.date) <= 2 ? "review" : "learn", done:false});
+      pick.need -= mins; cap -= mins; t += (mins + 10) * 60e3;
+    }
+  }
+  return {blocks, short: Math.round(ex.reduce((s, e) => s + Math.max(0, e.need), 0) / 60)};
+}
+function startPlanBlock(id){
+  const b = (((meP()||{}).study||{}).plan||{}).blocks?.find(x => x.id === id); if (!b) return;
+  openFocus("study", null, (b.kind==="review" ? "Review: " : "Study: ") + b.examName, b.mins >= 50 ? "pomo2" : "25", null, id);
+}
+
 // ================= boot =================
 let gen = 0;
 function boot(store){
@@ -2232,8 +2619,21 @@ function boot(store){
   render();
 }
 checkInterrupted();
-makeDemo().then(d => { if (!S || S.demo) { boot(d); cloudBoot(d); } });
-makeLive().then(live => { if (live) boot(live); });
+(async () => {
+  const livePromise = makeLive();
+  if (getMode()==="demo") boot(await makeDemo()); else boot(makeLocal());
+  if (getMode()!=="demo") {
+    const local = S && S.kind==="local" && S.dump ? S.dump() : null;
+    const cs = await makeCloud();
+    if (cs) {
+      setMode("cloud"); boot(cs);
+      const lp = local && local.players && local.players["local-me"];
+      let moved = false;
+      if (lp && lp.profile) cs.on("players", m => { if (moved || m[cs.me]) { moved = true; return; } moved = true; cs.save("players", cs.me, {...lp, name: cs.myName}).catch(() => {}); });
+    }
+  }
+  const lv = await livePromise; if (lv) boot(lv);
+})();
 })();
 </script>
 <div id="installSheet" hidden style="position:fixed;left:12px;right:12px;bottom:calc(84px + env(safe-area-inset-bottom, 0px));z-index:50;max-width:436px;margin:0 auto;background:#0E2B26;color:#EAF4F1;border-radius:20px;padding:16px;box-shadow:0 12px 40px rgba(0,0,0,.3);font-family:Figtree,system-ui,sans-serif">
@@ -2266,7 +2666,7 @@ makeLive().then(live => { if (live) boot(live); });
 })();
 </script>
 <script>
-// Offline support + automatic updates (version 202611020919)
+// Offline support + automatic updates (version 202611020947)
 if ("serviceWorker" in navigator && location.protocol === "https:") {
   navigator.serviceWorker.register("sw.js").catch(function(){});
   var reloaded = false;
