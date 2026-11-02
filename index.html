@@ -1435,7 +1435,7 @@ function render(){
   $$("#view [data-exit-demo]").forEach(b => b.onclick = () => { setMode("local"); location.hash = ""; location.reload(); });
   $$("#view [data-enter-demo]").forEach(b => b.onclick = async () => { const keep = {profile:profile(), town:myTown(), blocked:(meP()||{}).blocked}; setMode("demo"); const d = await makeDemo(); boot(d); await d.loadGuest(); const np = {...clone(meP()), ...keep}; delete np.name; await writeMe(np); go("today"); toast("Presentation mode: example data loaded"); });
   hydrateNames();
-  if (BLOCKED_APP && meP() && meP().profile && !$(".flow")) { const app = BLOCKED_APP; BLOCKED_APP = null; try { history.replaceState(null, "", location.pathname + "#today"); } catch(e){} logBlockedHit(); showBlocked(app); }
+  if (BLOCKED_APP && state.ready.players && !$(".flow")) { const app = BLOCKED_APP; BLOCKED_APP = null; try { history.replaceState(null, "", location.pathname + "#today"); } catch(e){} logBlockedHit(); showBlocked(app); }
   if (PENDING_INVITE && state.invites && state.invites[PENDING_INVITE] && meP() && meP().profile && !$(".flow")) { const id = PENDING_INVITE; PENDING_INVITE = null; openInvite(id); }
 }
 async function hydrateNames(root=document){
