@@ -2929,7 +2929,9 @@ function boot(store){
 checkInterrupted();
 (async () => {
   const livePromise = makeLive();
-  if (getMode()==="demo") boot(await makeDemo()); else boot(makeLocal());
+  let wantDemo = false; try { wantDemo = new URLSearchParams(location.search).has("demo"); } catch(e){}
+  if (wantDemo) { setMode("demo"); try { localStorage.removeItem(BANNER_KEY); } catch(e){} }
+  if (getMode()==="demo") { const d = await makeDemo(); boot(d); if (wantDemo && (!meP() || !meP().profile)) { await d.loadGuest(); go("today"); } } else boot(makeLocal());
   if (getMode()!=="demo") {
     const local = S && S.kind==="local" && S.dump ? S.dump() : null;
     const cs = await makeCloud();
@@ -2974,7 +2976,7 @@ checkInterrupted();
 })();
 </script>
 <script>
-// Offline support + automatic updates (version 202611022044)
+// Offline support + automatic updates (version 202611022046)
 if ("serviceWorker" in navigator && location.protocol === "https:") {
   navigator.serviceWorker.register("sw.js").catch(function(){});
   var reloaded = false;
