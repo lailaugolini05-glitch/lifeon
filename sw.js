@@ -1,6 +1,6 @@
-// LifeOn service worker, version 202611020828
+// LifeOn service worker, version 202611020845
 // Pages: network first (so every update shows up), cache as offline fallback. Fonts and libraries: cache first.
-const CACHE = "lifeon-202611020828";
+const CACHE = "lifeon-202611020845";
 const CORE = ["./", "index.html", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"];
 self.addEventListener("install", e => { self.skipWaiting(); e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE)).catch(() => {})); });
 self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
