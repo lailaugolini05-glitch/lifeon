@@ -1375,7 +1375,7 @@ function presentationCard(){
     : `<section class="card"><h3>Presentation mode</h3><p class="small muted">Show LifeOn full of example people, places and invites, for a demo. Your real data stays as it is.</p><button class="ghost small" data-enter-demo style="align-self:flex-start">Start presentation mode</button></section>`;
 }
 // ================= routing =================
-const ALL_ROUTES = ["today","explore","friends","shop","team","me","study","learn","agenda","train","eat","remind"];
+const ALL_ROUTES = ["today","explore","friends","shop","team","me","study","learn","agenda","train","eat","remind","block"];
 function tabs(){
   const t = [];
   if (meP()) t.push(["today","Today"],["explore","Nearby"],["friends","Friends"]);
@@ -1389,7 +1389,7 @@ let CUR = (() => { try { const h=(location.hash||"").slice(1); return ALL_ROUTES
 const route = () => ALL_ROUTES.includes(CUR) ? CUR : "today";
 function go(r){ if (!ALL_ROUTES.includes(r)) return; CUR = r; if (r==="shop" && !state.shopMid) state.shopMid = S.me; try { history.replaceState(null, "", "#"+r); } catch(e){} render(); try { window.scrollTo(0,0); } catch(e){} }
 window.addEventListener("hashchange", () => { const h = (location.hash||"").slice(1); if (h !== CUR && ALL_ROUTES.includes(h)) go(h); });
-document.addEventListener("click", e => { const a = e.target.closest && e.target.closest('a[href^="#"]'); if (!a) return; e.preventDefault(); go(a.getAttribute("href").slice(1)); });
+document.addEventListener("click", e => { const a = e.target.closest && e.target.closest('a[href^="#"]'); if (!a) return; e.preventDefault(); if (a.hasAttribute("data-close-flow")) { const fl = a.closest(".flow"); if (fl) fl.remove(); } go(a.getAttribute("href").slice(1)); });
 function renderTabs(){ const r = route(); const t = tabs(); $("#tabs").innerHTML = t.length > 1 ? t.map(([k,l])=>`<a href="#${k}" ${k===r||(r==="study"||r==="learn")&&k==="today"?'aria-current="page"':""}>${TAB_ICON[k]}<span>${l}</span></a>`).join("") : ""; }
 
 function render(){
@@ -1412,6 +1412,7 @@ function render(){
   else if (r==="train") { v.innerHTML = viewTrain(); bindTrain(); }
   else if (r==="eat") { v.innerHTML = viewEat(); bindEat(); }
   else if (r==="remind") { v.innerHTML = viewRemind(); bindRemind(); }
+  else if (r==="block") { v.innerHTML = viewBlock(); bindBlock(); }
   else if (r==="explore") { v.innerHTML = viewExplore(); bindExplore(); }
   else if (r==="friends") { v.innerHTML = viewFriends(); bindFriends(); }
   else { v.innerHTML = viewMe(); bindMe(); }
@@ -1434,6 +1435,7 @@ function render(){
   $$("#view [data-exit-demo]").forEach(b => b.onclick = () => { setMode("local"); location.hash = ""; location.reload(); });
   $$("#view [data-enter-demo]").forEach(b => b.onclick = async () => { const keep = {profile:profile(), town:myTown(), blocked:(meP()||{}).blocked}; setMode("demo"); const d = await makeDemo(); boot(d); await d.loadGuest(); const np = {...clone(meP()), ...keep}; delete np.name; await writeMe(np); go("today"); toast("Presentation mode: example data loaded"); });
   hydrateNames();
+  if (BLOCKED_APP && meP() && meP().profile && !$(".flow")) { const app = BLOCKED_APP; BLOCKED_APP = null; try { history.replaceState(null, "", location.pathname + "#today"); } catch(e){} logBlockedHit(); showBlocked(app); }
   if (PENDING_INVITE && state.invites && state.invites[PENDING_INVITE] && meP() && meP().profile && !$(".flow")) { const id = PENDING_INVITE; PENDING_INVITE = null; openInvite(id); }
 }
 async function hydrateNames(root=document){
@@ -1689,7 +1691,7 @@ function openFocus(kind, preMode, taskLabel, prePlan, preType, blockId, interval
       ${f.task?`<div class="card"><p class="small muted">Working on</p><b>${esc(f.task)}</b></div>`:""}
       ${kind==="move" ? `<div class="card"><p class="small" style="font-weight:700">What are you doing?</p><div class="chips" id="fType">${MOVE_TYPES.map(t=>`<button type="button" class="chip" data-v="${t}" aria-pressed="${f.type===t}">${t}</button>`).join("")}</div><p class="small muted">${["Walk","Run","Bike"].includes(f.type) ? "Like Strava: GPS records your route, distance and speed. Keep LifeOn open (the screen stays on). Points only if the GPS confirms it." : "Points only at a partner place: choose At a partner place and check in with the code on the poster."}</p><p class="small" style="font-weight:700">Music? Start it first, then come back and press Start</p>${musicChips(f.type==="Run" ? "running" : f.type==="Bike" ? "cycling" : f.type==="Yoga" ? "yoga" : "workout")}</div>` : `<div class="card"><p class="small muted">Locked during the session</p>
         <div class="blocked">${(p.blocked||[]).map(a=>`<span>${ICON.lock}${esc(a)}</span>`).join("") || `<span>No apps chosen yet. Pick them in Me.</span>`}</div>
-        <p class="small muted">Open any other app for more than 10 seconds and the session stops.${f.plan.startsWith("pomo")?" During Pomodoro breaks you're free.":""} Keep the screen on, phone face down.${kind==="study"||kind==="work" ? " LifeOn will beep 1–2 times to check you're there, and at the end you'll write what you did." : ""}</p></div>`}
+        <p class="small muted">Open any other app for more than 10 seconds and the session stops.${f.plan.startsWith("pomo")?" During Pomodoro breaks you're free.":""} Keep the screen on, phone face down. <a class="link" href="#block" data-close-flow>Turn on real blocking</a>.${kind==="study"||kind==="work" ? " LifeOn will beep 1–2 times to check you're there, and at the end you'll write what you did." : ""}</p></div>`}
       <div class="card"><p class="small" style="font-weight:700">How long?</p>
         <div class="chips" id="fPlan">${KIND_PLANS[kind].map(k=>`<button type="button" class="chip" data-v="${k}" aria-pressed="${f.plan===k}">${esc(PLANS[k].label)}</button>`).join("")}</div>
         <p class="small" style="font-weight:700">Where?</p>
@@ -2096,6 +2098,7 @@ function viewMe(){
   ${activityList()}
   ${accountCard()}
   ${presentationCard()}
+  <section class="card"><h3>Real blocking</h3><p class="small muted">Lock Instagram, TikTok and YouTube for real with your phone's own tools, together with LifeOn.</p><a class="btn small" href="#block" style="align-self:flex-start;background:var(--night);color:var(--night-ink)">${ICON.lock} Set it up</a></section>
   <section class="card"><h3>Notifications and reminders</h3><p class="small muted">Study sessions, invites, a daily nudge and your own reminders.</p><a class="btn small ghostlink" href="#remind" style="align-self:flex-start">${ICON.bell} Open</a></section>
   <form class="card" id="goalForm"><h3>Weekly goals</h3><p class="small muted">Set your own targets. They show as rings on Today.</p><div class="grid3"><label for="gF">Focus hours<input id="gF" type="number" min="1" max="60" value="${g.focus}"></label><label for="gM">Workouts<input id="gM" type="number" min="0" max="21" value="${g.move}"></label><label for="gP">Points<input id="gP" type="number" min="50" max="1050" step="50" value="${g.points}"></label></div><button class="ghost small" type="submit" style="align-self:flex-start">Save goals</button></form>
   <form class="card" id="meForm"><h2>Settings</h2>
@@ -3057,13 +3060,69 @@ function scrollCard(){
     <div class="grid2"><div class="stat"><span class="n">${fmtMin(base)}</span><span class="k">a day when you started</span></div><div class="stat"><span class="n" style="color:${diff!=null && diff>0 ? "var(--good)" : "inherit"}">${cur!=null ? fmtMin(cur) : "—"}</span><span class="k">${avg!=null ? "a day this week" : "log today's time"}</span></div></div>
     ${diff!=null ? `<p style="font-weight:700">${diff > 0 ? "You won back " + fmtMin(diff) + " a day. That's " + Math.round(diff*7/60) + " hours a week." : diff < 0 ? "A bit more than when you started. One Focus session today?" : "Same as when you started. Let's lower it."}</p>` : ""}
     <form id="scrollForm" class="row"><input id="scrollMin" type="number" min="0" max="1200" inputmode="numeric" placeholder="Today's social minutes" aria-label="Today's minutes on social media" value="${log[today()] != null ? log[today()] : ""}"><button class="small" type="submit">Save</button></form>
-    <p class="small muted">Find it in Screen Time (iPhone) or Digital Wellbeing (Android). The App Store version will read it automatically.</p></section>`;
+    <p class="small muted">Find it in Screen Time (iPhone) or Digital Wellbeing (Android). The App Store version will read it automatically.</p>
+    ${((p.blockHits||{})[today()]) ? `<p class="small">Today you tried to open a locked app <b>${p.blockHits[today()]}</b> ${p.blockHits[today()]===1 ? "time" : "times"}.</p>` : ""}
+    <a class="btn small" href="#block" style="align-self:flex-start;background:var(--night);color:var(--night-ink)">${ICON.lock} Turn on real blocking</a></section>`;
 }
 function bindScroll(){ const f = $("#scrollForm"); if (f) f.onsubmit = async e => { e.preventDefault(); const v = Number($("#scrollMin").value); if (!(v >= 0)) return; const np = clone(meP()); np.screen = {...(np.screen||{}), [today()]: Math.round(v)}; const cut = dkey(Date.now() - 120*864e5); np.screen = Object.fromEntries(Object.entries(np.screen).filter(([k]) => k >= cut)); if (await writeMe(np)) toast(v < (Number(np.baseline)||180) ? "Saved. Less than when you started: well done!" : "Saved. Let's bring it down together."); }; }
 function toolsCard(){
   const tools = [["agenda", ICON.cal, "Agenda"], ["ai", ICON.spark, "Plan with AI"], ["train", ICON.gym, "Workouts"], ["eat", ICON.food, "Eat well"], ["remind", ICON.bell, "Reminders"]];
   return `<section class="tiles" style="grid-template-columns:repeat(5,1fr)" aria-label="Tools">${tools.map(([k,ic,l]) => `<button class="tile" data-tool="${k}"><span class="ti" style="background:var(--sunk);color:var(--ink)">${ic}</span>${l}</button>`).join("")}</section>`;
 }
+
+// ================= real blocking (phone tools + LifeOn) =================
+const BLOCK_BASE = () => location.origin + location.pathname;
+let BLOCKED_APP = (() => { try { const v = new URLSearchParams(location.search).get("blocked"); return v ? v.slice(0, 30) : null; } catch(e){ return null; } })();
+function viewBlock(){
+  const link = BLOCK_BASE() + "?blocked=Instagram";
+  const ios = /iPhone|iPad|iPod/.test(navigator.userAgent), android = /Android/.test(navigator.userAgent);
+  const iosCard = `<section class="card"><h2>iPhone</h2>
+    <h3>1 · Hard lock in your study hours (2 minutes)</h3>
+    <ol class="small" style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px">
+      <li>Settings → <b>Screen Time</b> → <b>Downtime</b> → turn on <b>Scheduled</b> and set your study hours (e.g. 15:00–19:00).</li>
+      <li>Turn on <b>Block at Downtime</b>.</li>
+      <li>Screen Time → <b>Always Allowed</b>: keep Phone, Messages, Maps and LifeOn; remove Instagram, TikTok, YouTube.</li>
+      <li>Screen Time → <b>Use Screen Time Passcode</b>: let a friend or your parents type it, so you can't skip the lock yourself.</li></ol>
+    <h3>2 · Instagram sends you back to LifeOn (3 minutes)</h3>
+    <ol class="small" style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px">
+      <li>Settings → <b>Focus</b> → <b>+</b> → Custom → name it <b>LifeOn</b>. Under Apps, silence Instagram, TikTok and YouTube.</li>
+      <li>Open the <b>Shortcuts</b> app → <b>Automation</b> → <b>+</b> → <b>App</b> → choose Instagram, TikTok and YouTube → <b>Is Opened</b> → <b>Run Immediately</b> → Next.</li>
+      <li>Add the action <b>Get Current Focus</b>, then <b>If</b> → Current Focus <b>is</b> LifeOn.</li>
+      <li>Inside the If, add <b>Open URLs</b> and paste the link below. Done.</li>
+      <li>When you start studying, turn on the <b>LifeOn</b> Focus from Control Center: if you open Instagram, LifeOn appears instead.</li></ol>
+    <div class="row"><input readonly value="${esc(link)}" aria-label="LifeOn link for the shortcut" style="font-family:var(--mono);font-size:12px"><button class="small" data-copy-link="${esc(link)}">Copy</button></div></section>`;
+  const andCard = `<section class="card"><h2>Android</h2>
+    <h3>Hard lock with Focus mode (2 minutes)</h3>
+    <ol class="small" style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px">
+      <li>Settings → <b>Digital Wellbeing & parental controls</b> → <b>Focus mode</b>.</li>
+      <li>Select Instagram, TikTok, YouTube and the other apps that distract you.</li>
+      <li><b>Set a schedule</b> with your study hours, or tap <b>Turn on now</b> when you start a LifeOn session.</li>
+      <li>While Focus mode is on those apps are paused: their icon is grey and they won't open.</li></ol>
+    <p class="small muted">On Samsung the menu may be called <b>Modes and Routines</b>. Want it stricter? Digital Wellbeing → Parental controls with Family Link and a parent's PIN.</p></section>`;
+  return `<div class="row"><a href="#me" class="link small">‹ Back</a></div>
+  <section class="card" style="background:var(--night);color:var(--night-ink)"><h2>Real blocking, today</h2><p class="small" style="opacity:.9">Apps opened from a link can't close other apps: only the App Store version will block them by itself. Until then, your phone already has the tools: LifeOn tells you exactly how to switch them on, and you get the lock and the points together.</p></section>
+  ${android && !ios ? andCard + iosCard : iosCard + andCard}
+  <section class="card"><h3>How it works with your points</h3><p class="small muted">Start a LifeOn Focus at the same time as the phone's lock. If you open Instagram anyway, LifeOn appears and counts the attempt: you see how many times a day you reach for social media. The session only counts if you stay in LifeOn.</p></section>`;
+}
+function bindBlock(){ $$("[data-copy-link]").forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(b.dataset.copyLink); toast("Link copied: paste it in the Shortcut"); } catch(e){ toast("Select the link and copy it"); } }); }
+function showBlocked(appName){
+  const el = flow(appName + " is locked", true); el.style.zIndex = 35;
+  const draw = () => {
+    const p = meP() || {}; const hits = ((p.blockHits||{})[today()]) || 0;
+    el.innerHTML = `<div class="in" style="min-height:100%;justify-content:center;text-align:center">
+      <div style="width:110px;height:110px;margin:0 auto;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb, var(--accent) 22%, transparent);color:var(--accent)"><span style="width:56px;height:56px;display:block">${ICON.lock}</span></div>
+      <h1 style="font-size:38px;line-height:1.05">${esc(appName)} is locked.</h1>
+      <p class="muted">You're in LifeOn time. That's attempt <b>${hits}</b> today: the urge passes in about a minute.</p>
+      <button class="full" data-bfocus>Start a Focus session instead</button>
+      <button class="ghost full" data-bclose>Back to LifeOn</button>
+      <button class="ghost full" data-bearn style="opacity:.8">I really need it: let me earn it</button></div>`;
+    $("[data-bclose]", el).onclick = () => { el.remove(); render(); };
+    $("[data-bfocus]", el).onclick = () => { el.remove(); openFocus(profile()==="work" ? "work" : "study"); };
+    $("[data-bearn]", el).onclick = () => openUnlock(() => { el.innerHTML = `<div class="in" style="min-height:100%;justify-content:center;text-align:center"><h1 style="font-size:34px">OK, you earned it.</h1><p class="muted">Turn off the <b>LifeOn</b> Focus (Control Center) or Focus mode (Android) to open ${esc(appName)}. Be back soon: the streak is waiting.</p><button class="full" data-bclose>Close</button></div>`; $("[data-bclose]", el).onclick = () => { el.remove(); render(); }; });
+  };
+  draw();
+}
+async function logBlockedHit(){ const p = meP(); if (!p || !p.profile) return; const np = clone(p); np.blockHits = {...(np.blockHits||{}), [today()]: (((np.blockHits||{})[today()])||0) + 1}; const cut = dkey(Date.now() - 60*864e5); np.blockHits = Object.fromEntries(Object.entries(np.blockHits).filter(([k]) => k >= cut)); await writeMe(np); }
 
 // ================= boot =================
 let gen = 0;
@@ -3132,7 +3191,7 @@ checkInterrupted();
 })();
 </script>
 <script>
-// Offline support + automatic updates (version 202611022101)
+// Offline support + automatic updates (version 202611022126)
 if ("serviceWorker" in navigator && location.protocol === "https:") {
   navigator.serviceWorker.register("sw.js").catch(function(){});
   var reloaded = false;
