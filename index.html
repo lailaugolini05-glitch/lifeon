@@ -210,8 +210,10 @@ nav.tabs a[aria-current="page"]{color:var(--accent)}
 .pickrow{display:grid!important;grid-template-columns:44px 1fr;gap:12px;align-items:center;width:100%;background:none!important;color:inherit!important;border-radius:0!important;padding:12px 0!important;text-align:left;font-weight:500!important}
 button svg{width:18px;height:18px;flex:none}
 .btn.small{padding:8px 12px;font-size:13px}
+.btn svg,label.btn svg{width:16px;height:16px;flex:none}
 .btn.ghostlink{background:var(--sunk);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
-a.chip{text-decoration:none;padding:8px 12px;font-size:13px}
+a.chip{text-decoration:none;padding:8px 12px;font-size:13px;display:inline-flex;align-items:center;gap:6px}
+a.chip svg{width:14px;height:14px}
 body.onboarding header.top, body.onboarding nav.tabs{display:none}
 body.ob-dark, body.ob-dark .app{background:var(--night);color:var(--night-ink)}
 .ob{display:flex;flex-direction:column;gap:14px;padding-top:calc(12px + env(safe-area-inset-top, 0px))}
@@ -1018,6 +1020,8 @@ const TAB_ICON = { today:ICON.focus, explore:'<svg viewBox="0 0 24 24" fill="non
 
 ICON.sport = ICON.gym; ICON.services = ICON.other;
 ICON.pin = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>';
+ICON.music = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>';
+ICON.bell = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>';
 ICON.check = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/><path d="M9 12l2 2 4-4"/></svg>';
 const MARK = (c1, c2) => `<svg viewBox="0 0 100 100" aria-hidden="true"><path d="M32 24 A34 34 0 1 0 68 24" fill="none" stroke="${c1}" stroke-width="13" stroke-linecap="round"/><line x1="50" y1="12" x2="50" y2="46" stroke="${c2}" stroke-width="13" stroke-linecap="round"/></svg>`;
 // ================= location =================
@@ -1125,7 +1129,7 @@ function groupBonusFor(pid, s){
 function stats(pid){
   const p = state.players[pid] || {}; const byDay = {}; const add = (k,v) => { byDay[k] = (byDay[k]||0) + v; };
   let focusMin = 0, weekFocus = 0, weekMove = 0, done = 0, tried = 0; const wk = new Set(weekKeys());
-  for (const s of (p.sessions||[])) { const k = dkey(s.start); tried++; if (s.ok){ done++; focusMin += s.min; if (wk.has(k)) { if (s.kind==="move") weekMove++; else weekFocus += s.min; } } add(k, sessionPts(s, groupBonusFor(pid, s))); }
+  for (const s of (p.sessions||[])) { const k = dkey(s.start); tried++; if (s.ok){ done++; focusMin += s.min; if (wk.has(k)) { if (s.kind==="move" || s.kind==="workout") weekMove++; else weekFocus += s.min; } } add(k, sessionPts(s, groupBonusFor(pid, s))); }
   const seenM = {};
   for (const c of (p.checkins||[]).slice().sort((a,b)=>a.at-b.at)) { const k = dkey(c.at); add(k, 30); const mk = k.slice(0,7); const set = seenM[mk] = seenM[mk] || new Set(); const before = set.size; set.add(c.venueId); if (before===2 && set.size===3) add(k, 60); if (wk.has(k) && ["gym","sport"].includes(state.merchants[c.venueId]?.kind)) weekMove++; }
   for (const k of Object.keys(p.ritual||{})) add(k, 5);
@@ -1346,7 +1350,7 @@ async function authStart(kind, email){
   const redirectTo = location.origin + location.pathname;
   if (kind==="email") { const {error} = await c.auth.signInWithOtp({email, options:{emailRedirectTo:redirectTo, shouldCreateUser:true}}); if (error) { ob.authMsg = /rate|seconds/i.test(error.message||"") ? "Too many emails in a short time. Wait a minute and try again." : "Couldn't send the email. Check the address and try again."; } else { ob.otpFor = email; ob.authMsg = "We sent an email to "+email+". Type the 6-digit code here, or open the link on this phone."; } render(); return; }
   const {error} = await c.auth.signInWithOAuth({provider:kind, options:{redirectTo}});
-  if (error) { ob.authMsg = (kind==="apple" ? "Apple" : "Google")+" sign-in isn't available yet. Try email, or continue on this phone."; render(); }
+  if (error) { ob.authMsg = /not enabled|provider/i.test(error.message||"") ? "Google sign-in is being switched on. For now, create an account with email and password." : "Google sign-in didn't work. Try again or use email."; render(); }
 }
 function accountCard(){
   if (S.kind==="live") return "";
@@ -1360,7 +1364,7 @@ function presentationCard(){
     : `<section class="card"><h3>Presentation mode</h3><p class="small muted">Show LifeOn full of example people, places and invites, for a demo. Your real data stays as it is.</p><button class="ghost small" data-enter-demo style="align-self:flex-start">Start presentation mode</button></section>`;
 }
 // ================= routing =================
-const ALL_ROUTES = ["today","explore","friends","shop","team","me","study","learn","agenda"];
+const ALL_ROUTES = ["today","explore","friends","shop","team","me","study","learn","agenda","train","eat","remind"];
 function tabs(){
   const t = [];
   if (meP()) t.push(["today","Today"],["explore","Nearby"],["friends","Friends"]);
@@ -1394,6 +1398,9 @@ function render(){
   else if (r==="study") { v.innerHTML = viewStudy(); bindStudy(); }
   else if (r==="learn") { v.innerHTML = viewLearn(); bindLearn(); }
   else if (r==="agenda") { v.innerHTML = viewAgenda(); bindAgenda(); }
+  else if (r==="train") { v.innerHTML = viewTrain(); bindTrain(); }
+  else if (r==="eat") { v.innerHTML = viewEat(); bindEat(); }
+  else if (r==="remind") { v.innerHTML = viewRemind(); bindRemind(); }
   else if (r==="explore") { v.innerHTML = viewExplore(); bindExplore(); }
   else if (r==="friends") { v.innerHTML = viewFriends(); bindFriends(); }
   else { v.innerHTML = viewMe(); bindMe(); }
@@ -1408,6 +1415,11 @@ function render(){
   $$("#view [data-newinv]").forEach(b => b.onclick = () => openNewInvite());
   $$("#view [data-goinv]").forEach(b => b.onclick = () => { state.friendsTab = "invites"; go("friends"); });
   $$("#view [data-plan-start]").forEach(b => b.onclick = () => startPlanBlock(b.dataset.planStart));
+  $$("#view [data-ev-new]").forEach(b => b.onclick = () => openEventEditor());
+  $$("#view [data-ev-edit]").forEach(b => b.onclick = () => openEventEditor(b.dataset.evEdit));
+  $$("#view [data-ai]").forEach(b => { if (!b.onclick) b.onclick = () => openAI(b.dataset.ai); });
+  $$("#view [data-tool]").forEach(b => b.onclick = () => { const k = b.dataset.tool; if (k==="ai") openAI(profile()==="study" ? "study" : "week"); else go(k); });
+  bindScroll();
   $$("#view [data-exit-demo]").forEach(b => b.onclick = () => { setMode("local"); location.hash = ""; location.reload(); });
   $$("#view [data-enter-demo]").forEach(b => b.onclick = async () => { const keep = {profile:profile(), town:myTown(), blocked:(meP()||{}).blocked}; setMode("demo"); const d = await makeDemo(); boot(d); await d.loadGuest(); const np = {...clone(meP()), ...keep}; delete np.name; await writeMe(np); go("today"); toast("Presentation mode: example data loaded"); });
   hydrateNames();
@@ -1425,7 +1437,7 @@ function flow(label, night){ const el = document.createElement("div"); el.classN
 
 // ================= welcome / onboarding =================
 const INTRO = [
-  {icon:"lock", color:"var(--accent)", title:"Phone down.", text:"Lock Instagram, TikTok and the apps that steal your time. Leave LifeOn during a session and it stops: no tricks."},
+  {icon:"lock", color:"var(--accent)", title:"Stop scrolling.", text:"Hours go by on Instagram and TikTok without us noticing. In our survey, 61% of young people use social media more than they want. LifeOn locks those apps while you focus: leave LifeOn and the session stops."},
   {icon:"walk", color:"var(--sport)", title:"Focus. Move. Earn.", text:"Study, work or get moving. Every real minute turns into points, checked with codes at the counter and GPS for your runs."},
   {icon:"shop", color:"var(--teal)", title:"Life on.", text:"Spend your points in cafés, gyms and shops near you: free coffee, discounts, trial classes."}
 ];
@@ -1444,7 +1456,6 @@ function viewWelcome(){
   const bar = `<div class="ob-progress" aria-label="Step ${ob.step} of 4">${[1,2,3,4].map(i=>`<i class="${i<=ob.step?"on":""}"></i>`).join("")}</div>`;
   const back = `<button class="ghost small" data-ob="back" style="align-self:flex-start">‹ Back</button>`;
   if (ob.step===1) return `<section class="ob">${back}${bar}<h1>Welcome to LifeOn</h1><p class="muted">Sign in to keep your points safe and use them on every device.</p>
-    <button class="authbtn apple" data-auth="apple">Continue with Apple</button>
     <button class="authbtn google" data-auth="google">Continue with Google</button>
     ${ob.emailOpen ? `<form class="card" id="obMail" style="gap:10px"><label for="obEmail">Email<input id="obEmail" type="email" autocomplete="email" required placeholder="you@email.com" value="${esc(ob.email||"")}"></label><label for="obPass">Password<input id="obPass" type="password" autocomplete="current-password" minlength="6" required placeholder="At least 6 characters"></label><button class="full" type="submit" data-mode="new">Create my account</button><button class="ghost full" type="submit" data-mode="old">I have an account: sign in</button></form>` : `<button class="authbtn mail" data-auth="email">Continue with email</button>`}
     ${ob.authMsg ? `<div class="banner">${esc(ob.authMsg)}</div>` : ""}
@@ -1592,7 +1603,7 @@ function viewToday(){
       ${(()=>{ const done = (p.sessions||[]).some(s=>s.ok && s.kind==="evening" && s.min>=60 && inThisWeek(s.start)); return done?'<span class="chip on">Done this week</span>':'<span class="chip">Not yet</span>'; })()}</section>
     ${explorerCard()}`;
   }
-  return `<h1 class="hello">${hello()}${S.kind==="cloud" && meP().name ? ", "+esc(meP().name) : ""}</h1>${heroBlock(st)}${quickTiles()}${dayAgendaCard()}${goalsBlock(st)}${invitesTodayCard()}${main}
+  return `<h1 class="hello">${hello()}${S.kind==="cloud" && meP().name ? ", "+esc(meP().name) : ""}</h1>${scrollCard()}${heroBlock(st)}${quickTiles()}${toolsCard()}${dayAgendaCard()}${goalsBlock(st)}${invitesTodayCard()}${main}
   ${live.length?`<section class="card"><div class="row between"><h3>Focusing right now</h3><span class="live">${live.length} live</span></div><div class="list">${liveRows(live)}</div><button class="ghost full" data-join-focus>Join them</button></section>`:""}
   ${plans.length?`<section class="card"><h3>Plans from your groups</h3><div class="list">${plans.map(x=>`<div class="row" style="align-items:flex-start"><img class="ava" alt="" data-uid="${esc(x.by)}" src="${avatar("?")}"><div style="min-width:0"><div class="small"><b data-uid="${esc(x.by)}">Someone</b> · ${esc(x.g)}</div><div>${esc(x.text)}</div></div></div>`).join("")}</div></section>`:""}
   ${nearOffers.length?`<section class="card"><div class="row between"><h3>Open now near you</h3><a href="#explore" class="link small">All</a></div><div class="list">${nearOffers.map(offerRow).join("")}</div></section>`:""}`;
@@ -1634,7 +1645,7 @@ function planCard(s, exams){
     <button class="full" id="makePlan" ${up.length ? "" : "disabled"}>${plan ? "Update my plan" : "Make my plan"}</button>${up.length ? "" : `<p class="small muted">Add an exam first, with the hours of study it needs.</p>`}
     ${plan ? `${plan.short ? `<div class="banner warn"><b>${plan.short} hours are missing.</b> Study a bit more each day, or start earlier.</div>` : `<div class="banner">Plan ready: ${(plan.blocks||[]).length} sessions until ${esc(fmtDate(up.length ? up[up.length-1].date : today()))}.</div>`}
       ${next.length ? `<div class="list">${next.map(b => agendaRow({kind:"plan", s:b.s, e:b.s + b.mins*60e3, title:(b.kind==="review" ? "Review: " : "Study: ") + b.examName + " · " + esc(fmtDate(b.day)), id:b.id, done:b.done})).join("")}</div>` : ""}
-      <div class="row wrap"><a class="link small" href="#agenda">See it in Agenda</a></div>` : ""}</section>`;
+      <div class="row wrap"><a class="link small" href="#agenda">See it in Agenda</a></div>` : ""}<button class="ghost small" data-ai="study" style="align-self:flex-start">${ICON.spark} Or plan it with your AI</button></section>`;
 }
 function bindStudy(){
   const mp = $("#makePlan"); if (mp) mp.onclick = async () => { const np = clone(meP()); np.study = np.study || {exams:[], tasks:[]}; const prefs = {wd:Number($("#plWd").value)||0, we:Number($("#plWe").value)||0, start:$("#plStart").value||"15:00"}; np.study.prefs = prefs; const res = buildPlan(np.study.exams||[], prefs); np.study.plan = {made:Date.now(), blocks:res.blocks, short:res.short}; if (await writeMe(np)) toast(res.blocks.length ? "Your plan is ready: "+res.blocks.length+" sessions" : "No time found: check your hours"); };
@@ -1655,17 +1666,17 @@ function bindLearn(){ $$("[data-try]").forEach(b=>b.onclick=()=>{ const t = TECH
 // ================= Focus =================
 let focusRun = null, unlock = { lockedUntil:0, strikes:0 };
 const SAFE_KEY = "lifeon-run";
-function openFocus(kind, preMode, taskLabel, prePlan, preType, blockId){
+function openFocus(kind, preMode, taskLabel, prePlan, preType, blockId, intervals){
   const p = meP(); const groups = myGroups();
   const places = Object.entries(state.merchants).filter(([mid])=>approved(mid)).sort((a,b)=>dist(a[1])-dist(b[1]));
-  const f = { kind, blockId: blockId || null, type: preType || MOVE_TYPES[0], plan: prePlan || KIND_PLANS[kind][0], mode: preMode || "solo", group: groups[0]?.[0] || "", venue: places[0]?.[0] || "", task: taskLabel || "" };
+  const f = { kind, intervals: intervals || null, blockId: blockId || null, type: preType || MOVE_TYPES[0], plan: prePlan || KIND_PLANS[kind][0], mode: preMode || "solo", group: groups[0]?.[0] || "", venue: places[0]?.[0] || "", task: taskLabel || "" };
   const el = flow(KIND_NAME[kind], true);
   const draw = () => {
     const fm = focusMins(f.plan);
     el.innerHTML = `<div class="in">
       <div class="row between"><h2>${esc(KIND_NAME[kind])}</h2><button class="ghost small" data-close>Close</button></div>
       ${f.task?`<div class="card"><p class="small muted">Working on</p><b>${esc(f.task)}</b></div>`:""}
-      ${kind==="move" ? `<div class="card"><p class="small" style="font-weight:700">What are you doing?</p><div class="chips" id="fType">${MOVE_TYPES.map(t=>`<button type="button" class="chip" data-v="${t}" aria-pressed="${f.type===t}">${t}</button>`).join("")}</div><p class="small muted">${["Walk","Run","Bike"].includes(f.type) ? "Like Strava: GPS records your route, distance and speed. Keep LifeOn open (the screen stays on). Points only if the GPS confirms it." : "Points only at a partner place: choose At a partner place and check in with the code on the poster."}</p></div>` : `<div class="card"><p class="small muted">Locked during the session</p>
+      ${kind==="move" ? `<div class="card"><p class="small" style="font-weight:700">What are you doing?</p><div class="chips" id="fType">${MOVE_TYPES.map(t=>`<button type="button" class="chip" data-v="${t}" aria-pressed="${f.type===t}">${t}</button>`).join("")}</div><p class="small muted">${["Walk","Run","Bike"].includes(f.type) ? "Like Strava: GPS records your route, distance and speed. Keep LifeOn open (the screen stays on). Points only if the GPS confirms it." : "Points only at a partner place: choose At a partner place and check in with the code on the poster."}</p><p class="small" style="font-weight:700">Music? Start it first, then come back and press Start</p>${musicChips(f.type==="Run" ? "running" : f.type==="Bike" ? "cycling" : f.type==="Yoga" ? "yoga" : "workout")}</div>` : `<div class="card"><p class="small muted">Locked during the session</p>
         <div class="blocked">${(p.blocked||[]).map(a=>`<span>${ICON.lock}${esc(a)}</span>`).join("") || `<span>No apps chosen yet. Pick them in Me.</span>`}</div>
         <p class="small muted">Open any other app for more than 10 seconds and the session stops.${f.plan.startsWith("pomo")?" During Pomodoro breaks you're free.":""}</p></div>`}
       <div class="card"><p class="small" style="font-weight:700">How long?</p>
@@ -1728,11 +1739,12 @@ function runFocus(el, f){
     const tl = $("#tLeft", el); if (tl) tl.firstChild.nodeValue = m+":"+pad(s);
     const a = $("#arc", el); if (a) { a.setAttribute("stroke-dashoffset", String(C*(1-left/(ph.to-ph.from)))); a.setAttribute("stroke", ph.ty==="b" ? "var(--teal)" : "var(--accent)"); }
     const fi = phases.slice(0,i+1).filter(x=>x.ty==="f").length;
-    const lbl = $("#phaseLbl", el); if (lbl) lbl.textContent = ph.ty==="b" ? "Break · stretch, drink water" : (fCount>1 ? "Pomodoro "+fi+" of "+fCount : KIND_NAME[f.kind]);
+    const lbl = $("#phaseLbl", el); if (lbl && !f.intervals) lbl.textContent = ph.ty==="b" ? "Break · stretch, drink water" : (fCount>1 ? "Pomodoro "+fi+" of "+fCount : KIND_NAME[f.kind]);
     const sub = $("#tSub", el); if (sub) sub.textContent = ph.ty==="b" ? "free time" : f.kind==="move" ? (focusRun.track ? (focusRun.track.denied ? "GPS off" : focusRun.track.fixes ? focusRun.track.km.toFixed(2)+" km" : "finding GPS…") : "keep going") : "stay here";
     const tip = $("#tTip", el); if (tip) tip.textContent = ph.ty==="b" ? "Break time: you can leave LifeOn. Be back when it ends, or the session stops." : (f.kind==="move" ? (focusRun.track ? "Keep LifeOn open: GPS is measuring your distance. Tap I'm done when you finish." : "Tap I'm done when you finish. Check in at a partner place for full points.") : f.kind==="work" ? "Deep work: one task, notifications off. Every 20 minutes, look 6 m away for 20 seconds." : "Phone face-down. Leave LifeOn for more than 10 seconds and the session stops. Want your apps back early? You'll have to earn it.");
   };
   focusRun.timer = setInterval(tick, 1000); tick();
+  if (f.intervals) { let lastCue = -1; const cueT = setInterval(() => { if (!focusRun) { clearInterval(cueT); return; } const e = (Date.now() - start)/1000; let idx = -1, acc = 0; for (let j = 0; j < f.intervals.length; j++) { acc += f.intervals[j][1]; if (e < acc) { idx = j; break; } } const lbl = $("#phaseLbl", el); if (lbl) lbl.textContent = idx >= 0 ? f.intervals[idx][0] + " · " + Math.ceil(acc - e) + "s" : "Keep going"; if (idx !== lastCue) { lastCue = idx; try { navigator.vibrate && navigator.vibrate([150,80,150]); } catch(err){} } }, 500); }
   const onVis = () => {
     if (!focusRun) return;
     if (document.hidden) focusRun.hiddenAt = Date.now();
@@ -2049,6 +2061,7 @@ function viewMe(){
   ${activityList()}
   ${accountCard()}
   ${presentationCard()}
+  <section class="card"><h3>Notifications and reminders</h3><p class="small muted">Study sessions, invites, a daily nudge and your own reminders.</p><a class="btn small ghostlink" href="#remind" style="align-self:flex-start">${ICON.bell} Open</a></section>
   <form class="card" id="goalForm"><h3>Weekly goals</h3><p class="small muted">Set your own targets. They show as rings on Today.</p><div class="grid3"><label for="gF">Focus hours<input id="gF" type="number" min="1" max="60" value="${g.focus}"></label><label for="gM">Workouts<input id="gM" type="number" min="0" max="21" value="${g.move}"></label><label for="gP">Points<input id="gP" type="number" min="50" max="1050" step="50" value="${g.points}"></label></div><button class="ghost small" type="submit" style="align-self:flex-start">Save goals</button></form>
   <form class="card" id="meForm"><h2>Settings</h2>
     <div><p class="small" style="font-weight:700;margin-bottom:8px">Apps locked during Focus</p><div class="chips" id="mApps">${SOCIAL.map(a=>`<button type="button" class="chip" data-v="${a}" aria-pressed="${(p.blocked||[]).includes(a)}">${a}</button>`).join("")}</div></div>
@@ -2084,7 +2097,7 @@ function bindMe(){
   const dm = $("#delMe"); if (dm) dm.onclick = async () => { if (dm.dataset.armed!=="1") { dm.dataset.armed="1"; dm.textContent="Tap again to delete everything"; return; } try { await S.remove("players", S.me); toast("Your data has been deleted"); } catch(e){ toast("Couldn't delete. Try again."); } };
   $$("#mProf [data-v]").forEach(b=>b.onclick=async()=>{ const np = clone(meP()); np.profile = b.dataset.v; if (await writeMe(np)) toast("Profile: "+PROFILES[np.profile].label); });
   const so = $("#signOut"); if (so) so.onclick = async () => { const c = await cloud(); try { await c.auth.signOut(); } catch(e){} cloudUser = null; setMode("local"); location.hash = ""; location.reload(); };
-  const gs2 = $("#goSignIn"); if (gs2) gs2.onclick = () => { state.ob = {step:1, slide:0, emailOpen:false}; const el = flow("Sign in"); el.innerHTML = `<div class="in"><div class="row between"><h2>Sign in</h2><button class="ghost small" data-close>Close</button></div><p class="muted">Keep your points safe and use them on every device.</p><button class="authbtn apple" data-a="apple">Continue with Apple</button><button class="authbtn google" data-a="google">Continue with Google</button><form id="siMail" class="card" style="gap:10px"><label for="siEmail">Or with your email<input id="siEmail" type="email" autocomplete="email" required placeholder="you@email.com"></label><label for="siPass">Password<input id="siPass" type="password" autocomplete="current-password" minlength="6" required placeholder="At least 6 characters"></label><button class="full" type="submit" data-mode="new">Create my account</button><button class="ghost full" type="submit" data-mode="old">I have an account: sign in</button></form><div id="siMsg"></div><form id="siOtp" class="card" style="gap:10px" hidden><label for="siCode">Code from the email<input id="siCode" inputmode="numeric" autocomplete="one-time-code" maxlength="10" required placeholder="123456" style="font-family:var(--mono);font-size:22px;letter-spacing:.2em"></label><button class="full" type="submit">Sign in</button></form></div>`; $("[data-close]", el).onclick = () => el.remove(); const msg = () => { const m = state.ob.authMsg; $("#siMsg", el).innerHTML = m ? `<div class="banner">${esc(m)}</div>` : ""; if (state.ob.otpFor) $("#siOtp", el).hidden = false; }; $("#siOtp", el).onsubmit = e => { e.preventDefault(); verifyCode(state.ob.otpFor, $("#siCode", el).value); }; $$("[data-a]", el).forEach(b=>b.onclick=async()=>{ await authStart(b.dataset.a); msg(); }); $("#siMail", el).onsubmit = async e => { e.preventDefault(); const isNew = !(e.submitter && e.submitter.dataset.mode==="old"); const ok = await emailAuth($("#siEmail", el).value.trim(), $("#siPass", el).value, isNew); if (!ok) msg(); }; };
+  const gs2 = $("#goSignIn"); if (gs2) gs2.onclick = () => { state.ob = {step:1, slide:0, emailOpen:false}; const el = flow("Sign in"); el.innerHTML = `<div class="in"><div class="row between"><h2>Sign in</h2><button class="ghost small" data-close>Close</button></div><p class="muted">Keep your points safe and use them on every device.</p><button class="authbtn google" data-a="google">Continue with Google</button><form id="siMail" class="card" style="gap:10px"><label for="siEmail">Or with your email<input id="siEmail" type="email" autocomplete="email" required placeholder="you@email.com"></label><label for="siPass">Password<input id="siPass" type="password" autocomplete="current-password" minlength="6" required placeholder="At least 6 characters"></label><button class="full" type="submit" data-mode="new">Create my account</button><button class="ghost full" type="submit" data-mode="old">I have an account: sign in</button></form><div id="siMsg"></div><form id="siOtp" class="card" style="gap:10px" hidden><label for="siCode">Code from the email<input id="siCode" inputmode="numeric" autocomplete="one-time-code" maxlength="10" required placeholder="123456" style="font-family:var(--mono);font-size:22px;letter-spacing:.2em"></label><button class="full" type="submit">Sign in</button></form></div>`; $("[data-close]", el).onclick = () => el.remove(); const msg = () => { const m = state.ob.authMsg; $("#siMsg", el).innerHTML = m ? `<div class="banner">${esc(m)}</div>` : ""; if (state.ob.otpFor) $("#siOtp", el).hidden = false; }; $("#siOtp", el).onsubmit = e => { e.preventDefault(); verifyCode(state.ob.otpFor, $("#siCode", el).value); }; $$("[data-a]", el).forEach(b=>b.onclick=async()=>{ await authStart(b.dataset.a); msg(); }); $("#siMail", el).onsubmit = async e => { e.preventDefault(); const isNew = !(e.submitter && e.submitter.dataset.mode==="old"); const ok = await emailAuth($("#siEmail", el).value.trim(), $("#siPass", el).value, isNew); if (!ok) msg(); }; };
   const ml = $("#meLoc"); if (ml) ml.onclick = async () => { ml.disabled = true; const n = await locate(); ml.disabled = false; if (n) { $("#mTown").value = n.town; toast("Near "+n.town+". Tap Save to keep it."); } else toast("Couldn't get your location."); };
   $("#meForm").onsubmit = async e => { e.preventDefault(); const np = clone(meP()); np.blocked = picked($("#mApps")); np.town = $("#mTown").value; np.baseline = Math.max(10, Number($("#mBase").value)||np.baseline); if (await writeMe(np)) toast("Saved"); };
   const gs = $("#goShop"); if (gs) gs.onclick = () => { state.shopMid = S.me; go("shop"); };
@@ -2511,7 +2524,7 @@ const gcalUrl = (title, s, e, details, loc) => `https://calendar.google.com/cale
 function downloadICS(items, name){
   const e2 = x => String(x||"").replace(/[\\,;]/g, m => "\\" + m).replace(/\n/g, "\\n");
   const lines = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//LifeOn//EN","CALSCALE:GREGORIAN"];
-  for (const it of items) lines.push("BEGIN:VEVENT", "UID:" + it.id + "@lifeon.app", "DTSTAMP:" + icsTime(Date.now()), "DTSTART:" + icsTime(it.s), "DTEND:" + icsTime(it.e), "SUMMARY:" + e2(it.title), "LOCATION:" + e2(it.loc), "END:VEVENT");
+  for (const it of items) { lines.push("BEGIN:VEVENT", "UID:" + it.id + "@lifeon.app", "DTSTAMP:" + icsTime(Date.now()), "DTSTART:" + icsTime(it.s), "DTEND:" + icsTime(it.e), "SUMMARY:" + e2(it.title), "LOCATION:" + e2(it.loc)); if (it.rrule) lines.push("RRULE:" + it.rrule); if (it.alarm != null) lines.push("BEGIN:VALARM", "ACTION:DISPLAY", "DESCRIPTION:" + e2(it.title), "TRIGGER:-PT" + Number(it.alarm) + "M", "END:VALARM"); lines.push("END:VEVENT"); }
   lines.push("END:VCALENDAR");
   try { const blob = new Blob([lines.join("\r\n")], {type:"text/calendar"}); const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500); toast("Calendar file ready: open it to add the events"); } catch(e){ toast("Couldn't create the file here"); }
 }
@@ -2567,25 +2580,27 @@ function agendaItems(fromDay, days){
   for (const ex of ((p.study||{}).exams||[])) { const t = new Date(ex.date + "T09:00").getTime(); if (t >= start && t < end) out.push({kind:"exam", s:t, e:t + 2*3600e3, title:"Exam: " + ex.name, allDay:true}); }
   for (const b of (((p.study||{}).plan||{}).blocks||[])) if (b.s >= start && b.s < end) out.push({kind:"plan", s:b.s, e:b.s + b.mins*60e3, title:(b.kind==="review" ? "Review: " : "Study: ") + b.examName, id:b.id, done:b.done, mins:b.mins});
   for (const [id, iv] of Object.entries(state.invites||{})) { if (!iv || iv.cancelled) continue; const role = myRole(iv); if (role!=="host" && role!=="going") continue; const t = invStart(iv); if (t >= start && t < end) out.push({kind:"invite", s:t, e:t + 90*60e3, title:iv.title, loc:invPlace(iv), id}); }
+  out.push(...expandMine(start, end));
   return out.sort((a,b) => a.s - b.s);
 }
-const AG_COL = {cal:"var(--muted)", exam:"var(--bad)", plan:"var(--accent)", invite:"var(--sport)"};
-const AG_LBL = {cal:"Calendar", exam:"Exam", plan:"Study plan", invite:"Invite"};
+const AG_COL = {cal:"var(--muted)", exam:"var(--bad)", plan:"var(--accent)", invite:"var(--sport)", mine:"var(--teal)"};
+const AG_LBL = {cal:"Calendar", exam:"Exam", plan:"Study plan", invite:"Invite", mine:"Mine"};
 const hm = t => { const d = new Date(t); return pad(d.getHours()) + ":" + pad(d.getMinutes()); };
 function agendaRow(it){
-  const act = it.kind==="plan" ? (it.done ? `<span class="chip on">Done</span>` : `<button class="small" data-plan-start="${esc(it.id)}">Start</button>`) : it.kind==="invite" ? `<button class="ghost small" data-inv-open="${esc(it.id)}">Open</button>` : "";
+  const act = it.kind==="plan" ? (it.done ? `<span class="chip on">Done</span>` : `<button class="small" data-plan-start="${esc(it.id)}">Start</button>`) : it.kind==="invite" ? `<button class="ghost small" data-inv-open="${esc(it.id)}">Open</button>` : it.kind==="mine" ? `<button class="ghost small" data-ev-edit="${esc(it.id)}">Edit</button>` : "";
   return `<div class="row between" style="align-items:flex-start"><div class="row" style="align-items:flex-start;gap:10px;min-width:0"><span style="width:4px;align-self:stretch;border-radius:4px;background:${AG_COL[it.kind]}"></span><div style="min-width:0"><b style="${it.done ? "text-decoration:line-through;opacity:.6" : ""}">${esc(it.title)}</b><div class="small muted">${it.allDay ? "All day" : hm(it.s) + (it.e ? "–" + hm(it.e) : "")} · ${AG_LBL[it.kind]}${it.loc ? " · " + esc(it.loc) : ""}</div></div></div>${act}</div>`;
 }
 function dayAgendaCard(){
   const items = agendaItems(today(), 1).filter(it => it.allDay || (it.e || it.s) > Date.now() - 3600e3).slice(0, 5);
   return `<section class="card"><div class="row between"><h3>Your day</h3><a class="link small" href="#agenda">Agenda</a></div>
-    ${items.length ? `<div class="list">${items.map(agendaRow).join("")}</div>` : `<p class="small muted">Nothing planned. ${profile()==="study" ? "Import your university timetable or make a study plan in Agenda." : "Import your calendar or publish an invite."}</p>`}</section>`;
+    ${items.length ? `<div class="list">${items.map(agendaRow).join("")}</div>` : `<p class="small muted">Nothing planned. Add an event, import your calendar or let your AI plan your day.</p>`}<div class="row"><button class="ghost small" data-ev-new>+ Add</button><button class="ghost small" data-ai="week">${ICON.spark} Plan with AI</button></div></section>`;
 }
 function viewAgenda(){
   const cal = loadCal(); const days = [...Array(7)].map((_, i) => dkey(addDays(new Date(), i)));
   const items = agendaItems(today(), 7);
   return `<div class="row"><a href="#today" class="link small">‹ Today</a></div>
-  <section class="card"><h2>Agenda</h2><p class="small muted">Your lessons, study plan, exams and invites in one place, for the next 7 days.</p>
+  <section class="card"><div class="row between"><h2>Agenda</h2><button class="small" data-ev-new>+ Add</button></div><p class="small muted">Your lessons, study plan, exams, invites and your own events, for the next 7 days. Tap + Add to put in anything, or let your AI plan it.</p>
+    <button class="ghost full" data-ai="week">${ICON.spark} Plan my week with AI (Claude, ChatGPT…)</button>
     ${days.map(k => { const its = items.filter(it => dkey(it.s) === k); return `<div style="display:flex;flex-direction:column;gap:8px"><h3 style="font-size:14px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)">${k===today() ? "Today" : esc(fmtDate(k))}</h3>${its.length ? `<div class="list">${its.map(agendaRow).join("")}</div>` : `<p class="small muted">Free</p>`}</div>`; }).join("")}</section>
   <section class="card"><h3>Connect your calendar</h3><p class="small muted">Import your university timetable or your personal calendar as an .ics file. Most university portals have an "Export" or "iCal" option on the timetable page; Google Calendar: Settings → Import & export → Export; Outlook: Calendar → Share → ICS. Your calendar stays on this phone.</p>
     <label class="btn small ghostlink" style="align-self:flex-start;cursor:pointer">${ICON.cal} Import .ics file<input type="file" id="icsFile" accept=".ics,text/calendar" hidden></label>
@@ -2594,6 +2609,7 @@ function viewAgenda(){
   <section class="card"><h3>Send LifeOn to your calendar</h3><p class="small muted">Your study plan and invites for the next 60 days, as a file for Apple Calendar, Google Calendar or Outlook.</p><button class="ghost small" id="icsOut" style="align-self:flex-start">${ICON.cal} Download calendar file</button></section>`;
 }
 function bindAgenda(){
+  $$("#view [data-ai]").forEach(b => b.onclick = () => openAI(b.dataset.ai));
   const fi = $("#icsFile"); if (fi) fi.onchange = async () => { const file = fi.files && fi.files[0]; if (!file) return; const text = await file.text(); if (importICS(text, file.name.replace(/\.ics$/i, ""))) render(); };
   const uf = $("#icsUrlForm"); if (uf) uf.onsubmit = async e => { e.preventDefault(); let u = $("#icsUrl").value.trim(); if (!u) return; u = u.replace(/^webcal:/i, "https:"); try { const r = await fetch(u); if (!r.ok) throw 0; const text = await r.text(); if (importICS(text, new URL(u).hostname)) render(); } catch(err){ toast("That site doesn't let apps read the link directly. Download the .ics file and use Import."); } };
   $$("[data-cal-del]").forEach(b => b.onclick = () => { const cal = loadCal(); cal.sources = (cal.sources||[]).filter(s => s.id !== b.dataset.calDel); cal.events = (cal.events||[]).filter(e => e.src !== b.dataset.calDel); saveCal(cal); render(); });
@@ -2630,6 +2646,264 @@ function startPlanBlock(id){
   openFocus("study", null, (b.kind==="review" ? "Review: " : "Study: ") + b.examName, b.mins >= 50 ? "pomo2" : "25", null, id);
 }
 
+// ================= my agenda events =================
+const REPEAT = {none:"Once", daily:"Every day", weekdays:"Mon–Fri", weekly:"Every week"};
+function myEvents(){ return state.myAgenda || []; }
+async function saveMyEvents(list){ state.myAgenda = list; try { await S.setPrivate("agenda", {events:list}); } catch(e){ toast("Couldn't save. Check your connection."); } }
+function expandMine(start, end){
+  const out = [];
+  for (const ev of myEvents()) {
+    const base = new Date(ev.date + "T" + (ev.start || "09:00")); const dur = Math.max(5, toMin(ev.end || ev.start) - toMin(ev.start || "09:00")) * 60e3 || 3600e3;
+    for (let i = 0; i < 400; i++) {
+      let d;
+      if (ev.repeat === "daily" || ev.repeat === "weekdays") d = addDays(base, i);
+      else if (ev.repeat === "weekly") d = addDays(base, i*7);
+      else { if (i) break; d = base; }
+      const t = d.getTime(); if (t >= end) break;
+      if (ev.repeat === "weekdays" && [0,6].includes(d.getDay())) continue;
+      if (t >= start) out.push({kind:"mine", s:t, e:t + dur, title:ev.title, loc:ev.loc||"", id:ev.id, remind:ev.remind});
+    }
+  }
+  return out;
+}
+const toMin = hhmm => { const [h,m] = String(hhmm||"0:0").split(":").map(Number); return (h||0)*60 + (m||0); };
+function openEventEditor(id, pre){
+  const ev = id ? myEvents().find(x => x.id === id) : null;
+  const nh = new Date(Date.now() + 3600e3);
+  const f = ev ? {...ev} : {title:"", date:today(), start:pad(nh.getHours())+":00", end:pad((nh.getHours()+1)%24)+":00", loc:"", repeat:"none", remind:15, ...(pre||{})};
+  const el = flow(ev ? "Edit event" : "New event"); el.style.zIndex = 26;
+  el.innerHTML = `<div class="in"><div class="row between"><h2>${ev ? "Edit event" : "New event"}</h2><button class="ghost small" data-close>Close</button></div>
+    <form class="card" id="evForm">
+      <label for="evTitle">What<input id="evTitle" maxlength="70" required value="${esc(f.title)}" placeholder="e.g. Marketing lesson, gym, dinner with friends"></label>
+      <label for="evDate">Day<input id="evDate" type="date" required value="${esc(f.date)}"></label>
+      <div class="grid2"><label for="evStart">From<input id="evStart" type="time" required value="${esc(f.start)}"></label><label for="evEnd">To<input id="evEnd" type="time" required value="${esc(f.end)}"></label></div>
+      <label for="evLoc">Where (optional)<input id="evLoc" maxlength="80" value="${esc(f.loc||"")}" placeholder="e.g. LIUC, room 2"></label>
+      <div class="grid2"><label for="evRep">Repeat<select id="evRep">${Object.entries(REPEAT).map(([k,l]) => `<option value="${k}" ${f.repeat===k?"selected":""}>${l}</option>`).join("")}</select></label>
+        <label for="evRem">Reminder<select id="evRem">${[[-1,"None"],[0,"At the start"],[10,"10 min before"],[15,"15 min before"],[30,"30 min before"],[60,"1 hour before"]].map(([k,l]) => `<option value="${k}" ${Number(f.remind)===k?"selected":""}>${l}</option>`).join("")}</select></label></div>
+      <button class="full" type="submit">Save</button>
+      ${ev ? `<button class="ghost full" type="button" data-del style="color:var(--bad)">Delete</button>` : ""}
+    </form></div>`;
+  $("[data-close]", el).onclick = () => el.remove();
+  $("#evForm", el).onsubmit = async e => {
+    e.preventDefault();
+    const n = {id: ev ? ev.id : "e" + rid(7), title:$("#evTitle", el).value.trim(), date:$("#evDate", el).value, start:$("#evStart", el).value, end:$("#evEnd", el).value, loc:$("#evLoc", el).value.trim(), repeat:$("#evRep", el).value, remind:Number($("#evRem", el).value)};
+    if (toMin(n.end) <= toMin(n.start)) { toast("The end must be after the start"); return; }
+    const list = myEvents().filter(x => x.id !== n.id); list.push(n);
+    await saveMyEvents(list); el.remove(); toast(ev ? "Saved" : "Added to your agenda"); render();
+  };
+  const del = $("[data-del]", el); if (del) del.onclick = async () => { await saveMyEvents(myEvents().filter(x => x.id !== ev.id)); el.remove(); toast("Deleted"); render(); };
+}
+
+// ================= connect your AI =================
+const AI_APPS = {claude:["Claude", q => "https://claude.ai/new?q=" + encodeURIComponent(q)], chatgpt:["ChatGPT", q => "https://chatgpt.com/?q=" + encodeURIComponent(q)], other:["Other AI (copy)", null]};
+const AI_GOALS = {
+  week:["Plan my week", "Plan my next 7 days around my commitments. Leave free evenings, add short phone-free breaks and some movement every day."],
+  study:["Study plan for my exams", "Make a study plan until my exams, in 50-minute sessions with 10-minute breaks, more time for the closest and hardest exam, the last 2 days before each exam for review, and never during my lessons."],
+  workout:["Training plan", "Make a 2-week training plan for a beginner: 3–4 sessions a week, mixing brisk walks or easy runs, bodyweight workouts and stretching, 20–45 minutes each."],
+  meals:["Healthy week of meals", "Suggest when to cook 4 simple, healthy, cheap meals this week (lunch or dinner), each under 30 minutes, with a one-line recipe in the title."]
+};
+function aiPrompt(goal){
+  const p = meP() || {}; const lines = [];
+  lines.push("You are helping me organise my time in the app LifeOn, which helps me spend less time on social media.");
+  lines.push("Today is " + today() + " (" + DAYS[(new Date().getDay()+6)%7] + "). I live in " + myTown() + ", Italy. My profile: " + (PROFILES[profile()]||{}).label + ".");
+  lines.push("Task: " + AI_GOALS[goal][1]);
+  const ex = ((p.study||{}).exams||[]).filter(e => e.date >= today());
+  if (ex.length) lines.push("My exams: " + ex.map(e => e.name + " on " + e.date + " (" + (e.hours||20) + " hours of study needed)").join("; ") + ".");
+  const busy = agendaItems(today(), 14).filter(it => it.kind !== "plan").slice(0, 60);
+  if (busy.length) lines.push("Already in my agenda (do not overlap):\n" + busy.map(it => dkey(it.s) + " " + (it.allDay ? "all day" : hm(it.s) + "-" + hm(it.e || it.s)) + " " + it.title).join("\n"));
+  lines.push("Answer ONLY with a list, one item per line, exactly in this format and nothing else:\nYYYY-MM-DD HH:MM-HH:MM | Title | Place\nUse 24-hour times. Place can be empty.");
+  return lines.join("\n\n");
+}
+function parseAIPlan(text){
+  const out = [];
+  for (const line of String(text).split(/\r?\n/)) {
+    const m = line.match(/(\d{4}-\d{2}-\d{2})\D{1,3}(\d{1,2})[:.](\d{2})\s*[-–—]\s*(\d{1,2})[:.](\d{2})\s*\|?\s*([^|]+?)\s*(?:\|\s*(.*?))?\s*$/);
+    if (!m) continue;
+    const title = m[6].replace(/^[-*•\s]+/, "").replace(/\*\*/g, "").trim(); if (!title) continue;
+    out.push({id:"a" + rid(7), date:m[1], start:pad(m[2]) + ":" + m[3], end:pad(m[4]) + ":" + m[5], title:title.slice(0,70), loc:(m[7]||"").replace(/\*\*/g,"").trim().slice(0,80), repeat:"none", remind:10, src:"ai"});
+  }
+  return out;
+}
+function openAI(goal){
+  let g = goal || "week"; let pref = "claude"; try { pref = localStorage.getItem("lifeon-ai") || "claude"; } catch(e){}
+  const el = flow("Plan with AI"); el.style.zIndex = 26; let parsed = [];
+  const draw = () => {
+    el.innerHTML = `<div class="in"><div class="row between"><h2>Plan with AI</h2><button class="ghost small" data-close>Close</button></div>
+      <div class="card steps" style="gap:10px"><div class="step"><span class="n">1</span><div><b>Choose what you need</b><p class="small muted">LifeOn writes the request for you, with your exams, lessons and agenda.</p></div></div><div class="step"><span class="n">2</span><div><b>Open your AI</b><p class="small muted">Claude or ChatGPT opens with everything filled in. Send it.</p></div></div><div class="step"><span class="n">3</span><div><b>Paste the answer here</b><p class="small muted">Copy the AI's list and paste it below: it goes straight into your agenda, and you can still edit everything.</p></div></div></div>
+      <div class="card"><p class="small" style="font-weight:700">1 · What do you need?</p><div class="chips" id="aiGoal">${Object.entries(AI_GOALS).map(([k,v]) => `<button type="button" class="chip" data-v="${k}" aria-pressed="${g===k}">${esc(v[0])}</button>`).join("")}</div>
+        <p class="small" style="font-weight:700">2 · Your AI</p><div class="chips" id="aiApp">${Object.entries(AI_APPS).map(([k,v]) => `<button type="button" class="chip" data-v="${k}" aria-pressed="${pref===k}">${esc(v[0])}</button>`).join("")}</div>
+        <button class="full" id="aiGo">${pref==="other" ? "Copy the request" : "Open " + AI_APPS[pref][0]}</button>
+        <details><summary class="small muted" style="cursor:pointer">See the request</summary><pre class="small" style="white-space:pre-wrap;font-family:var(--mono);background:var(--sunk);padding:10px;border-radius:10px;max-height:200px;overflow:auto">${esc(aiPrompt(g))}</pre></details></div>
+      <form class="card" id="aiPaste"><p class="small" style="font-weight:700">3 · Paste the AI's answer</p><textarea id="aiText" rows="6" style="font:inherit;font-family:var(--mono);font-size:13px;color:var(--ink);background:var(--sunk);border:1px solid var(--line);border-radius:12px;padding:10px;width:100%" placeholder="2026-11-03 15:00-15:50 | Statistics: chapter 4 | Library"></textarea><button class="ghost full" type="submit">Read it</button>
+        ${parsed.length ? `<div class="list">${parsed.slice(0,12).map(x => `<div class="small"><b>${esc(x.title)}</b> · ${esc(fmtDate(x.date))} ${esc(x.start)}–${esc(x.end)}${x.loc ? " · "+esc(x.loc) : ""}</div>`).join("")}${parsed.length > 12 ? `<div class="small muted">…and ${parsed.length-12} more</div>` : ""}</div><button class="full" type="button" id="aiAdd">Add ${parsed.length} to my agenda</button>` : ""}</form>
+      <p class="small muted">Your data is sent only to the AI you choose, when you press its button. A built-in LifeOn assistant is coming in the App Store version.</p></div>`;
+    $("[data-close]", el).onclick = () => el.remove();
+    $$("#aiGoal [data-v]", el).forEach(b => b.onclick = () => { g = b.dataset.v; draw(); });
+    $$("#aiApp [data-v]", el).forEach(b => b.onclick = () => { pref = b.dataset.v; try { localStorage.setItem("lifeon-ai", pref); } catch(e){} draw(); });
+    $("#aiGo", el).onclick = async () => { const q = aiPrompt(g); try { await navigator.clipboard.writeText(q); } catch(e){} if (pref==="other") toast("Request copied: paste it in your AI app"); else window.open(AI_APPS[pref][1](q), "_blank", "noopener"); };
+    $("#aiPaste", el).onsubmit = e => { e.preventDefault(); parsed = parseAIPlan($("#aiText", el).value); if (!parsed.length) toast("I couldn't read any line. Ask the AI to use the format shown."); draw(); };
+    const add = $("#aiAdd", el); if (add) add.onclick = async () => { await saveMyEvents([...myEvents(), ...parsed]); toast(parsed.length + " events added"); el.remove(); go("agenda"); };
+  };
+  draw();
+}
+
+// ================= workouts =================
+const WORKOUTS = [
+  {id:"c5k", name:"First 5 km: run and walk", mins:30, level:"Beginner", gps:"Run", plan:"m30", intervals:[["Warm-up walk",300],...Array(8).fill(0).flatMap(() => [["Run easy",60],["Walk",90]]),["Cool-down walk",300]], what:"Run 1 minute, walk 90 seconds, 8 times. The phone buzzes when it's time to switch."},
+  {id:"walk30", name:"Brisk walk", mins:30, level:"Everyone", gps:"Walk", plan:"m30", what:"Walk fast enough that talking takes a little effort. GPS checks the distance."},
+  {id:"bike45", name:"Easy bike ride", mins:45, level:"Everyone", gps:"Bike", plan:"m45", what:"Steady pace on flat roads or the Olona cycle path."},
+  {id:"body20", name:"20-minute bodyweight", mins:20, level:"Beginner", steps:[["Jumping jacks",40],["Rest",20],["Squats",40],["Rest",20],["Push-ups (knees are fine)",40],["Rest",20],["Lunges",40],["Rest",20],["Plank",40],["Rest",20],["Glute bridge",40],["Rest",40]], rounds:2, what:"No equipment. 40 seconds on, 20 off, two rounds."},
+  {id:"core10", name:"10-minute core", mins:10, level:"Everyone", steps:[["Plank",30],["Rest",15],["Dead bug",40],["Rest",15],["Side plank left",25],["Side plank right",25],["Rest",15],["Bicycle crunch",40],["Rest",15],["Superman hold",30]], rounds:1, what:"Short and effective, good after studying."},
+  {id:"mob15", name:"Mobility and stretching", mins:15, level:"Everyone", steps:[["Neck rolls",45],["Shoulder circles",45],["Cat-cow",60],["Hip flexor stretch left",45],["Hip flexor stretch right",45],["Hamstring stretch",60],["Child's pose",60],["Chest opener",45],["Deep breathing",90]], rounds:1, what:"For long days at the desk. Slow, no pain."},
+  {id:"hiit15", name:"Park HIIT", mins:15, level:"Intermediate", steps:[["High knees",30],["Rest",15],["Squat jumps",30],["Rest",15],["Mountain climbers",30],["Rest",15],["Bench step-ups",30],["Rest",15],["Burpees",30],["Rest",45]], rounds:2, what:"Find a bench in the park. Hard but short."}
+];
+const MUSIC = [["Spotify","https://open.spotify.com/search/"],["Apple Music","https://music.apple.com/search?term="],["YouTube Music","https://music.youtube.com/search?q="]];
+const musicChips = q => `<div class="chips">${MUSIC.map(([l,u]) => `<a class="chip" href="${esc(u + encodeURIComponent(q))}" target="_blank" rel="noopener">${ICON.music} ${l}</a>`).join("")}</div>`;
+function viewTrain(){
+  return `<div class="row"><a href="#today" class="link small">‹ Today</a></div>
+  <section class="card" style="background:var(--sport);color:var(--sport-ink)"><h2>Workouts</h2><p class="small" style="opacity:.9">Pick one and press Start. Outdoor ones are checked with GPS; the indoor ones run on a guided timer with the phone in front of you, not in your hand.</p></section>
+  ${WORKOUTS.map(w => `<section class="card"><div class="row between"><h3>${esc(w.name)}</h3><span class="chip">${w.mins} min · ${esc(w.level)}</span></div><p class="small muted">${esc(w.what)}</p>${w.steps ? `<p class="small">${esc(w.steps.filter(s => s[0]!=="Rest").map(s => s[0]).join(" · "))}${w.rounds > 1 ? " · ×"+w.rounds : ""}</p>` : ""}<button class="small" data-wk="${w.id}" style="align-self:flex-start;background:var(--sport);color:var(--sport-ink)">Start${w.gps ? " · GPS" : ""}</button></section>`).join("")}
+  <section class="card"><h3>Music for your workout</h3><p class="small muted">Start your playlist first, then come back to LifeOn and press Start.</p>${musicChips("workout")}</section>
+  <section class="card"><h3>Want a plan made for you?</h3><p class="small muted">Your AI can build a 2-week plan and LifeOn puts it in your agenda.</p><button class="ghost small" data-ai="workout" style="align-self:flex-start">${ICON.spark} Plan with AI</button></section>`;
+}
+function bindTrain(){ $$("[data-wk]").forEach(b => b.onclick = () => startWorkout(b.dataset.wk)); $$("#view [data-ai]").forEach(b => b.onclick = () => openAI(b.dataset.ai)); }
+function startWorkout(id){
+  const w = WORKOUTS.find(x => x.id === id); if (!w) return;
+  if (w.gps) { openFocus("move", null, w.name, w.plan, w.gps, null, w.intervals || null); return; }
+  runGuided(w);
+}
+function runGuided(w){
+  const steps = []; for (let r = 0; r < (w.rounds||1); r++) for (const s of w.steps) steps.push(s);
+  const total = steps.reduce((a,s) => a + s[1], 0);
+  const el = flow(w.name, true); let i = 0, left = steps[0][1], paused = false, timer = null, hiddenAt = null, wake = null, done = 0;
+  try { if (navigator.wakeLock) navigator.wakeLock.request("screen").then(x => wake = x).catch(() => {}); } catch(e){}
+  const start = Date.now();
+  const draw = () => { const s = steps[i], nx = steps[i+1];
+    el.innerHTML = `<div class="in" style="min-height:100%;justify-content:center;text-align:center">
+      <p class="small muted" style="font-weight:700;letter-spacing:.08em;text-transform:uppercase">${esc(w.name)} · ${i+1}/${steps.length}</p>
+      <h1 style="font-size:40px;line-height:1.05;${s[0]==="Rest" ? "opacity:.7" : ""}">${esc(s[0])}</h1>
+      <p style="font-family:var(--display);font-weight:800;font-size:84px;font-variant-numeric:tabular-nums;color:${s[0]==="Rest" ? "var(--teal)" : "var(--accent)"}" id="gLeft">${left}</p>
+      <p class="muted">${nx ? "Next: " + esc(nx[0]) : "Last one!"}</p>
+      <div class="qbar" style="background:color-mix(in srgb, var(--night-ink) 15%, transparent)"><i style="width:${Math.round(done/total*100)}%;background:var(--accent)"></i></div>
+      <div class="row" style="justify-content:center"><button class="ghost" data-pause>${paused ? "Resume" : "Pause"}</button><button class="ghost" data-skip>Skip</button></div>
+      <p class="small muted">Keep LifeOn open: leave it for more than 10 seconds and the workout stops.</p>
+      <button class="ghost full" data-quit>End workout</button></div>`;
+    $("[data-pause]", el).onclick = () => { paused = !paused; draw(); };
+    $("[data-skip]", el).onclick = () => next();
+    $("[data-quit]", el).onclick = () => finish(false, "You ended the workout early.");
+  };
+  const next = () => { done += steps[i][1]; i++; if (i >= steps.length) { finish(true); return; } left = steps[i][1]; try { navigator.vibrate && navigator.vibrate(steps[i][0]==="Rest" ? 120 : [80,60,80]); } catch(e){} draw(); };
+  timer = setInterval(() => { if (paused) return; left--; const g = $("#gLeft", el); if (g) g.textContent = left; if (left <= 0) next(); }, 1000);
+  const onVis = () => { if (document.hidden) hiddenAt = Date.now(); else if (hiddenAt) { const away = Date.now() - hiddenAt; hiddenAt = null; if (away > 10e3 && !paused) finish(false, "You left LifeOn for " + Math.round(away/1e3) + " seconds."); } };
+  document.addEventListener("visibilitychange", onVis);
+  async function finish(ok, why){
+    clearInterval(timer); document.removeEventListener("visibilitychange", onVis); try { wake && wake.release(); } catch(e){}
+    const mins = Math.max(1, Math.round((Date.now() - start)/60e3));
+    const fullDone = ok || done >= total * 0.8;
+    const s = {id:rid(8), start, min: fullDone ? Math.round(total/60) : mins, mode:"solo", kind:"workout", type:w.name, ok: fullDone};
+    const np = clone(meP()); np.sessions = [...(np.sessions||[]), s]; await writeMe(np);
+    el.innerHTML = `<div class="in" style="min-height:100%;justify-content:center;text-align:center"><h1 style="font-size:42px">${fullDone ? "Well done." : "Workout stopped"}</h1><p class="muted">${fullDone ? esc(w.name) + " · " + Math.round(total/60) + " min" : esc(why||"")}</p>${fullDone ? `<p style="font-family:var(--display);font-weight:800;font-size:56px;color:var(--accent)">+${sessionPts(s,false)}</p><p class="small muted">points · tracked by the guided timer</p>` : ""}<button class="full" data-close>Back</button></div>`;
+    $("[data-close]", el).onclick = () => { el.remove(); render(); };
+  }
+  draw();
+}
+
+// ================= eat well =================
+const RECIPES = [
+  {id:"oats", name:"Overnight oats", mins:5, when:"Breakfast", ing:["50 g oat flakes","150 ml milk or soy drink","1 spoon yogurt","1 fruit (banana or berries)","A few nuts"], steps:["Mix oats, milk and yogurt in a jar.","Leave it in the fridge overnight.","In the morning add the fruit and nuts."]},
+  {id:"chick", name:"Chickpea and tomato salad", mins:10, when:"Lunch", ing:["1 can of chickpeas","10 cherry tomatoes","½ red onion","Feta or tuna","Olive oil, lemon, basil"], steps:["Rinse the chickpeas.","Cut tomatoes and onion.","Mix everything with oil, lemon, salt and basil."]},
+  {id:"pasta", name:"Wholemeal pasta, tuna and courgettes", mins:20, when:"Lunch or dinner", ing:["80 g wholemeal pasta","1 courgette","1 small can of tuna","1 garlic clove","Olive oil, chilli"], steps:["Boil the pasta.","Cook the sliced courgette with garlic and oil for 8 minutes.","Add the tuna, then the drained pasta and a spoon of its water."]},
+  {id:"frittata", name:"Vegetable frittata", mins:20, when:"Dinner", ing:["3 eggs","1 pepper or 1 courgette","1 handful of spinach","20 g parmesan","Salt and pepper"], steps:["Cook the chopped vegetables in a pan for 5 minutes.","Beat the eggs with parmesan, pour them in.","Cover and cook on low heat for 10 minutes."]},
+  {id:"salmon", name:"Baked salmon and vegetables", mins:25, when:"Dinner", ing:["1 salmon fillet","1 potato or sweet potato","Broccoli or green beans","Olive oil, lemon, rosemary"], steps:["Cut the potato into cubes, roast at 200 °C for 10 minutes.","Add salmon and vegetables, oil and lemon.","Roast 12–15 more minutes."]},
+  {id:"bowl", name:"Yogurt power bowl", mins:5, when:"Snack", ing:["170 g Greek yogurt","1 spoon honey","1 handful of granola","Fresh fruit"], steps:["Put the yogurt in a bowl.","Add granola and fruit on top.","Finish with honey."]}
+];
+function viewEat(){
+  return `<div class="row"><a href="#today" class="link small">‹ Today</a></div>
+  <section class="card" style="background:var(--teal);color:var(--teal-ink)"><h2>Eat well</h2><p class="small" style="opacity:.9">Quick, cheap and healthy. Press "Cook it": the timer starts with your phone down, so cooking earns points too.</p></section>
+  ${RECIPES.map(r => `<section class="card"><div class="row between"><h3>${esc(r.name)}</h3><span class="chip">${r.mins} min · ${esc(r.when)}</span></div>
+    <details><summary class="small" style="cursor:pointer;font-weight:700">Ingredients and steps</summary><ul class="small" style="margin:8px 0;padding-left:18px">${r.ing.map(x => `<li>${esc(x)}</li>`).join("")}</ul><ol class="small" style="margin:0;padding-left:18px">${r.steps.map(x => `<li>${esc(x)}</li>`).join("")}</ol></details>
+    <div class="row wrap"><button class="small" data-cook="${r.id}">Cook it · phone down</button><button class="ghost small" data-plan-meal="${r.id}">Add to agenda</button></div></section>`).join("")}
+  <section class="card"><h3>A whole week of meals?</h3><p class="small muted">Ask your AI for a simple plan and LifeOn puts it in your agenda.</p><button class="ghost small" data-ai="meals" style="align-self:flex-start">${ICON.spark} Plan with AI</button></section>`;
+}
+function bindEat(){
+  $$("[data-cook]").forEach(b => b.onclick = () => { const r = RECIPES.find(x => x.id === b.dataset.cook); openFocus("evening", null, "Cooking: " + r.name, r.mins <= 30 ? "l30" : "l60"); });
+  $$("[data-plan-meal]").forEach(b => b.onclick = () => { const r = RECIPES.find(x => x.id === b.dataset.planMeal); openEventEditor(null, {title:"Cook: " + r.name, start:"19:30", end:"20:15", remind:30}); });
+  $$("#view [data-ai]").forEach(b => b.onclick = () => openAI(b.dataset.ai));
+}
+
+// ================= reminders & notifications =================
+const REM_KEY = "lifeon-fired";
+function myReminders(){ return state.myReminders || []; }
+async function saveReminders(list){ state.myReminders = list; try { await S.setPrivate("reminders", {list}); } catch(e){ toast("Couldn't save"); } }
+const notifState = () => { try { return ("Notification" in window) ? Notification.permission : "unsupported"; } catch(e){ return "unsupported"; } };
+async function notify(title, body){
+  toast(title + (body ? ": " + body : ""));
+  if (notifState() !== "granted") return;
+  try { const reg = navigator.serviceWorker && await navigator.serviceWorker.getRegistration(); if (reg) { reg.showNotification(title, {body, icon:"icons/icon-192.png", badge:"icons/icon-192.png"}); return; } } catch(e){}
+  try { new Notification(title, {body}); } catch(e){}
+}
+function remDue(){
+  const p = meP(); if (!p || !p.profile || !S) return;
+  let fired = {}; try { fired = JSON.parse(localStorage.getItem(REM_KEY) || "{}"); } catch(e){}
+  const now = Date.now(), k = today(), wd = new Date().getDay(), mark = id => { fired[id] = now; };
+  const due = (id, t) => t <= now && now - t < 15*60e3 && !fired[id];
+  for (const r of myReminders()) { if (!r.on) continue; if (r.days === "weekdays" && [0,6].includes(wd)) continue; const t = new Date(k + "T" + r.time).getTime(); const id = "r" + r.id + k; if (due(id, t)) { mark(id); notify(r.text, "LifeOn reminder"); } }
+  const nPrefs = (p.notify || {plan:true, invites:true, nudge:true});
+  for (const it of agendaItems(k, 1)) {
+    if (it.kind === "plan" && nPrefs.plan && !it.done) { const id = "p" + it.id; if (due(id, it.s - 5*60e3)) { mark(id); notify("Study session in 5 minutes", it.title); } }
+    if (it.kind === "invite" && nPrefs.invites) { const id = "i" + it.id + k; if (due(id, it.s - 30*60e3)) { mark(id); notify("In 30 minutes: " + it.title, it.loc || ""); } }
+    if (it.kind === "mine" && it.remind >= 0) { const id = "m" + it.id + it.s; if (due(id, it.s - it.remind*60e3)) { mark(id); notify(it.title, it.remind ? "In " + it.remind + " minutes" : "Starting now"); } }
+  }
+  if (nPrefs.nudge) { const t = new Date(k + "T18:00").getTime(); const id = "nudge" + k; if (due(id, t) && !(p.sessions||[]).some(s => s.ok && dkey(s.start) === k)) { mark(id); notify("Put the phone down for 25 minutes?", "No session yet today. One Focus and your streak is safe."); } }
+  for (const [iid, iv] of Object.entries(state.invites||{})) { if (iv.by !== S.me || iv.cancelled) continue; const n = (iv.requests||[]).length; const id = "req" + iid + n; if (n && !fired[id]) { mark(id); notify(n === 1 ? "Someone wants to join your invite" : n + " people want to join your invite", iv.title); } }
+  try { localStorage.setItem(REM_KEY, JSON.stringify(Object.fromEntries(Object.entries(fired).filter(([,v]) => now - v < 3*864e5)))); } catch(e){}
+}
+setInterval(remDue, 30e3);
+function reminderICS(list){
+  const items = list.map(r => { const [h,m] = r.time.split(":").map(Number); const d = new Date(); d.setHours(h, m, 0, 0); if (d.getTime() < Date.now()) d.setDate(d.getDate()+1); return {id:"rem-"+r.id, s:d.getTime(), e:d.getTime() + 10*60e3, title:r.text, loc:"", rrule: r.days === "weekdays" ? "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR" : "FREQ=DAILY", alarm:0}; });
+  downloadICS(items, "lifeon-reminders.ics");
+}
+function viewRemind(){
+  const p = meP(); const nPrefs = (p.notify || {plan:true, invites:true, nudge:true}); const st = notifState();
+  const tog = (k, l, d) => `<label class="row between" style="flex-direction:row;color:var(--ink);font-weight:500"><span><b>${l}</b><br><span class="small muted">${d}</span></span><input type="checkbox" data-np="${k}" ${nPrefs[k] ? "checked" : ""}></label>`;
+  return `<div class="row"><a href="#today" class="link small">‹ Today</a></div>
+  <section class="card"><h2>Notifications</h2>
+    ${st === "granted" ? `<div class="banner">Notifications are on.</div>` : st === "denied" ? `<div class="banner warn">Notifications are blocked. Turn them on in your phone settings for this app.</div>` : st === "unsupported" ? `<div class="banner warn">On iPhone, notifications work once LifeOn is on your Home Screen. Add it, then open it from there.</div>` : `<button class="full" id="askNotif">${ICON.bell} Allow notifications</button>`}
+    <div class="list">${tog("plan","Study sessions","5 minutes before each session of your plan")}${tog("invites","Invites","When someone wants to join, and 30 minutes before you meet")}${tog("nudge","Daily nudge","At 18:00, if you haven't put the phone down yet today")}</div>
+    <p class="small muted">In this version LifeOn can notify you while it's open or recently used. For reminders that always ring, also add them to your phone's calendar below.</p></section>
+  <section class="card"><h2>Your reminders</h2><p class="small muted">Drink water, take your vitamins, stretch, go to bed on time: anything that helps you.</p>
+    ${myReminders().length ? `<div class="list">${myReminders().map(r => `<div class="row between"><div><b>${esc(r.text)}</b><div class="small muted">${esc(r.time)} · ${r.days==="weekdays" ? "Mon–Fri" : "Every day"}</div></div><div class="row" style="gap:6px"><input type="checkbox" aria-label="On" data-rem-on="${esc(r.id)}" ${r.on ? "checked" : ""}><button class="ghost small" data-rem-del="${esc(r.id)}">Delete</button></div></div>`).join("")}</div>` : ""}
+    <form id="remForm" class="row wrap"><input id="remText" maxlength="60" required placeholder="e.g. Drink a glass of water" aria-label="Reminder" style="flex:2 1 180px"><input id="remTime" type="time" value="09:00" required aria-label="Time" style="flex:1 1 100px"><select id="remDays" aria-label="Days" style="flex:1 1 120px"><option value="daily">Every day</option><option value="weekdays">Mon–Fri</option></select><button class="teal small" type="submit">Add</button></form>
+    ${myReminders().length ? `<button class="ghost small" id="remICS" style="align-self:flex-start">${ICON.cal} Add them to my phone's calendar (they'll always ring)</button>` : ""}</section>`;
+}
+function bindRemind(){
+  const an = $("#askNotif"); if (an) an.onclick = async () => { try { await Notification.requestPermission(); } catch(e){} if (notifState() === "granted") notify("Notifications are on", "We'll remind you at the right moments."); render(); };
+  $$("[data-np]").forEach(c => c.onchange = async () => { const np = clone(meP()); np.notify = {plan:true, invites:true, nudge:true, ...(np.notify||{}), [c.dataset.np]: c.checked}; await writeMe(np); });
+  $("#remForm").onsubmit = async e => { e.preventDefault(); await saveReminders([...myReminders(), {id:rid(6), text:$("#remText").value.trim(), time:$("#remTime").value, days:$("#remDays").value, on:true}]); toast("Reminder added"); render(); };
+  $$("[data-rem-on]").forEach(c => c.onchange = async () => { await saveReminders(myReminders().map(r => r.id === c.dataset.remOn ? {...r, on:c.checked} : r)); });
+  $$("[data-rem-del]").forEach(b => b.onclick = async () => { await saveReminders(myReminders().filter(r => r.id !== b.dataset.remDel)); render(); });
+  const ri = $("#remICS"); if (ri) ri.onclick = () => reminderICS(myReminders().filter(r => r.on));
+}
+
+// ================= scroll meter =================
+function scrollCard(){
+  const p = meP(); const base = Number(p.baseline) || 180; const log = p.screen || {};
+  const keys = Object.keys(log).sort(); const last = keys.length ? log[keys[keys.length-1]] : null;
+  const wk = weekKeys().filter(k => log[k] != null); const avg = wk.length ? Math.round(wk.reduce((s,k) => s + log[k], 0) / wk.length) : null;
+  const cur = avg != null ? avg : last; const diff = cur != null ? base - cur : null;
+  return `<section class="card" style="border:2px solid var(--accent)"><div class="row between"><h3>Your scroll time</h3><span class="chip hot">The real goal</span></div>
+    <p class="small muted">Too many of us spend hours scrolling without noticing. In our survey, 61% of young people use social media more than they'd like.</p>
+    <div class="grid2"><div class="stat"><span class="n">${fmtMin(base)}</span><span class="k">a day when you started</span></div><div class="stat"><span class="n" style="color:${diff!=null && diff>0 ? "var(--good)" : "inherit"}">${cur!=null ? fmtMin(cur) : "—"}</span><span class="k">${avg!=null ? "a day this week" : "log today's time"}</span></div></div>
+    ${diff!=null ? `<p style="font-weight:700">${diff > 0 ? "You won back " + fmtMin(diff) + " a day. That's " + Math.round(diff*7/60) + " hours a week." : diff < 0 ? "A bit more than when you started. One Focus session today?" : "Same as when you started. Let's lower it."}</p>` : ""}
+    <form id="scrollForm" class="row"><input id="scrollMin" type="number" min="0" max="1200" inputmode="numeric" placeholder="Today's social minutes" aria-label="Today's minutes on social media" value="${log[today()] != null ? log[today()] : ""}"><button class="small" type="submit">Save</button></form>
+    <p class="small muted">Find it in Screen Time (iPhone) or Digital Wellbeing (Android). The App Store version will read it automatically.</p></section>`;
+}
+function bindScroll(){ const f = $("#scrollForm"); if (f) f.onsubmit = async e => { e.preventDefault(); const v = Number($("#scrollMin").value); if (!(v >= 0)) return; const np = clone(meP()); np.screen = {...(np.screen||{}), [today()]: Math.round(v)}; const cut = dkey(Date.now() - 120*864e5); np.screen = Object.fromEntries(Object.entries(np.screen).filter(([k]) => k >= cut)); if (await writeMe(np)) toast(v < (Number(np.baseline)||180) ? "Saved. Less than when you started: well done!" : "Saved. Let's bring it down together."); }; }
+function toolsCard(){
+  const tools = [["agenda", ICON.cal, "Agenda"], ["ai", ICON.spark, "Plan with AI"], ["train", ICON.gym, "Workouts"], ["eat", ICON.food, "Eat well"], ["remind", ICON.bell, "Reminders"]];
+  return `<section class="tiles" style="grid-template-columns:repeat(5,1fr)" aria-label="Tools">${tools.map(([k,ic,l]) => `<button class="tile" data-tool="${k}"><span class="ti" style="background:var(--sunk);color:var(--ink)">${ic}</span>${l}</button>`).join("")}</section>`;
+}
+
 // ================= boot =================
 let gen = 0;
 function boot(store){
@@ -2638,6 +2912,9 @@ function boot(store){
   COLS.forEach(c => S.on(c, m => { if (my!==gen) return; state[c] = m; state.ready[c] = true; if (!$(".flow")) render(); }));
   S.onLive(peers => { if (my!==gen) return; state.live = peers; if (!$(".flow") && (route()==="today"||route()==="friends")) render(); });
   S.getPrivate("shop").then(d => { if (my!==gen) return; state.myCode = d?.code || null; if (!$(".flow") && route()==="shop") render(); });
+  state.myAgenda = []; state.myReminders = [];
+  S.getPrivate("agenda").then(d => { if (my!==gen) return; state.myAgenda = (d && d.events) || []; if (!$(".flow")) render(); });
+  S.getPrivate("reminders").then(d => { if (my!==gen) return; state.myReminders = (d && d.list) || []; });
   if (route()==="shop" && !state.shopMid) state.shopMid = S.me;
   render();
 }
@@ -2689,7 +2966,7 @@ checkInterrupted();
 })();
 </script>
 <script>
-// Offline support + automatic updates (version 202611020959)
+// Offline support + automatic updates (version 202611021023)
 if ("serviceWorker" in navigator && location.protocol === "https:") {
   navigator.serviceWorker.register("sw.js").catch(function(){});
   var reloaded = false;
