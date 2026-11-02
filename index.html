@@ -227,13 +227,20 @@ body.ob-dark, body.ob-dark .app{background:var(--night);color:var(--night-ink)}
 .ob-dots{display:flex;gap:8px;justify-content:center}
 .ob-dots i{width:8px;height:8px;border-radius:99px;background:currentColor;opacity:.3}
 .ob-dots i.on{width:26px;opacity:1;background:var(--accent)}
-.ob-link{background:none;color:inherit;opacity:.8;font-weight:600}
+.ob-link{background:none;color:inherit;opacity:.8;font-weight:600;display:block;width:100%;text-align:center}
 .ob-progress{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
 .ob-progress i{height:5px;border-radius:99px;background:var(--line)}
 .ob-progress i.on{background:var(--accent)}
 .ob-or{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:13px}
 .ob-or::before,.ob-or::after{content:"";flex:1;height:1px;background:var(--line)}
 .pick.sel{box-shadow:0 0 0 2px var(--accent)}
+.authbtn{width:100%;height:52px;border-radius:999px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px}
+.authbtn.apple{background:#000;color:#fff}
+.authbtn.google{background:#fff;color:#1f1f1f;box-shadow:inset 0 0 0 1px #c7c7c7}
+.authbtn.mail{background:var(--sunk);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
+.plans{display:flex;flex-direction:column;gap:10px}
+.plan .feat{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;opacity:.8}
+#routeMap{height:200px;border-radius:16px;overflow:hidden;background:color-mix(in srgb, var(--night-ink) 8%, transparent)}
 .verify{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;padding:6px 12px;border-radius:999px}
 #map{height:300px;border-radius:14px;overflow:hidden;background:var(--sunk);z-index:0}
 .leaflet-popup-content{font-family:var(--body)}
@@ -960,6 +967,20 @@ const TIERS = {
   reward:{label:"Big reward", cost:800, budget:3, example:"Free class, full breakfast"}
 };
 const PRO_PRICE = 29, FEE = 0.5;
+const BIZ = {
+  free:{label:"Free", price:0, fee:0.5, offers:1, acts:1, flash:false, line:"Try LifeOn with no monthly cost.", feats:["1 active reward and 1 activity","Check-in poster and coupon check","Monthly results and estimated profit","€0.50 only when a coupon is used"]},
+  starter:{label:"Starter", price:9, fee:0.2, offers:3, acts:3, flash:false, line:"For small shops, bars and studios.", feats:["3 rewards and 3 activities","Rewards on all three levels","Results and estimated profit","€0.20 per coupon used"]},
+  pro:{label:"Pro", price:29, fee:0, offers:99, acts:99, flash:true, line:"For busy places that want to fill their quiet hours.", feats:["Unlimited rewards and activities","Fill now: 1-hour flash rewards when you're empty","Shown first in “I'm bored”","No fee per coupon"]},
+  plus:{label:"Plus", price:59, fee:0, offers:99, acts:99, flash:true, featured:true, line:"For gyms, chains and several locations.", feats:["Everything in Pro","Up to 3 locations","Featured on the map and in Nearby","Monthly report for your team"]}
+};
+const planOf = mid => BIZ[(state.billing[mid]||{}).plan] ? state.billing[mid].plan : "free";
+const planDef = mid => BIZ[planOf(mid)];
+function planCards(cur, mid, requested){
+  return `<div class="plans">${Object.entries(BIZ).map(([k,d])=>`<div class="plan ${k==="pro"?"pro":""}"><div class="row between"><b style="font-size:17px">${d.label}</b>${k===cur?'<span class="chip on">Your plan</span>':k==="starter"?'<span class="chip hot">Small shops</span>':k==="pro"?'<span class="chip" style="background:var(--plum-ink);color:var(--plum)">Most popular</span>':""}</div>
+    <div class="price">€${d.price} <span class="small" style="font-family:var(--body);font-weight:600">/ month</span></div><p class="small" style="opacity:.85">${esc(d.line)}</p><ul>${d.feats.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>
+    ${mid && k!==cur ? (requested===k ? '<p class="small"><b>Request sent.</b> The LifeOn team will contact you.</p>' : `<button class="small ${k==="pro"?"":"ghost"}" data-req="${k}" style="align-self:flex-start;${k==="pro"?"background:var(--plum-ink);color:var(--plum)":""}">${d.price > BIZ[cur].price ? "Upgrade" : "Switch"} to ${d.label}</button>`) : ""}</div>`).join("")}</div>
+  <p class="small muted">First month free on every paid plan. Cancel any time. Prices without VAT. Pay yearly and get 2 months free.</p>`;
+}
 const ICON = {
   cafe:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8z"/><path d="M17 9h1.5a2.5 2.5 0 0 1 0 5H17"/><path d="M8 3v2M12 3v2"/></svg>',
   gym:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 7v10M18 7v10M3 10v4M21 10v4M6 12h12"/></svg>',
@@ -1074,7 +1095,7 @@ const PLANS = {
   "e120":{label:"2 hours", parts:[["f",120]]},
   "m30":{label:"30 min", parts:[["f",30]]}, "m45":{label:"45 min", parts:[["f",45]]}, "m60":{label:"60 min", parts:[["f",60]]}, "m90":{label:"90 min", parts:[["f",90]]}
 };
-const KIND_PLANS = { study:["pomo2","pomo4","50","90"], work:["50","90","pomo2"], lunch:["l30","l45","l60"], evening:["l60","e120"], move:["m30","m45","m60","m90"] };
+const KIND_PLANS = { study:["pomo2","pomo4","50","90"], work:["50","90","pomo2"], lunch:["l30","l45","l60"], evening:["l30","l60","e120"], move:["m30","m45","m60","m90"] };
 const KIND_NAME = { study:"Study focus", work:"Work focus", lunch:"Lunch offline", evening:"Offline evening", move:"Move session" };
 const MOVE_TYPES = ["Walk","Run","Bike","Gym","Sport","Yoga"];
 const CATS = { all:["All",[]], fitness:["Fitness",["gym","sport"]], food:["Food",["food"]], cafe:["Cafés & study",["cafe","library"]], more:["Services & culture",["culture","services","other"]] };
@@ -1083,7 +1104,7 @@ const focusMins = plan => PLANS[plan].parts.filter(p=>p[0]==="f").reduce((s,p)=>
 
 // ================= scoring =================
 const DAILY_CAP = 150;
-function sessionPts(s, groupBonus){ if (!s.ok) return 0; let p = Math.round(s.min*0.5); if (s.kind==="move" && s.mode!=="venue" && !s.verified) p = Math.min(30, p); if (s.mode==="venue") p = Math.round(p*1.6); if (groupBonus) p += 10; return p; }
+function sessionPts(s, groupBonus){ if (!s.ok) return 0; let p = Math.round(s.min*0.5); if (s.kind==="move" && s.mode!=="venue" && !s.verified) p = 0; if (s.mode==="venue") p = Math.round(p*1.6); if (groupBonus) p += 10; return p; }
 function groupBonusFor(pid, s){
   if (s.mode!=="group" || !s.ok || !s.group) return false;
   const g = state.groups[s.group]; if (!g) return false;
@@ -1095,7 +1116,6 @@ function stats(pid){
   for (const s of (p.sessions||[])) { const k = dkey(s.start); tried++; if (s.ok){ done++; focusMin += s.min; if (wk.has(k)) { if (s.kind==="move") weekMove++; else weekFocus += s.min; } } add(k, sessionPts(s, groupBonusFor(pid, s))); }
   const seenM = {};
   for (const c of (p.checkins||[]).slice().sort((a,b)=>a.at-b.at)) { const k = dkey(c.at); add(k, 30); const mk = k.slice(0,7); const set = seenM[mk] = seenM[mk] || new Set(); const before = set.size; set.add(c.venueId); if (before===2 && set.size===3) add(k, 60); if (wk.has(k) && ["gym","sport"].includes(state.merchants[c.venueId]?.kind)) weekMove++; }
-  for (const k of Object.keys(p.free||{})) add(k, 10);
   for (const k of Object.keys(p.ritual||{})) add(k, 5);
   let earned = 0, weekPts = 0;
   for (const [k,v] of Object.entries(byDay)) { const c = Math.min(DAILY_CAP, v); earned += c; if (wk.has(k)) weekPts += c; }
@@ -1110,18 +1130,19 @@ function stats(pid){
 // ================= shops =================
 const billing = mid => state.billing[mid] || {};
 const approved = mid => billing(mid).status === "approved";
-const isPro = mid => billing(mid).plan === "pro";
+const isPro = mid => planDef(mid).flash;
 function shopOffers(mid){
   const m = state.merchants[mid]; if (!m) return [];
   let list = Object.entries(m.offers||{}).filter(([,o])=>o.active).sort((a,b)=>(a[1].createdAt||0)-(b[1].createdAt||0));
   list = list.filter(([,o]) => !o.flashUntil || (isPro(mid) && Date.now() < o.flashUntil));
-  if (!isPro(mid)) list = list.filter(([,o])=>!o.flashUntil).slice(0,1);
+  if (!isPro(mid)) list = list.filter(([,o])=>!o.flashUntil);
+  list = list.slice(0, planDef(mid).offers);
   return list;
 }
 function shopActivities(mid){
   const m = state.merchants[mid]; if (!m) return [];
   let list = Object.entries(m.activities||{}).filter(([,a])=>a.active && a.date >= today()).sort((a,b)=>(a[1].date+a[1].time).localeCompare(b[1].date+b[1].time));
-  if (!isPro(mid)) list = list.slice(0,1);
+  list = list.slice(0, planDef(mid).acts);
   return list;
 }
 function liveOffers(){ const out=[]; for (const mid of Object.keys(state.merchants)) if (approved(mid)) for (const [key,o] of shopOffers(mid)) out.push({mid, key, o, m:state.merchants[mid]}); return out; }
@@ -1155,7 +1176,7 @@ function avatar(name){
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" rx="32" fill="#0F6B5E"/><text x="32" y="41" font-family="Arial" font-size="24" font-weight="700" fill="#fff" text-anchor="middle">${esc(ini)}</text></svg>`;
   return "data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg);
 }
-const DEMO_KEY = "lifeon-demo-v5", BANNER_KEY = "lifeon-banner-off";
+const DEMO_KEY = "lifeon-demo-v6", BANNER_KEY = "lifeon-banner-off";
 const bannerOff = () => { try { return localStorage.getItem(BANNER_KEY) === "1"; } catch(e){ return false; } };
 async function makeDemo(){
   const me = "demo-me", now = Date.now(), H = 3600e3, D = 24*H;
@@ -1163,7 +1184,7 @@ async function makeDemo(){
   const ex = k => dkey(now + k*D);
   const players = {
     [me]: {profile:"study", baseline:190, town:"Castellanza", blocked:["Instagram","TikTok","YouTube"], joined:dkey(now-20*D),
-      sessions:[sess(0,40,"solo",{kind:"move",type:"Run"}), sess(1,50,"group",{group:"DEMO42"}), sess(2,60,"venue",{kind:"move",type:"Gym",venueId:"d2"}), sess(2,50,"solo"), sess(2,25,"solo"), sess(3,90,"venue",{venueId:"d3"}), sess(4,50,"solo"), {id:"f1",start:now-5*D,min:12,mode:"solo",ok:false,kind:"study"}, sess(5,50,"solo"), sess(6,50,"solo")],
+      sessions:[sess(0,40,"solo",{kind:"move",type:"Run",verified:true,km:6.4}), sess(1,50,"group",{group:"DEMO42"}), sess(2,60,"venue",{kind:"move",type:"Gym",venueId:"d2"}), sess(2,50,"solo"), sess(2,25,"solo"), sess(3,90,"venue",{venueId:"d3"}), sess(4,50,"solo"), {id:"f1",start:now-5*D,min:12,mode:"solo",ok:false,kind:"study"}, sess(5,50,"solo"), sess(6,50,"solo")],
       checkins:[{at:now-3*D, venueId:"d1"}, {at:now-2*D, venueId:"d2"}], free:{[dkey(now-2*D)]:true}, ritual:{}, coupons:[],
       study:{exams:[{id:"e1",name:"Corporate Finance",date:ex(12)},{id:"e2",name:"Marketing",date:ex(26)}], tasks:[{id:"t1",text:"Chapter 4: review with active recall",exam:"e1",done:false,day:today()},{id:"t2",text:"Exercises 4.1–4.6",exam:"e1",done:true,day:today()},{id:"t3",text:"Case study notes",exam:"e2",done:false,day:today()}]},
       work:{date:today(), top3:[{t:"Finish the client report",done:false},{t:"Reply to supplier",done:true},{t:"Plan next week",done:false}]}},
@@ -1196,20 +1217,22 @@ async function makeDemo(){
   };
   Object.assign(merchants.d1, {lat:45.6105, lng:8.8936}); Object.assign(merchants.d2, {lat:45.5978, lng:8.9152}); Object.assign(merchants.d3, {lat:45.6117, lng:8.8503}); Object.assign(merchants.d4, {lat:45.5941, lng:8.9106}); Object.assign(merchants[me], {lat:45.6126, lng:8.8991});
   const sampleMe = players[me]; delete players[me];
-  const billing = { d1:{status:"approved", plan:"pro"}, d2:{status:"approved", plan:"pro"}, d3:{status:"approved", plan:"pro"}, d4:{status:"approved", plan:"free"}, [me]:{status:"approved", plan:"free"} };
+  const billing = { d1:{status:"approved", plan:"pro"}, d2:{status:"approved", plan:"pro"}, d3:{status:"approved", plan:"pro"}, d4:{status:"approved", plan:"starter"}, [me]:{status:"approved", plan:"free"} };
   const teamkeys = { d1:{code:"CAFE24"}, d2:{code:"GYM77"}, d3:{code:"STUDY5"}, d4:{code:"RUN10"} };
   const groups = { DEMO42:{name:"Study group (example)", members:[me,"demo-1","demo-2","demo-3"], createdBy:me, createdAt:now-9*D, plans:[{by:"demo-1", text:"Studying at Example study café from 15:00. Who's in?", at: now-40*60e3}]} };
   const data = {players, merchants, billing, teamkeys, groups};
   try { const saved = JSON.parse(localStorage.getItem(DEMO_KEY) || "null"); if (saved && saved.players) Object.assign(data, saved); } catch(e){}
   const persist = () => { try { localStorage.setItem(DEMO_KEY, JSON.stringify(data)); } catch(e){} };
+  const sampleShop = merchants[me], sampleBill = billing[me]; delete merchants[me]; delete billing[me];
   const priv = { shop:{code:"SHOP1"} };
   const subs = {}; const emit = c => (subs[c]||[]).forEach(f=>f(data[c]));
   return {
     demo:true, me, canEdit:true, canWrite:true,
     names: async ids => Object.fromEntries(ids.map(id=>{ const nm = (id===me && data.players[me] && data.players[me].name) || names[id] || "Someone"; return [id,{name:nm, avatarUrl:avatar(nm), isMe:id===me}]; })),
-    async loadGuest(){ data.players[me] = JSON.parse(JSON.stringify(sampleMe)); persist(); emit("players"); },
+    async adopt(d){ data.players[me] = JSON.parse(JSON.stringify(d)); persist(); emit("players"); },
+    async loadGuest(){ data.players[me] = JSON.parse(JSON.stringify(sampleMe)); if (!data.merchants[me]) { data.merchants[me] = JSON.parse(JSON.stringify(sampleShop)); data.billing[me] = {...sampleBill}; } persist(); emit("merchants"); emit("billing"); emit("players"); },
     on(c, f){ (subs[c]=subs[c]||[]).push(f); f(data[c]); },
-    async save(c, id, body){ data[c][id] = JSON.parse(JSON.stringify(body)); persist(); emit(c); },
+    async save(c, id, body){ data[c][id] = JSON.parse(JSON.stringify(body)); persist(); emit(c); if (c==="players" && id===me) cloudSave(body); },
     async remove(c, id){ delete data[c][id]; persist(); emit(c); },
     async getPrivate(k){ return priv[k]||null; }, async setPrivate(k, v){ priv[k] = v; },
     presence(){}, onLive(f){ f([{by:"demo-1", presence:{focusUntil: now + 32*60e3}}]); }
@@ -1266,6 +1289,40 @@ async function saveShop(mid, m){
   catch(e){ toast(e && e.code==="invalid_argument" ? "You can't save this shop. Ask the LifeOn team for access." : "Couldn't save. Try again."); return false; }
 }
 
+// ================= accounts (Supabase) =================
+// Fill in to switch on Google, Apple and email sign-in (see SETUP in the README).
+const CLOUD = { url: "", anonKey: "" };
+let sbP = null, cloudUser = null;
+function loadScript(src){ return new Promise((res, rej) => { const sc = document.createElement("script"); sc.src = src; sc.onload = res; sc.onerror = rej; document.head.appendChild(sc); }); }
+function cloud(){
+  if (!CLOUD.url || !CLOUD.anonKey || (S && !S.demo)) return Promise.resolve(null);
+  if (!sbP) sbP = loadScript("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js").then(() => window.supabase.createClient(CLOUD.url, CLOUD.anonKey, {auth:{persistSession:true, autoRefreshToken:true, detectSessionInUrl:true}})).catch(() => { sbP = null; return null; });
+  return sbP;
+}
+async function authStart(kind, email){
+  const ob = state.ob, c = await cloud();
+  if (!c) { ob.authMsg = "Sign-in with Apple, Google and email isn't switched on yet in this preview. Continue on this phone below: everything else works the same."; render(); return; }
+  const redirectTo = location.origin + location.pathname;
+  if (kind==="email") { const {error} = await c.auth.signInWithOtp({email, options:{emailRedirectTo:redirectTo}}); ob.authMsg = error ? "Couldn't send the email. Try again." : "Check your inbox: we sent a sign-in link to "+email+"."; render(); return; }
+  const {error} = await c.auth.signInWithOAuth({provider:kind, options:{redirectTo}});
+  if (error) { ob.authMsg = (kind==="apple" ? "Apple" : "Google")+" sign-in isn't available yet. Try email, or continue on this phone."; render(); }
+}
+async function cloudSave(body){ if (!cloudUser) return; const c = await cloud(); if (!c) return; try { await c.from("players").upsert({id: cloudUser.id, data: body, updated_at: new Date().toISOString()}); } catch(e){} }
+async function cloudBoot(store){
+  const c = await cloud(); if (!c) return;
+  let session = null; try { session = (await c.auth.getSession()).data.session; } catch(e){}
+  if (!session) return;
+  cloudUser = session.user;
+  try { const {data:row} = await c.from("players").select("data").eq("id", cloudUser.id).maybeSingle(); if (row && row.data && row.data.profile) { await store.adopt(row.data); return; } } catch(e){}
+  const meta = cloudUser.user_metadata || {};
+  state.ob.name = meta.full_name || meta.name || (cloudUser.email||"").split("@")[0]; state.ob.signedIn = true;
+  if (!meP() || !meP().profile) { state.ob.step = 2; render(); } else cloudSave(meP());
+}
+function accountCard(){
+  if (!S.demo) return "";
+  if (cloudUser) return `<section class="card"><h3>Account</h3><p class="small muted">Signed in as ${esc(cloudUser.email || "your account")}. Your points are backed up.</p><button class="ghost small" id="signOut" style="align-self:flex-start">Sign out</button></section>`;
+  return `<section class="card"><h3>Account</h3><p class="small muted">You're using LifeOn on this phone only. Sign in to back up your points and use them on other devices.</p><button class="ghost small" id="goSignIn" style="align-self:flex-start">Sign in</button></section>`;
+}
 // ================= routing =================
 const ALL_ROUTES = ["today","explore","friends","shop","team","me","study","learn"];
 function tabs(){
@@ -1341,13 +1398,16 @@ function viewWelcome(){
       <button class="ob-link" data-ob="shop">I have a business</button></div></section>`; }
   const bar = `<div class="ob-progress" aria-label="Step ${ob.step} of 4">${[1,2,3,4].map(i=>`<i class="${i<=ob.step?"on":""}"></i>`).join("")}</div>`;
   const back = `<button class="ghost small" data-ob="back" style="align-self:flex-start">‹ Back</button>`;
-  if (ob.step===1) return `<section class="ob">${back}${bar}<h1>Create your profile</h1><p class="muted">Pick a name your friends will recognise, or look around first as a guest.</p>
-    <form class="card" id="obAcc"><label for="obName">Your name<input id="obName" maxlength="30" autocomplete="given-name" required placeholder="e.g. Laila" value="${esc(ob.name||"")}"></label>
-      <label class="row" style="flex-direction:row;color:var(--ink);font-weight:500"><input type="checkbox" id="obAge" required> I'm 18 or older</label>
-      <button class="full" type="submit">Create profile</button>
-      <p class="small muted">In this preview your profile is saved on this phone. Sign in with Apple, Google or email comes with the App Store version.</p></form>
+  if (ob.step===1) return `<section class="ob">${back}${bar}<h1>Welcome to LifeOn</h1><p class="muted">Sign in to keep your points safe and use them on every device.</p>
+    <button class="authbtn apple" data-auth="apple">Continue with Apple</button>
+    <button class="authbtn google" data-auth="google">Continue with Google</button>
+    ${ob.emailOpen ? `<form class="card" id="obMail" style="gap:10px"><label for="obEmail">Your email<input id="obEmail" type="email" autocomplete="email" required placeholder="you@email.com"></label><button class="full" type="submit">Send me a sign-in link</button></form>` : `<button class="authbtn mail" data-auth="email">Continue with email</button>`}
+    ${ob.authMsg ? `<div class="banner">${esc(ob.authMsg)}</div>` : ""}
     <div class="ob-or"><span>or</span></div>
-    <button class="ghost full" data-ob="guest">Continue as guest</button><p class="small muted" style="text-align:center">Guest mode: try everything with example points, friends and places.</p></section>`;
+    <form class="card" id="obAcc" style="gap:10px"><label for="obName">Use LifeOn without an account: your name<input id="obName" maxlength="30" autocomplete="given-name" required placeholder="e.g. Laila" value="${esc(ob.name||"")}"></label>
+      <label class="row" style="flex-direction:row;color:var(--ink);font-weight:500"><input type="checkbox" id="obAge" required> I'm 18 or older</label>
+      <button class="ghost full" type="submit">Continue on this phone</button></form>
+    <button class="ob-link" data-ob="guest" style="color:var(--ink)">Just looking? <u>Try as a guest with example data</u></button></section>`;
   if (ob.step===2) return `<section class="ob">${back}${bar}<h1>Who are you?</h1><p class="muted">LifeOn adapts to what you need. You can change it any time.</p>
     ${[["study",ICON.book,"Student","Focus, study plan, Pomodoro, study techniques"],["work",ICON.brief,"Worker","Deep work, Top 3 of the day, lunch offline"],["active",ICON.walk,"I want to move more","Workouts with GPS, sport nearby, fitness rewards"],["free",ICON.leaf,"Less phone, more life","Ideas, events and places near you"]].map(([k,ic,t,d])=>`<button class="pick ${ob.profile===k?"sel":""}" data-prof="${k}"><span class="ico">${ic}</span><span><b>${t}</b><span class="s">${d}</span></span><span class="muted">›</span></button>`).join("")}</section>`;
   if (ob.step===3) return `<section class="ob">${back}${bar}<h1>What distracts you?</h1><p class="muted">These apps are locked during your sessions.</p>
@@ -1369,22 +1429,25 @@ function bindWelcome(){
     else if (a==="skip") { ob.step = 1; render(); }
     else if (a==="back") { ob.step = Math.max(0, ob.step-1); if (ob.step===1 && !S.demo) ob.step = 0; render(); }
     else if (a==="shop") { document.body.classList.remove("ob-dark"); state.shopMid = S.me; go("shop"); }
-    else if (a==="guest") { if (S.loadGuest) { await S.loadGuest(); document.body.classList.remove("ob-dark"); go("today"); toast("Guest mode: example data loaded"); } }
+    else if (a==="guest") { ob.guest = true; ob.name = ""; ob.step = 2; render(); }
     else if (a==="locate") { b.disabled = true; const n = await locate(); if (n) { ob.town = n.town; ob.locMsg = n.km > 15 ? "You're outside the pilot area, so we picked the closest town: "+n.town+"." : "Found you near "+n.town+"."; } else ob.locMsg = "We couldn't get your location. Choose your town below."; render(); }
     else if (a==="finish") { ob.town = $("#wTown").value; await finishOnboarding(); }
   });
   $$("[data-prof]", v).forEach(b=>b.onclick=()=>{ ob.profile = b.dataset.prof; ob.step = 3; render(); });
-  const acc = $("#obAcc"); if (acc) acc.onsubmit = e => { e.preventDefault(); ob.name = $("#obName").value.trim(); ob.step = 2; render(); };
+  const acc = $("#obAcc"); if (acc) acc.onsubmit = e => { e.preventDefault(); ob.guest = false; ob.name = $("#obName").value.trim(); ob.step = 2; render(); };
+  $$("[data-auth]", v).forEach(b=>b.onclick=()=>{ const k = b.dataset.auth; if (k==="email") { ob.emailOpen = true; render(); } else authStart(k); });
+  const om = $("#obMail"); if (om) om.onsubmit = e => { e.preventDefault(); authStart("email", $("#obEmail").value.trim()); };
   const ap = $("#obApps"); if (ap) { toggleChips($("#wApps"), false); ap.onsubmit = e => { e.preventDefault(); ob.apps = picked($("#wApps")); ob.base = Math.max(10, Number($("#wBase").value)||180); ob.step = 4; render(); }; }
   const wt = $("#wTown"); if (wt) wt.onchange = () => { ob.town = wt.value; };
 }
 async function finishOnboarding(){
   const ob = state.ob;
+  if (ob.guest && S.loadGuest) await S.loadGuest();
   const p = { ...clone(meP()), profile: ob.profile||"study", blocked: ob.apps||["Instagram","TikTok","YouTube"], baseline: ob.base||180, town: ob.town||"Castellanza", joined: meP()?.joined || today() };
-  if (ob.name && S.demo) p.name = ob.name.slice(0,30);
+  if (ob.name && S.demo) p.name = ob.name.slice(0,30); if (ob.guest) delete p.name;
   for (const k of ["sessions","checkins","coupons"]) p[k] = p[k] || [];
   p.free = p.free || {}; p.ritual = p.ritual || {};
-  if (await writeMe(p)) { const nm = ob.name; document.body.classList.remove("ob-dark"); state.ob = {step:0, slide:0}; go("today"); toast("Welcome to LifeOn"+(nm?", "+nm:"")); }
+  if (await writeMe(p)) { const nm = ob.name; document.body.classList.remove("ob-dark"); state.ob = {step:0, slide:0}; go("today"); toast(ob.guest ? "Guest mode: example points and friends loaded" : "Welcome to LifeOn"+(nm?", "+nm:"")); }
 }
 
 // ================= today =================
@@ -1533,17 +1596,17 @@ function bindLearn(){ $$("[data-try]").forEach(b=>b.onclick=()=>{ const t = TECH
 // ================= Focus =================
 let focusRun = null, unlock = { lockedUntil:0, strikes:0 };
 const SAFE_KEY = "lifeon-run";
-function openFocus(kind, preMode, taskLabel, prePlan){
+function openFocus(kind, preMode, taskLabel, prePlan, preType){
   const p = meP(); const groups = myGroups();
   const places = Object.entries(state.merchants).filter(([mid])=>approved(mid)).sort((a,b)=>dist(a[1])-dist(b[1]));
-  const f = { kind, type: MOVE_TYPES[0], plan: prePlan || KIND_PLANS[kind][0], mode: preMode || "solo", group: groups[0]?.[0] || "", venue: places[0]?.[0] || "", task: taskLabel || "" };
+  const f = { kind, type: preType || MOVE_TYPES[0], plan: prePlan || KIND_PLANS[kind][0], mode: preMode || "solo", group: groups[0]?.[0] || "", venue: places[0]?.[0] || "", task: taskLabel || "" };
   const el = flow(KIND_NAME[kind], true);
   const draw = () => {
     const fm = focusMins(f.plan);
     el.innerHTML = `<div class="in">
       <div class="row between"><h2>${esc(KIND_NAME[kind])}</h2><button class="ghost small" data-close>Close</button></div>
       ${f.task?`<div class="card"><p class="small muted">Working on</p><b>${esc(f.task)}</b></div>`:""}
-      ${kind==="move" ? `<div class="card"><p class="small" style="font-weight:700">What are you doing?</p><div class="chips" id="fType">${MOVE_TYPES.map(t=>`<button type="button" class="chip" data-v="${t}" aria-pressed="${f.type===t}">${t}</button>`).join("")}</div><p class="small muted">${["Walk","Run","Bike"].includes(f.type) ? "GPS checks your distance and speed: keep LifeOn open (the screen stays on) for full points. Without GPS it counts up to 30 points." : "For full points choose At a partner place and check in with the code. Otherwise it counts up to 30 points."}</p></div>` : `<div class="card"><p class="small muted">Locked during the session</p>
+      ${kind==="move" ? `<div class="card"><p class="small" style="font-weight:700">What are you doing?</p><div class="chips" id="fType">${MOVE_TYPES.map(t=>`<button type="button" class="chip" data-v="${t}" aria-pressed="${f.type===t}">${t}</button>`).join("")}</div><p class="small muted">${["Walk","Run","Bike"].includes(f.type) ? "Like Strava: GPS records your route, distance and speed. Keep LifeOn open (the screen stays on). Points only if the GPS confirms it." : "Points only at a partner place: choose At a partner place and check in with the code on the poster."}</p></div>` : `<div class="card"><p class="small muted">Locked during the session</p>
         <div class="blocked">${(p.blocked||[]).map(a=>`<span>${ICON.lock}${esc(a)}</span>`).join("") || `<span>No apps chosen yet. Pick them in Me.</span>`}</div>
         <p class="small muted">Open any other app for more than 10 seconds and the session stops.${f.plan.startsWith("pomo")?" During Pomodoro breaks you're free.":""}</p></div>`}
       <div class="card"><p class="small" style="font-weight:700">How long?</p>
@@ -1581,8 +1644,8 @@ function runFocus(el, f){
   const overlapFocus = (a,b) => phases.filter(x=>x.ty==="f").reduce((s,x)=>s+Math.max(0, Math.min(b,x.to)-Math.max(a,x.from)),0);
   focusRun = { ...f, start, end, hiddenAt:null, timer:null, track:null, wake:null };
   if (f.kind==="move" && ["Walk","Run","Bike"].includes(f.type) && navigator.geolocation) {
-    const track = focusRun.track = {km:0, last:null, fixes:0, watch:null};
-    try { track.watch = navigator.geolocation.watchPosition(pos => { const c = pos.coords; if (c.accuracy > 60) return; const pt = [c.latitude, c.longitude]; track.fixes++; track.denied = false; if (!track.last) { track.last = pt; return; } const d = hav(track.last, pt); if (d > 0.01) { track.km += d; track.last = pt; } }, err => { if (err && err.code === 1) track.denied = true; }, {enableHighAccuracy:true, maximumAge:5000}); } catch(e){}
+    const track = focusRun.track = {km:0, last:null, lastT:0, fixes:0, watch:null, route:[], jumps:0};
+    try { track.watch = navigator.geolocation.watchPosition(pos => { const c = pos.coords; if (c.accuracy > 60) return; const pt = [c.latitude, c.longitude], now = Date.now(); track.fixes++; track.denied = false; if (!track.last) { track.last = pt; track.lastT = now; track.route.push(pt); return; } const d = hav(track.last, pt); if (d > 0.01) { const hrs = Math.max(1, now - track.lastT)/3.6e6; if (d/hrs > 60) { track.last = pt; track.lastT = now; track.jumps++; return; } track.km += d; track.last = pt; track.lastT = now; if (track.route.length < 600) track.route.push(pt); } }, err => { if (err && err.code === 1) track.denied = true; }, {enableHighAccuracy:true, maximumAge:5000}); } catch(e){}
     try { if (navigator.wakeLock) navigator.wakeLock.request("screen").then(w => { if (focusRun) focusRun.wake = w; else w.release(); }).catch(()=>{}); } catch(e){}
   }
   unlock = { lockedUntil:0, strikes:0 };
@@ -1636,17 +1699,18 @@ function runFocus(el, f){
       if (run.mode==="venue") vNote = "Verified by check-in at the place";
       else if (run.track && run.track.fixes) { const kmv = Math.round(run.track.km*100)/100, spd = mins > 0 ? kmv/(mins/60) : 0, R = {Walk:[2,8], Run:[5,20], Bike:[8,40]}[run.type];
         s.km = kmv; s.verified = !!R && spd >= R[0] && spd <= R[1];
-        vNote = s.verified ? `GPS verified · ${kmv.toFixed(2)} km · ${spd.toFixed(1)} km/h` : spd > (R?R[1]:99) ? `Too fast for a ${run.type.toLowerCase()} (${spd.toFixed(0)} km/h): counted as not verified` : `Only ${kmv.toFixed(2)} km tracked: counted as not verified`; }
-      else vNote = "Not verified (no GPS or check-in): counts up to 30 points";
+        vNote = s.verified ? `GPS verified · ${kmv.toFixed(2)} km · ${spd.toFixed(1)} km/h` : spd > (R?R[1]:99) ? `Too fast for a ${run.type.toLowerCase()} (${spd.toFixed(0)} km/h): not verified, no points` : `Only ${kmv.toFixed(2)} km tracked: not verified, no points`; }
+      else vNote = "Not verified (no GPS or check-in): no points this time";
     }
     const np = clone(meP()); np.sessions = [...(np.sessions||[]), s];
     await writeMe(np);
     el.innerHTML = `<div class="in" style="min-height:100%;justify-content:center;text-align:center">
-      <h1 style="font-size:42px;line-height:1">${ok?"Done.":"Session stopped"}</h1>
+      <h1 style="font-size:42px;line-height:1">${!ok ? "Session stopped" : (run.kind==="move" && run.mode!=="venue" && !s.verified) ? "Not verified" : "Done."}</h1>
       <p class="muted">${ok ? (run.kind==="move" ? `You moved for ${fmtMin(mins)}.` : `You stayed focused for ${fmtMin(totalFocus)}.`) : esc(why||"")}</p>
-      ${ok?`<p style="font-family:var(--display);font-weight:800;font-size:56px;color:var(--accent)">+${sessionPts(s,false)}</p><p class="muted small">points${run.mode==="group"?" · +10 more if a friend finishes too":""}</p>${vNote?`<p><span class="verify" style="background:color-mix(in srgb, ${s.verified||run.mode==="venue"?"var(--good)":"var(--sun)"} 18%, transparent)">${ICON.check}${esc(vNote)}</span></p>`:""}`:`<p class="muted small">Next time keep LifeOn open. Breaks under 10 seconds are fine.</p>`}
+      ${ok && sessionPts(s,false)>0?`<p style="font-family:var(--display);font-weight:800;font-size:56px;color:var(--accent)">+${sessionPts(s,false)}</p><p class="muted small">points${run.mode==="group"?" · +10 more if a friend finishes too":""}</p>${run.track && run.track.route.length > 1 ? `<div id="routeMap" aria-label="Your route"></div><p class="small muted">${(s.km||0).toFixed(2)} km · ${fmtMin(mins)}${run.type==="Run" && s.km > 0.2 ? " · "+Math.floor(mins/s.km)+"'"+pad(Math.round((mins/s.km % 1)*60))+'" per km' : ""}</p>` : ""}${vNote?`<p><span class="verify" style="background:color-mix(in srgb, ${s.verified||run.mode==="venue"?"var(--good)":"var(--sun)"} 18%, transparent)">${ICON.check}${esc(vNote)}</span></p>`:""}`:(ok ? `<p class="muted small">Next time keep LifeOn open with GPS on, or check in at a partner place.</p>` : `<p class="muted small">Next time keep LifeOn open. Breaks under 10 seconds are fine.</p>`)}
       <button class="full" data-close>Back to today</button></div>`;
     $("[data-close]", el).onclick = () => { el.remove(); render(); };
+    const rm = $("#routeMap", el); if (rm) loadLeaflet().then(L => { const map = L.map(rm, {zoomControl:false, attributionControl:false}); L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:19}).addTo(map); const line = L.polyline(run.track.route, {color:"#EE5A2F", weight:5}).addTo(map); map.fitBounds(line.getBounds(), {padding:[20,20]}); }).catch(() => { rm.remove(); });
   }
 }
 function makePuzzle(){
@@ -1729,7 +1793,9 @@ function openBored(){
     const pool = IDEAS.filter(x=>x[2]===b.mood && x[3]<=b.time);
     const extra = IDEAS.filter(x=>x[2]!==b.mood && x[3]<=b.time);
     const list = [...shuffle(pool, state.ideaSeed), ...shuffle(extra, state.ideaSeed+1)].slice(0,6);
-    const groups = myGroups(); const doneFree = !!(meP().free||{})[today()];
+    const groups = myGroups();
+    const ideaAction = x => { const t = x[0]; if (/bike|cycle|ride|ciclabile/i.test(t)) return ["Bike","GPS"]; if (/\brun\b|run in/i.test(t)) return ["Run","GPS"]; if ((x[2]==="move" || x[2]==="outdoor") && /walk|hike|explore|sunset|paths|trail|street|town/i.test(t)) return ["Walk","GPS"]; return [null,"offline"]; };
+    const planFor = m => m <= 30 ? "l30" : m <= 60 ? "l60" : "e120";
     const label = b.time===30 ? "the next 30 minutes" : b.time===60 ? "the next hour" : "this afternoon or evening";
     const firstPlace = offers[0]?.m.name;
     el.innerHTML = `<div class="in">
@@ -1740,8 +1806,8 @@ function openBored(){
           <div class="row"><button class="ghost small" data-claim="${esc(x.mid)}|${esc(x.key)}" style="flex:1">Get it</button><button class="small" data-checkin="${esc(x.mid)}" style="flex:1">I'm there: check in</button></div></div>`).join("")}</div>`
         : `<p class="muted small">No partner offers open right now in your area. Plenty of other ideas below.</p>`}</div>
       ${acts.length?`<div class="opt"><span class="tag" style="color:var(--plum)">Happening soon</span><div class="list">${activityCards(acts,2)}</div></div>`:""}
-      <div class="opt"><span class="tag" style="color:var(--teal)">Free ideas · +10 pts once a day</span>
-        <div class="list">${list.map((x,i)=>`<div class="offer"><div class="ico">${ICON.walk}</div><div><div class="t">${esc(x[0])}</div><div class="b">${esc(x[1])}</div></div><button class="ghost small" data-free="${i}" ${doneFree?"disabled":""}>${doneFree?"Done":"Did it"}</button></div>`).join("")}</div>
+      <div class="opt"><span class="tag" style="color:var(--teal)">Free ideas · points only when verified</span><p class="small muted">Walks, runs and rides start a GPS session. Everything else starts a phone-down timer: if you pick up your phone, it stops.</p>
+        <div class="list">${list.map((x,i)=>`<div class="offer"><div class="ico">${ICON.walk}</div><div><div class="t">${esc(x[0])}</div><div class="b">${esc(x[1])}</div></div><button class="ghost small" data-idea="${i}">${ideaAction(x)[1]==="GPS" ? "Start · GPS" : "Start"}</button></div>`).join("")}</div>
         <button class="ghost small" id="moreIdeas">Show other ideas</button></div>
       <div class="opt"><span class="tag" style="color:var(--muted)">With friends</span>
         ${groups.length ? `<div class="offer two"><div class="ico">${ICON.friends}</div><div><div class="t">Ask your group to join you</div><div class="b">Your plan shows up on their Today screen.</div></div></div>
@@ -1753,7 +1819,7 @@ function openBored(){
     $("#moreIdeas", el).onclick = () => { state.ideaSeed += 7; ideas(); };
     $$("[data-claim]", el).forEach(x=>x.onclick=()=>{ const [mid,key] = x.dataset.claim.split("|"); confirmClaim(mid,key); });
     $$("[data-checkin]", el).forEach(x=>x.onclick=()=>checkIn(x.dataset.checkin));
-    $$("[data-free]", el).forEach(x=>x.onclick=async()=>{ const np = clone(meP()); np.free = {...(np.free||{}), [today()]: true}; if (await writeMe(np)) { toast("+10 points. Enjoy it."); ideas(); } });
+    $$("[data-idea]", el).forEach(x=>x.onclick=()=>{ const idea = list[Number(x.dataset.idea)]; const [type, how] = ideaAction(idea); el.remove(); if (how==="GPS") openFocus("move", null, idea[0], type==="Bike" ? "m60" : "m30", type); else openFocus("evening", null, idea[0], planFor(idea[3])); });
     const ps = $("#pSend", el); if (ps) ps.onclick = async () => {
       const code = $("#pGroup", el).value, g = clone(state.groups[code]), text = $("#pText", el).value.trim(); if (!text) return;
       g.plans = [...(g.plans||[]).filter(x=>Date.now()-x.at < 24*3600e3), {by:S.me, text, at:Date.now()}].slice(-10);
@@ -1890,6 +1956,11 @@ function bindFriends(){
 }
 
 // ================= me =================
+function activityList(){
+  const acts = ((meP()||{}).sessions||[]).filter(s=>s.kind==="move").slice(-5).reverse();
+  if (!acts.length) return "";
+  return `<section class="card"><h3>Your workouts</h3><div class="list">${acts.map(s=>`<div class="row between"><div><b>${esc(s.type||"Workout")}</b><div class="small muted">${esc(fmtDate(dkey(s.start)))} · ${fmtMin(s.min)}${s.km?" · "+s.km.toFixed(2)+" km":""}</div></div><span class="chip ${s.verified||s.mode==="venue"?"on":""}">${s.verified?"GPS verified":s.mode==="venue"?"Check-in":"Not verified"}</span></div>`).join("")}</div></section>`;
+}
 function viewMe(){
   const p = meP(), st = stats(S.me), g = myGoals();
   return `<section class="card"><div class="row"><img alt="" data-uid="${esc(S.me)}" src="${avatar("?")}" style="width:56px;height:56px;border-radius:50%"><div><h2 data-uid="${esc(S.me)}">You</h2><p class="small muted">${esc(PROFILES[p.profile]?.label||"")} · ${esc(p.town)} · since ${esc(p.joined||"")}</p></div></div>
@@ -1897,6 +1968,8 @@ function viewMe(){
   <section class="card"><h3>Your profile</h3><p class="small muted">LifeOn changes its home screen for what you need. Switch any time.</p>
     <div class="chips" id="mProf">${Object.entries(PROFILES).map(([k,v])=>`<button type="button" class="chip" data-v="${k}" aria-pressed="${p.profile===k}">${esc(v.label)}</button>`).join("")}</div></section>
   ${progressBlock(st)}
+  ${activityList()}
+  ${accountCard()}
   <form class="card" id="goalForm"><h3>Weekly goals</h3><p class="small muted">Set your own targets. They show as rings on Today.</p><div class="grid3"><label for="gF">Focus hours<input id="gF" type="number" min="1" max="60" value="${g.focus}"></label><label for="gM">Workouts<input id="gM" type="number" min="0" max="21" value="${g.move}"></label><label for="gP">Points<input id="gP" type="number" min="50" max="1050" step="50" value="${g.points}"></label></div><button class="ghost small" type="submit" style="align-self:flex-start">Save goals</button></form>
   <form class="card" id="meForm"><h2>Settings</h2>
     <div><p class="small" style="font-weight:700;margin-bottom:8px">Apps locked during Focus</p><div class="chips" id="mApps">${SOCIAL.map(a=>`<button type="button" class="chip" data-v="${a}" aria-pressed="${(p.blocked||[]).includes(a)}">${a}</button>`).join("")}</div></div>
@@ -1910,17 +1983,17 @@ function viewMe(){
       <div class="row between"><span>Focus at a partner place</span><b>+60%</b></div>
       <div class="row between"><span>Group session, a friend finishes too</span><b>+10</b></div>
       <div class="row between"><span>Check-in at a partner place</span><b>+30</b></div>
-      <div class="row between"><span>Free idea, self-reported</span><b>+10 once a day</b></div>
+      <div class="row between"><span>Offline timer for a free idea</span><b>+1 every 2 min</b></div>
       <div class="row between"><span>Work shutdown routine</span><b>+5 once a day</b></div>
       <div class="row between"><span>Every 7 days in a row</span><b>+50</b></div>
-      <div class="row between"><span>Move session without check-in</span><b>up to 30</b></div>
+      <div class="row between"><span>Walk, run, ride confirmed by GPS</span><b>+1 every 2 min</b></div>
       <div class="row between"><span>Explorer: 3 different places in a month</span><b>+60</b></div>
       <div class="row between"><span>Daily maximum</span><b>150</b></div></div>
     <p class="small muted">Rewards come in three levels: ${Object.values(TIERS).map(t=>t.label+" "+t.cost+" pts").join(", ")}. One reward per place per week, so places can keep offering them.</p></section>
   <section class="card"><h3>How we check it's real</h3><div class="list small">
     <div class="row between" style="align-items:flex-start"><span><b>Verified</b> · check-in code on the counter poster plus your location within 300 m; coupons with a 5-minute code</span><span class="chip on">Full points</span></div>
     <div class="row between" style="align-items:flex-start"><span><b>Tracked</b> · Focus stops if you leave the app; walks, runs and rides measured by GPS at a realistic speed</span><span class="chip on">Full points</span></div>
-    <div class="row between" style="align-items:flex-start"><span><b>Self-reported</b> · free ideas, workouts without GPS or check-in</span><span class="chip">Capped</span></div></div>
+    <div class="row between" style="align-items:flex-start"><span><b>Just saying it</b> · "I went for a walk" without GPS, check-in or timer</span><span class="chip">0 points</span></div></div>
     <p class="small muted">Coming with the App Store version: steps and workouts from Apple Health and Google Fit, and real app blocking with Screen Time.</p></section>
   <section class="card"><h3>Your data</h3><div class="list small"><div>No ads, ever.</div><div>Your screen time stays on your phone: LifeOn only knows if a session was completed.</div><div>Friends see only your name, points and streak.</div><div>Shops see that a coupon was used, not your name.</div></div><div class="row wrap"><button class="ghost small" data-guide>How LifeOn works</button><button class="ghost small" id="delMe" style="color:var(--bad)">Delete my data</button></div></section>
   <section class="card"><h3>About locking apps</h3><p class="small muted">In this pilot LifeOn runs in the browser. During Focus the other apps are locked by one rule: leave LifeOn and the session stops. To unlock early you must pass 3 brain challenges in a row with 3 lives; lose them all and you wait 5 minutes, then 10. The iPhone and Android versions will lock the chosen apps for real.</p></section>
@@ -1931,6 +2004,8 @@ function bindMe(){
   $("#goalForm").onsubmit = async e => { e.preventDefault(); const np = clone(meP()); np.goals = {focus:Math.max(1, Number($("#gF").value)||1), move:Math.max(0, Number($("#gM").value)||0), points:Math.max(50, Number($("#gP").value)||50)}; if (await writeMe(np)) toast("Goals saved"); };
   const dm = $("#delMe"); if (dm) dm.onclick = async () => { if (dm.dataset.armed!=="1") { dm.dataset.armed="1"; dm.textContent="Tap again to delete everything"; return; } try { await S.remove("players", S.me); toast("Your data has been deleted"); } catch(e){ toast("Couldn't delete. Try again."); } };
   $$("#mProf [data-v]").forEach(b=>b.onclick=async()=>{ const np = clone(meP()); np.profile = b.dataset.v; if (await writeMe(np)) toast("Profile: "+PROFILES[np.profile].label); });
+  const so = $("#signOut"); if (so) so.onclick = async () => { const c = await cloud(); try { await c.auth.signOut(); } catch(e){} cloudUser = null; toast("Signed out. Your data stays on this phone."); render(); };
+  const gs2 = $("#goSignIn"); if (gs2) gs2.onclick = () => { state.ob = {step:1, slide:0, emailOpen:false}; const el = flow("Sign in"); el.innerHTML = `<div class="in"><div class="row between"><h2>Sign in</h2><button class="ghost small" data-close>Close</button></div><p class="muted">Keep your points safe and use them on every device.</p><button class="authbtn apple" data-a="apple">Continue with Apple</button><button class="authbtn google" data-a="google">Continue with Google</button><form id="siMail" class="card" style="gap:10px"><label for="siEmail">Or with your email<input id="siEmail" type="email" required placeholder="you@email.com"></label><button class="full" type="submit">Send me a sign-in link</button></form><div id="siMsg"></div></div>`; $("[data-close]", el).onclick = () => el.remove(); const msg = () => { const m = state.ob.authMsg; $("#siMsg", el).innerHTML = m ? `<div class="banner">${esc(m)}</div>` : ""; }; $$("[data-a]", el).forEach(b=>b.onclick=async()=>{ await authStart(b.dataset.a); msg(); }); $("#siMail", el).onsubmit = async e => { e.preventDefault(); await authStart("email", $("#siEmail", el).value.trim()); msg(); }; };
   const ml = $("#meLoc"); if (ml) ml.onclick = async () => { ml.disabled = true; const n = await locate(); ml.disabled = false; if (n) { $("#mTown").value = n.town; toast("Near "+n.town+". Tap Save to keep it."); } else toast("Couldn't get your location."); };
   $("#meForm").onsubmit = async e => { e.preventDefault(); const np = clone(meP()); np.blocked = picked($("#mApps")); np.town = $("#mTown").value; np.baseline = Math.max(10, Number($("#mBase").value)||np.baseline); if (await writeMe(np)) toast("Saved"); };
   const gs = $("#goShop"); if (gs) gs.onclick = () => { state.shopMid = S.me; go("shop"); };
@@ -1953,15 +2028,21 @@ function shopNumbers(mid){
   const visits = checkins + focus + red.length;
   const revenue = visits * Number(m.avgTicket||0);
   const discountCost = red.reduce((s,r)=>s+Number(r.cost||0),0);
-  const fees = isPro(mid) ? PRO_PRICE : red.length*FEE;
-  return {checkins, focus, claimed, used:red.length, visits, newCustomers, people:seenMonth.size, revenue, discountCost, fees, net: revenue - discountCost - fees, feesIfFree: red.length*FEE};
+  const pd = planDef(mid); const fees = pd.price + red.length*pd.fee;
+  const costs = Object.entries(BIZ).map(([k,d])=>[k, d.price + red.length*d.fee]).sort((a,b)=>a[1]-b[1]);
+  return {checkins, focus, claimed, used:red.length, visits, newCustomers, people:seenMonth.size, revenue, discountCost, fees, net: revenue - discountCost - fees, best:costs[0][0], bestSave: fees - costs[0][1]};
 }
-const lockBox = (title, text) => `<div class="lock"><h3>${ICON.lock}${esc(title)} <span class="chip pro">Pro</span></h3><p class="small muted">${esc(text)}</p><button class="small" data-st="plan" style="align-self:flex-start;background:var(--plum);color:var(--plum-ink)">See Pro</button></div>`;
+const lockBox = (title, text) => `<div class="lock"><h3>${ICON.lock}${esc(title)} </h3><p class="small muted">${esc(text)}</p><button class="small" data-st="plan" style="align-self:flex-start;background:var(--plum);color:var(--plum-ink)">See plans</button></div>`;
 function viewShop(){
   const mid = state.shopMid || S.me; const m = state.merchants[mid];
   if (!m) {
     if (mid !== S.me) return `<section class="card"><p class="muted">This place no longer exists.</p></section>`;
     return `<section class="card" style="background:var(--teal);color:var(--teal-ink)"><h2>Bring people in when you're empty</h2><p class="small" style="opacity:.9">LifeOn users earn points by putting the phone down. They spend them at places like yours, in the hours you choose.</p></section>
+    <section class="card"><h2>How it works for you</h2><div class="steps">
+      <div class="step"><span class="n">1</span><div><b>Publish a reward</b><p class="small muted">A free coffee, −20%, a trial class. Only in the hours you choose, with a weekly limit.</p></div></div>
+      <div class="step"><span class="n">2</span><div><b>People come in</b><p class="small muted">They find you on the map and in "I'm bored", check in with the code on your poster and show a 5-minute coupon.</p></div></div>
+      <div class="step"><span class="n">3</span><div><b>See if it pays</b><p class="small muted">Visits, new customers and estimated profit, every month.</p></div></div></div></section>
+    <section class="card"><h2>Plans and prices</h2>${planCards(null, null)}</section>
     <form class="card" id="regForm"><h2>Register your business</h2>
       <label for="rName">Business name<input id="rName" maxlength="60" required placeholder="e.g. Bar Centrale"></label>
       <div class="grid2"><label for="rKind">Type<select id="rKind">${Object.entries(KIND).map(([k,l])=>`<option value="${k}">${esc(l)}</option>`).join("")}</select></label><label for="rTown">Town<select id="rTown">${townOptions("Castellanza")}</select></label></div>
@@ -1969,7 +2050,8 @@ function viewShop(){
       <div class="grid2"><label for="rPiva">VAT number (Partita IVA)<input id="rPiva" inputmode="numeric" maxlength="11" required placeholder="11 digits"></label><label for="rAteco">ATECO code<input id="rAteco" maxlength="8" required placeholder="e.g. 56.30.00"></label></div>
       <label for="rContact">Phone or email for the LifeOn team<input id="rContact" maxlength="80" required></label>
       <label for="rTicket">Average spend per customer (€)<input id="rTicket" type="number" min="1" max="500" step="0.5" value="6"></label>
-      <p class="small muted">We check your details before you go live. You start on the Free plan: no monthly fee, €${FEE.toFixed(2)} only when a LifeOn coupon is used.</p>
+      <label for="rPlan">Plan<select id="rPlan">${Object.entries(BIZ).map(([k,d])=>`<option value="${k}" ${k==="starter"?"selected":""}>${d.label} · €${d.price}/month${d.fee?" + €"+d.fee.toFixed(2)+" per coupon":""}</option>`).join("")}</select></label>
+      <p class="small muted">We check your VAT number and ATECO code before you go live. Paid plans start with a free month.</p>
       <button class="full" type="submit" ${S.canWrite?"":"disabled"}>Send registration</button></form>`;
   }
   const b = billing(mid), pro = isPro(mid), mine = mid===S.me;
@@ -1980,7 +2062,7 @@ function viewShop(){
   const offers = Object.entries(m.offers||{}).sort((a,c)=>(a[1].createdAt||0)-(c[1].createdAt||0));
   const acts = Object.entries(m.activities||{}).sort((a,c)=>(a[1].date||"").localeCompare(c[1].date||""));
   const code = mine ? state.myCode : state.teamkeys[mid]?.code;
-  const head = `<section class="card" style="background:var(--teal);color:var(--teal-ink)"><div class="row between"><div><h2>${esc(m.name)}</h2><p class="small" style="opacity:.9">${esc(KIND[m.kind]||"")} · ${esc(m.town)}${m.example?" · Example":""}</p></div><span class="chip ${pro?"pro":""}" style="${pro?"":"background:rgba(255,255,255,.2);color:inherit;box-shadow:none"}">${pro?"Pro":"Free"}</span></div></section>
+  const head = `<section class="card" style="background:var(--teal);color:var(--teal-ink)"><div class="row between"><div><h2>${esc(m.name)}</h2><p class="small" style="opacity:.9">${esc(KIND[m.kind]||"")} · ${esc(m.town)}${m.example?" · Example":""}</p></div><span class="chip ${pro?"pro":""}" style="${pro?"":"background:rgba(255,255,255,.2);color:inherit;box-shadow:none"}">${esc(planDef(mid).label)}</span></div></section>
   ${mid!==S.me?`<div class="row"><a href="#team" class="link small">‹ Back to Team</a></div>`:""}
   <div class="seg" role="group" aria-label="Shop">${[["results","Results"],["check","Check code"],["offers","Rewards"],["acts","Activities"],["plan","Plan"]].map(([k,l])=>`<button type="button" data-st="${k}" aria-pressed="${t===k}">${l}</button>`).join("")}</div>`;
   let body = "";
@@ -1990,10 +2072,10 @@ function viewShop(){
     <section class="card"><h3>Is it worth it? Estimated month</h3>
       <div class="list"><div class="row between"><span>${n.visits} visits × ${eur(m.avgTicket||0)} average spend</span><b>${eur(n.revenue)}</b></div>
       <div class="row between"><span>Cost of the rewards you gave</span><b>−${eur(n.discountCost)}</b></div>
-      <div class="row between"><span>${pro?"Pro plan":"Fees, "+eur(FEE)+" per used coupon"}</span><b>−${eur(n.fees)}</b></div>
+      <div class="row between"><span>${esc(planDef(mid).label)} plan${planDef(mid).price?" "+eur(planDef(mid).price)+"/month":""}${planDef(mid).fee?" + "+eur(planDef(mid).fee)+" per used coupon":""}</span><b>−${eur(n.fees)}</b></div>
       <div class="row between"><span style="font-weight:800">Estimated net</span><span class="big" style="font-size:26px;color:${n.net>=0?"var(--good)":"var(--bad)"}">${eur(n.net)}</span></div></div>
       <p class="small muted">An estimate: it assumes each visit spends your average. Change the average in Plan.</p>
-      ${!pro && n.feesIfFree > PRO_PRICE ? `<div class="banner"><b>Pro would save you ${eur(n.feesIfFree-PRO_PRICE)} this month</b> and unlock flash offers and more rewards.</div>`:""}</section>
+      ${n.best!==planOf(mid) && n.bestSave >= 1 ? `<div class="banner"><b>The ${BIZ[n.best].label} plan would save you ${eur(n.bestSave)} this month.</b> See Plan.</div>`:""}</section>
     <section class="card"><h3>Check-in code</h3><div class="poster"><div><div class="small" style="opacity:.8;font-weight:700;text-transform:uppercase;letter-spacing:.08em">LifeOn check-in</div><div class="code">${esc(code||"····")}</div><div class="small" style="opacity:.8">Put it at the counter. Change it if it gets shared online.</div></div>${code?`<div class="qr" data-qr="${esc(code)}"></div>`:""}</div>
       <button class="ghost small" id="rotate" style="align-self:flex-start">New code</button></section>`;
   if (t==="check") body = `<form class="card" id="valForm"><h2>Check a coupon</h2><p class="muted small">Type the code on the customer's phone. Codes last 5 minutes.</p>
@@ -2003,8 +2085,8 @@ function viewShop(){
     const activeCount = offers.filter(([,o])=>o.active && !o.flashUntil).length;
     body = `${pro?`<section class="card" style="background:var(--accent);color:var(--accent-ink)"><h2>Fill now</h2><p class="small">Empty right now? Launch a 1-hour flash reward. It's shown first to people nearby who press "I'm bored".</p>
       <select id="flWhat" aria-label="Flash reward"><option value="−50% on any drink|1">−50% on any drink · costs you about €1</option><option value="Free class for a newcomer|0">Free class for a newcomer · empty spot</option><option value="2-for-1 coffee|0.4">2-for-1 coffee · about €0.40</option></select>
-      <button class="full" id="flGo" style="background:var(--accent-ink);color:var(--accent)">Launch for 1 hour</button></section>`:lockBox("Fill now","Launch a 1-hour flash reward when you're empty. Shown first to people nearby who are bored right now.")}
-    ${!pro && activeCount>=1 ? lockBox("More rewards","The Free plan shows 1 active reward. Pro lets you run one per tier and per time slot.") : `<form class="card" id="offerForm"><h2>New reward</h2>
+      <button class="full" id="flGo" style="background:var(--accent-ink);color:var(--accent)">Launch for 1 hour</button></section>`:lockBox("Fill now · Pro and Plus","Launch a 1-hour flash reward when you're empty. Shown first to people nearby who are bored right now.")}
+    ${activeCount>=planDef(mid).offers ? lockBox("More rewards","Your "+planDef(mid).label+" plan includes "+planDef(mid).offers+" active reward"+(planDef(mid).offers>1?"s":"")+". Starter has 3, Pro and Plus are unlimited.") : `<form class="card" id="offerForm"><h2>New reward</h2>
       <div><p class="small" style="font-weight:700;margin-bottom:8px">Level</p><div class="chips" id="oTier">${Object.entries(TIERS).map(([k,v],i)=>`<button type="button" class="chip" data-v="${k}" aria-pressed="${i===0}">${esc(v.label)} · ${v.cost} pts</button>`).join("")}</div><p class="small muted" id="tierHint">${esc(TIERS.small.example)}</p></div>
       <label for="oTitle">Reward<input id="oTitle" maxlength="60" required placeholder="e.g. Biscuit with your coffee"></label>
       <label for="oDetail">How to use it<input id="oDetail" maxlength="120" placeholder="e.g. Show the code at the counter"></label>
@@ -2016,7 +2098,7 @@ function viewShop(){
       <button class="full" type="submit">Publish reward</button></form>`}
     <section class="card"><h3>Your rewards</h3>${offers.length?`<div class="list">${offers.map(([k,o])=>`<div class="row between"><div style="min-width:0"><b>${esc(o.title)}</b><div class="small muted">${esc(TIERS[o.tier]?.label||"")} · ${o.cost} pts · ${esc(offerWindow(o))} · ${weekClaims(mid,k)}/${o.budgetWeek||TIERS[o.tier]?.budget} this week</div></div><div class="row" style="gap:6px"><button class="ghost small" data-toggle="${esc(k)}">${o.active?"Pause":"Resume"}</button><button class="ghost small" data-del="${esc(k)}">Delete</button></div></div>`).join("")}</div>`:`<p class="muted small">No rewards yet.</p>`}</section>`;
   }
-  if (t==="acts") body = `${!pro && acts.filter(([,a])=>a.active && a.date>=today()).length>=1 ? lockBox("More activities","The Free plan shows 1 upcoming activity. Pro lets you publish your whole calendar.") : `<form class="card" id="actForm"><h2>New activity</h2><p class="small muted">Courses, events, sport, workshops. LifeOn users see them in Activities and in "I'm bored".</p>
+  if (t==="acts") body = `${acts.filter(([,a])=>a.active && a.date>=today()).length>=planDef(mid).acts ? lockBox("More activities","Your "+planDef(mid).label+" plan includes "+planDef(mid).acts+" upcoming activit"+(planDef(mid).acts>1?"ies":"y")+". Starter has 3, Pro and Plus are unlimited.") : `<form class="card" id="actForm"><h2>New activity</h2><p class="small muted">Courses, events, sport, workshops. LifeOn users see them in Activities and in "I'm bored".</p>
       <label for="aTitle">What<input id="aTitle" maxlength="60" required placeholder="e.g. Yoga in the park"></label>
       <label for="aType">Type<select id="aType"><option value="event">Event</option><option value="course">Course / workshop</option><option value="sport">Sport class</option><option value="team">Team looking for players</option><option value="outdoor">Outdoor / trip</option></select></label>
       <div class="grid2"><label for="aDate">Day<input id="aDate" type="date" required></label><label for="aTime">Time<input id="aTime" type="time" required value="18:30"></label></div>
@@ -2025,11 +2107,8 @@ function viewShop(){
       <label for="aAud">Mostly for<select id="aAud"><option value="all">Everyone</option><option value="study">Students</option><option value="work">Workers</option><option value="free">Free time</option></select></label>
       <button class="full" type="submit">Publish activity</button></form>`}
     <section class="card"><h3>Your activities</h3>${acts.length?`<div class="list">${acts.map(([k,a])=>`<div class="row between"><div style="min-width:0"><b>${esc(a.title)}</b><div class="small muted">${esc(fmtDate(a.date))} ${esc(a.time)}${a.deal?" · "+esc(a.deal):""}${a.date<today()?" · past":""}</div></div><button class="ghost small" data-delact="${esc(k)}">Delete</button></div>`).join("")}</div>`:`<p class="muted small">No activities yet.</p>`}</section>`;
-  if (t==="plan") body = `<section class="card"><h2>Your plan</h2>
-      <div class="plan ${pro?"":""}"><div class="row between"><b>Free</b>${pro?"":'<span class="chip on">Current</span>'}</div><div class="price">€0 <span class="small" style="font-family:var(--body);font-weight:600">/ month</span></div><ul><li>1 active reward and 1 activity</li><li>Check-in code and coupon check</li><li>Results and estimated net</li><li>€${FEE.toFixed(2)} per coupon used</li></ul></div>
-      <div class="plan pro"><div class="row between"><b>Pro</b>${pro?'<span class="chip" style="background:var(--plum-ink);color:var(--plum)">Current</span>':""}</div><div class="price">€${PRO_PRICE} <span class="small" style="font-family:var(--body);font-weight:600">/ month</span></div><ul><li>Unlimited rewards on all three levels</li><li>Fill now: 1-hour flash rewards when you're empty</li><li>Your whole calendar of activities</li><li>No fee per coupon</li></ul>
-        ${pro?"":m.proRequested?`<p class="small">Request sent. The LifeOn team will contact you to activate Pro.</p>`:`<button class="full" id="reqPro" style="background:var(--plum-ink);color:var(--plum)">Ask for Pro</button>`}</div>
-      <p class="small muted">Payment by bank transfer or payment link from the LifeOn team. Cancel any time.</p></section>
+  if (t==="plan") body = `<section class="card"><h2>Plans</h2><p class="small muted">Pick what fits your shop. You can change any time.</p>${planCards(planOf(mid), mid, m.planRequested)}
+      <p class="small muted">Payment by bank transfer or payment link from the LifeOn team.</p></section>
     <form class="card" id="ticketForm"><h3>Average spend per customer</h3><p class="small muted">Used for your estimated net.</p><div class="row"><input id="tkVal" type="number" min="1" max="500" step="0.5" value="${esc(m.avgTicket||6)}" aria-label="Average spend in euro"><button class="teal small" type="submit">Save</button></div></form>
     <section class="card"><h3>Your place on the map</h3><p class="small muted">${typeof m.lat==="number" ? "Location set. Customers see you on the map, and check-ins count only within 300 m." : "Not set yet: we use the centre of "+esc(m.town)+". Set it so customers find you and check-ins are verified."}</p><button class="teal small" id="shopLoc" style="align-self:flex-start">${ICON.pin} I'm at the shop: use my location</button></section>`;
   return head + body;
@@ -2041,8 +2120,8 @@ function bindShop(){
     if (!pivaValid(piva)) { toast("That VAT number doesn't look valid. Check the 11 digits."); return; }
     if (!atecoValid(ateco)) { toast("ATECO code format: e.g. 56.30.00"); return; }
     const code = rid(5);
-    const doc = {name:$("#rName").value.trim(), kind:$("#rKind").value, town:$("#rTown").value, address:$("#rAddr").value.trim(), piva, ateco, contact:$("#rContact").value.trim(), avgTicket:Number($("#rTicket").value)||6, codeHash: await sha(code), owner:S.me, createdAt:Date.now(), offers:{}, activities:{}, redeemed:[]};
-    if (await saveShop(S.me, doc)) { try { await S.setPrivate("shop", {code}); state.myCode = code; } catch(e){} toast("Registration sent. We'll check it soon."); } }; return; }
+    const doc = {name:$("#rName").value.trim(), kind:$("#rKind").value, town:$("#rTown").value, address:$("#rAddr").value.trim(), piva, ateco, contact:$("#rContact").value.trim(), avgTicket:Number($("#rTicket").value)||6, codeHash: await sha(code), owner:S.me, createdAt:Date.now(), offers:{}, activities:{}, redeemed:[], planRequested: $("#rPlan").value};
+    if (await saveShop(S.me, doc)) { try { await S.setPrivate("shop", {code}); state.myCode = code; } catch(e){} if (S.demo) { await S.save("billing", S.me, {status:"approved", plan: doc.planRequested || "free", since: Date.now()}); toast("Demo: your shop is approved straight away"); } else toast("Registration sent. We'll check it soon."); } }; return; }
   if (!m) return;
   $$("[data-st]").forEach(b=>b.onclick=()=>{ state.shopTab=b.dataset.st; render(); });
   $$("#view [data-qr]").forEach(el => { try { if (window.QRCode) new QRCode(el, {text:el.dataset.qr, width:200, height:200, colorDark:"#13201C", colorLight:"#ffffff"}); } catch(e){} });
@@ -2060,7 +2139,7 @@ function bindShop(){
       const before = (m.redeemed||[]).some(r=>r.player===hit.pid) || (hit.p.checkins||[]).some(c=>c.venueId===mid) || (hit.p.sessions||[]).some(s=>s.venueId===mid);
       const off = m.offers?.[hit.c.offerKey];
       if (await save(nm => { nm.redeemed = [...(nm.redeemed||[]), {coupon:hit.c.id, player:hit.pid, at:Date.now(), offerKey:hit.c.offerKey, newCustomer:!before, cost:Number(off?.costToYou||0)}].slice(-500); }))
-        out.innerHTML = `<div class="banner"><b>Done.</b> ${before?"Returning customer.":"New customer for you."}${isPro(mid)?"":" Fee: "+eur(FEE)+"."}</div>`;
+        out.innerHTML = `<div class="banner"><b>Done.</b> ${before?"Returning customer.":"New customer for you."}${planDef(mid).fee?" Fee: "+eur(planDef(mid).fee)+".":""}</div>`;
     };
   };
   const fl = $("#flGo"); if (fl) fl.onclick = async () => { const [title, cy] = $("#flWhat").value.split("|");
@@ -2080,7 +2159,7 @@ function bindShop(){
     if (a.date < today()) { toast("Pick a day from today on"); return; }
     if (await save(nm => { nm.activities = nm.activities||{}; nm.activities["a"+rid(6)] = a; })) toast("Activity published"); };
   $$("[data-delact]").forEach(b=>b.onclick=async()=>{ if (await save(nm=>{ delete nm.activities[b.dataset.delact]; })) toast("Deleted"); });
-  const rp = $("#reqPro"); if (rp) rp.onclick = async () => { if (await save(nm => { nm.proRequested = Date.now(); })) toast("Request sent to the LifeOn team"); };
+  $$("#view [data-req]").forEach(b=>b.onclick=async()=>{ const k = b.dataset.req; if (await save(nm => { nm.planRequested = k; nm.proRequested = Date.now(); })) toast("Request for "+BIZ[k].label+" sent to the LifeOn team"); });
   const sl = $("#shopLoc"); if (sl) sl.onclick = async () => { sl.disabled = true; const p = await getPos({maximumAge:0}); if (!p) { sl.disabled = false; toast("Couldn't get your location."); return; } if (await save(nm => { nm.lat = Math.round(p.coords.latitude*1e5)/1e5; nm.lng = Math.round(p.coords.longitude*1e5)/1e5; })) toast("Location saved"); else sl.disabled = false; };
   const tf = $("#ticketForm"); if (tf) tf.onsubmit = async e => { e.preventDefault(); if (await save(nm => { nm.avgTicket = Math.max(1, Number($("#tkVal").value)||6); })) toast("Saved"); };
 }
@@ -2092,16 +2171,16 @@ function viewTeam(){
   const live = all.filter(([mid])=>approved(mid));
   let users=0, active=0, sessions=0, done=0, mins=0, used=0, claimed=0;
   for (const p of Object.values(state.players)) { users++; let a=false; for (const s of (p.sessions||[])) if (inThisWeek(s.start)) { sessions++; a=true; if (s.ok){ done++; mins+=s.min; } } for (const c of (p.checkins||[])) if (inThisWeek(c.at)) a=true; for (const c of (p.coupons||[])) { claimed++; if (couponUsed(c)) used++; } if (a) active++; }
-  const fees = live.reduce((s,[mid])=> s + (isPro(mid) ? PRO_PRICE : ((state.merchants[mid].redeemed||[]).filter(r=>r.at>=monthStart()).length*FEE)), 0);
+  const fees = live.reduce((s,[mid])=> s + (planDef(mid).price + ((state.merchants[mid].redeemed||[]).filter(r=>r.at>=monthStart()).length*planDef(mid).fee)), 0);
   const tabsH = `<div class="seg" role="group" aria-label="Team">${[["apps","Requests"+(pending.length?" ("+pending.length+")":"")],["places","Places"],["pilot","Pilot"]].map(([k,l])=>`<button type="button" data-tt="${k}" aria-pressed="${t===k}">${l}</button>`).join("")}</div>`;
   let body = "";
   if (t==="apps") body = pending.length ? pending.map(([mid,m])=>`<section class="card"><div class="row between"><h3>${esc(m.name)}</h3><span class="chip">${esc(KIND[m.kind]||"")}</span></div>
       <p class="small muted">${esc(m.address||"")}, ${esc(m.town)} · ${esc(m.contact||"")}</p>
       <div class="grid2"><div class="stat"><span class="k">VAT number</span><span style="font-family:var(--mono)">${esc(m.piva)}</span><span class="small" style="color:${pivaValid(m.piva)?"var(--good)":"var(--bad)"}">${pivaValid(m.piva)?"Check digit OK":"Check digit wrong"}</span></div><div class="stat"><span class="k">ATECO</span><span style="font-family:var(--mono)">${esc(m.ateco)}</span></div></div>
       <p class="small muted">Before approving, check the VAT number on the EU VIES service (ec.europa.eu/taxation_customs/vies) and that the ATECO code matches the type of business.</p>
-      <div class="row"><button class="teal small" data-approve="${esc(mid)}" style="flex:1">Approve on Free</button><button class="ghost small" data-reject="${esc(mid)}" style="flex:1">Reject</button></div></section>`).join("")
+      <div class="row"><button class="teal small" data-approve="${esc(mid)}" style="flex:1">Approve${m.planRequested && BIZ[m.planRequested] ? " on "+BIZ[m.planRequested].label : ""}</button><button class="ghost small" data-reject="${esc(mid)}" style="flex:1">Reject</button></div></section>`).join("")
     : `<section class="card"><div class="empty"><p>No registrations waiting.</p></div></section>`;
-  if (t==="places") body = `<section class="card"><h3>Live places</h3>${live.length?`<div class="list">${live.map(([mid,m])=>`<div class="row between"><div style="min-width:0"><b>${esc(m.name)}</b><div class="small muted">${esc(m.town)} · ${m.owner==="team"?"managed by the team":"self-managed"}${m.example?" · Example":""}${m.proRequested&&!isPro(mid)?" · asked for Pro":""}</div></div><div class="row" style="gap:6px">${m.owner==="team"||mid===S.me?`<button class="ghost small" data-manage="${esc(mid)}">Manage</button>`:""}<button class="small ${isPro(mid)?"ghost":""}" data-plan="${esc(mid)}" style="${isPro(mid)?"":"background:var(--plum);color:var(--plum-ink)"}">${isPro(mid)?"Set Free":"Set Pro"}</button></div></div>`).join("")}</div>`:`<p class="muted small">No live places yet.</p>`}</section>
+  if (t==="places") body = `<section class="card"><h3>Live places</h3>${live.length?`<div class="list">${live.map(([mid,m])=>`<div class="row between"><div style="min-width:0"><b>${esc(m.name)}</b><div class="small muted">${esc(m.town)} · ${m.owner==="team"?"managed by the team":"self-managed"}${m.example?" · Example":""}${m.planRequested && m.planRequested!==planOf(mid) && BIZ[m.planRequested] ? " · asked for "+BIZ[m.planRequested].label : ""}</div></div><div class="row" style="gap:6px">${m.owner==="team"||mid===S.me?`<button class="ghost small" data-manage="${esc(mid)}">Manage</button>`:""}<select data-setplan="${esc(mid)}" aria-label="Plan for ${esc(m.name)}" style="width:auto;padding:8px 10px">${Object.entries(BIZ).map(([k,d])=>`<option value="${k}" ${k===planOf(mid)?"selected":""}>${d.label}</option>`).join("")}</select></div></div>`).join("")}</div>`:`<p class="muted small">No live places yet.</p>`}</section>
     <form class="card" id="teamPlace"><h3>Add a place for a shop</h3><p class="small muted">For shops that prefer the team to manage LifeOn for them.</p>
       <label for="tpName">Name<input id="tpName" maxlength="60" required></label>
       <div class="grid2"><label for="tpKind">Type<select id="tpKind">${Object.entries(KIND).map(([k,l])=>`<option value="${k}">${esc(l)}</option>`).join("")}</select></label><label for="tpTown">Town<select id="tpTown">${townOptions("Castellanza")}</select></label></div>
@@ -2113,7 +2192,7 @@ function viewTeam(){
       <div class="stat"><span class="n">${done}/${sessions}</span><span class="k">sessions completed</span></div>
       <div class="stat"><span class="n">${fmtMin(mins)}</span><span class="k">time won back</span></div>
       <div class="stat"><span class="n">${used}/${claimed}</span><span class="k">coupons used / claimed (all time)</span></div>
-      <div class="stat"><span class="n">${live.length}</span><span class="k">live places (${live.filter(([mid])=>isPro(mid)).length} Pro)</span></div>
+      <div class="stat"><span class="n">${live.length}</span><span class="k">live places (${live.filter(([mid])=>planOf(mid)!=="free").length} paid)</span></div>
       <div class="stat"><span class="n">${eur(fees)}</span><span class="k">LifeOn revenue this month</span></div></div></section>
     <section class="card"><h3>By profile</h3><div class="list">${Object.entries(PROFILES).map(([k,v])=>`<div class="row between"><span>${esc(v.label)}</span><b>${Object.values(state.players).filter(p=>p.profile===k).length}</b></div>`).join("")}</div></section>`;
   return `<section class="card" style="background:var(--night);color:var(--night-ink)"><h2>LifeOn team</h2><p class="small" style="opacity:.85">Approve shops, manage plans and follow the pilot.</p></section>${tabsH}${body}`;
@@ -2127,9 +2206,9 @@ async function addTeamPlace(d, offers, activities, plan){
 }
 function bindTeam(){
   $$("[data-tt]").forEach(b=>b.onclick=()=>{ state.teamTab=b.dataset.tt; render(); });
-  $$("[data-approve]").forEach(b=>b.onclick=async()=>{ try { await S.save("billing", b.dataset.approve, {status:"approved", plan:"free", since:Date.now()}); toast("Approved"); } catch(e){ toast("Couldn't approve."); } });
+  $$("[data-approve]").forEach(b=>b.onclick=async()=>{ try { await S.save("billing", b.dataset.approve, {status:"approved", plan: (BIZ[(state.merchants[b.dataset.approve]||{}).planRequested] ? state.merchants[b.dataset.approve].planRequested : "free"), since:Date.now()}); toast("Approved"); } catch(e){ toast("Couldn't approve."); } });
   $$("[data-reject]").forEach(b=>b.onclick=async()=>{ if (b.dataset.armed!=="1"){ b.dataset.armed="1"; b.textContent="Tap again"; return; } try { await S.save("billing", b.dataset.reject, {status:"rejected", plan:"free", note:"Details could not be verified."}); toast("Rejected"); } catch(e){ toast("Couldn't update."); } });
-  $$("[data-plan]").forEach(b=>b.onclick=async()=>{ const mid = b.dataset.plan; const cur = billing(mid); try { await S.save("billing", mid, {...cur, status:"approved", plan: isPro(mid) ? "free" : "pro", since:Date.now()}); toast(isPro(mid)?"Set to Free":"Pro activated"); } catch(e){ toast("Couldn't update."); } });
+  $$("[data-setplan]").forEach(sel=>sel.onchange=async()=>{ const mid = sel.dataset.setplan; const cur = billing(mid); try { await S.save("billing", mid, {...cur, status:"approved", plan: sel.value, since:Date.now()}); toast(BIZ[sel.value].label+" plan set"); } catch(e){ toast("Couldn't update."); } });
   $$("[data-manage]").forEach(b=>b.onclick=()=>{ state.shopMid = b.dataset.manage; state.shopTab = "results"; go("shop"); });
   const tp = $("#teamPlace"); if (tp) tp.onsubmit = async e => { e.preventDefault(); try { await addTeamPlace({name:$("#tpName").value.trim(), kind:$("#tpKind").value, town:$("#tpTown").value, piva:$("#tpPiva").value.trim(), ateco:$("#tpAteco").value.trim()}); toast("Place added. Open Manage to get its code."); } catch(err){ toast("Couldn't add the place."); } };
   const ex = $("#addExamples"); if (ex) ex.onclick = async () => { ex.disabled = true; const now = Date.now(); const day = k => dkey(now + k*864e5);
@@ -2153,7 +2232,7 @@ function boot(store){
   render();
 }
 checkInterrupted();
-makeDemo().then(d => { if (!S || S.demo) boot(d); });
+makeDemo().then(d => { if (!S || S.demo) { boot(d); cloudBoot(d); } });
 makeLive().then(live => { if (live) boot(live); });
 })();
 </script>
@@ -2187,7 +2266,7 @@ makeLive().then(live => { if (live) boot(live); });
 })();
 </script>
 <script>
-// Offline support + automatic updates (version 202611020857)
+// Offline support + automatic updates (version 202611020919)
 if ("serviceWorker" in navigator && location.protocol === "https:") {
   navigator.serviceWorker.register("sw.js").catch(function(){});
   var reloaded = false;
