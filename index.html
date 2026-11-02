@@ -1312,19 +1312,25 @@ async function saveShop(mid, m){
 
 // ================= accounts (Supabase) =================
 // Fill in to switch on Google, Apple and email sign-in (see SETUP in the README).
-const CLOUD = { url: "", anonKey: "" };
+const CLOUD = { url: "https://dssrxkvtaclzptkvtkuv.supabase.co", anonKey: "sb_publishable_uKyUGVyXyzayspH779gNUw_2bZRu_mB" };
 let sbP = null, cloudUser = null;
 function loadScript(src){ return new Promise((res, rej) => { const sc = document.createElement("script"); sc.src = src; sc.onload = res; sc.onerror = rej; document.head.appendChild(sc); }); }
 function cloud(){
   if (!CLOUD.url || !CLOUD.anonKey || (S && S.kind==="live")) return Promise.resolve(null);
-  if (!sbP) sbP = loadScript("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js").then(() => window.supabase.createClient(CLOUD.url, CLOUD.anonKey, {auth:{persistSession:true, autoRefreshToken:true, detectSessionInUrl:true}})).catch(() => { sbP = null; return null; });
+  if (!sbP) sbP = loadScript("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js").then(() => window.supabase.createClient(CLOUD.url, CLOUD.anonKey, {auth:{persistSession:true, autoRefreshToken:true, detectSessionInUrl:true}})).catch(() => { sbP = null; return null; });
   return sbP;
+}
+async function verifyCode(email, code){
+  const c = await cloud(); if (!c) return false;
+  const {error} = await c.auth.verifyOtp({email, token:String(code).replace(/\D/g,""), type:"email"});
+  if (error) { toast("That code didn't work. Check it, or ask for a new email."); return false; }
+  setMode("cloud"); location.hash = ""; location.reload(); return true;
 }
 async function authStart(kind, email){
   const ob = state.ob, c = await cloud();
   if (!c) { ob.authMsg = "Sign-in with Apple, Google and email isn't switched on yet in this preview. Continue on this phone below: everything else works the same."; render(); return; }
   const redirectTo = location.origin + location.pathname;
-  if (kind==="email") { const {error} = await c.auth.signInWithOtp({email, options:{emailRedirectTo:redirectTo}}); ob.authMsg = error ? "Couldn't send the email. Try again." : "Check your inbox: we sent a sign-in link to "+email+"."; render(); return; }
+  if (kind==="email") { const {error} = await c.auth.signInWithOtp({email, options:{emailRedirectTo:redirectTo, shouldCreateUser:true}}); if (error) { ob.authMsg = /rate|seconds/i.test(error.message||"") ? "Too many emails in a short time. Wait a minute and try again." : "Couldn't send the email. Check the address and try again."; } else { ob.otpFor = email; ob.authMsg = "We sent an email to "+email+". Type the 6-digit code here, or open the link on this phone."; } render(); return; }
   const {error} = await c.auth.signInWithOAuth({provider:kind, options:{redirectTo}});
   if (error) { ob.authMsg = (kind==="apple" ? "Apple" : "Google")+" sign-in isn't available yet. Try email, or continue on this phone."; render(); }
 }
@@ -1428,6 +1434,7 @@ function viewWelcome(){
     <button class="authbtn google" data-auth="google">Continue with Google</button>
     ${ob.emailOpen ? `<form class="card" id="obMail" style="gap:10px"><label for="obEmail">Your email<input id="obEmail" type="email" autocomplete="email" required placeholder="you@email.com"></label><button class="full" type="submit">Send me a sign-in link</button></form>` : `<button class="authbtn mail" data-auth="email">Continue with email</button>`}
     ${ob.authMsg ? `<div class="banner">${esc(ob.authMsg)}</div>` : ""}
+    ${ob.otpFor ? `<form class="card" id="obOtp" style="gap:10px"><label for="obCode">Code from the email<input id="obCode" inputmode="numeric" autocomplete="one-time-code" maxlength="10" required placeholder="123456" style="font-family:var(--mono);font-size:22px;letter-spacing:.2em"></label><button class="full" type="submit">Sign in</button></form>` : ""}
     <div class="ob-or"><span>or</span></div>
     <form class="card" id="obAcc" style="gap:10px"><label for="obName">Use LifeOn without an account: your name<input id="obName" maxlength="30" autocomplete="given-name" required placeholder="e.g. Laila" value="${esc(ob.name||"")}"></label>
       <label class="row" style="flex-direction:row;color:var(--ink);font-weight:500"><input type="checkbox" id="obAge" required> I'm 18 or older</label>
@@ -1462,6 +1469,7 @@ function bindWelcome(){
   const acc = $("#obAcc"); if (acc) acc.onsubmit = e => { e.preventDefault(); ob.guest = false; ob.name = $("#obName").value.trim(); ob.step = 2; if (S.kind==="demo") { setMode("local"); boot(makeLocal()); } else render(); };
   $$("[data-auth]", v).forEach(b=>b.onclick=()=>{ const k = b.dataset.auth; if (k==="email") { ob.emailOpen = true; render(); } else authStart(k); });
   const om = $("#obMail"); if (om) om.onsubmit = e => { e.preventDefault(); authStart("email", $("#obEmail").value.trim()); };
+  const oo = $("#obOtp"); if (oo) oo.onsubmit = e => { e.preventDefault(); verifyCode(ob.otpFor, $("#obCode").value); };
   const ap = $("#obApps"); if (ap) { toggleChips($("#wApps"), false); ap.onsubmit = e => { e.preventDefault(); ob.apps = picked($("#wApps")); ob.base = Math.max(10, Number($("#wBase").value)||180); ob.step = 4; render(); }; }
   const wt = $("#wTown"); if (wt) wt.onchange = () => { ob.town = wt.value; };
 }
@@ -2062,7 +2070,7 @@ function bindMe(){
   const dm = $("#delMe"); if (dm) dm.onclick = async () => { if (dm.dataset.armed!=="1") { dm.dataset.armed="1"; dm.textContent="Tap again to delete everything"; return; } try { await S.remove("players", S.me); toast("Your data has been deleted"); } catch(e){ toast("Couldn't delete. Try again."); } };
   $$("#mProf [data-v]").forEach(b=>b.onclick=async()=>{ const np = clone(meP()); np.profile = b.dataset.v; if (await writeMe(np)) toast("Profile: "+PROFILES[np.profile].label); });
   const so = $("#signOut"); if (so) so.onclick = async () => { const c = await cloud(); try { await c.auth.signOut(); } catch(e){} cloudUser = null; setMode("local"); location.hash = ""; location.reload(); };
-  const gs2 = $("#goSignIn"); if (gs2) gs2.onclick = () => { state.ob = {step:1, slide:0, emailOpen:false}; const el = flow("Sign in"); el.innerHTML = `<div class="in"><div class="row between"><h2>Sign in</h2><button class="ghost small" data-close>Close</button></div><p class="muted">Keep your points safe and use them on every device.</p><button class="authbtn apple" data-a="apple">Continue with Apple</button><button class="authbtn google" data-a="google">Continue with Google</button><form id="siMail" class="card" style="gap:10px"><label for="siEmail">Or with your email<input id="siEmail" type="email" required placeholder="you@email.com"></label><button class="full" type="submit">Send me a sign-in link</button></form><div id="siMsg"></div></div>`; $("[data-close]", el).onclick = () => el.remove(); const msg = () => { const m = state.ob.authMsg; $("#siMsg", el).innerHTML = m ? `<div class="banner">${esc(m)}</div>` : ""; }; $$("[data-a]", el).forEach(b=>b.onclick=async()=>{ await authStart(b.dataset.a); msg(); }); $("#siMail", el).onsubmit = async e => { e.preventDefault(); await authStart("email", $("#siEmail", el).value.trim()); msg(); }; };
+  const gs2 = $("#goSignIn"); if (gs2) gs2.onclick = () => { state.ob = {step:1, slide:0, emailOpen:false}; const el = flow("Sign in"); el.innerHTML = `<div class="in"><div class="row between"><h2>Sign in</h2><button class="ghost small" data-close>Close</button></div><p class="muted">Keep your points safe and use them on every device.</p><button class="authbtn apple" data-a="apple">Continue with Apple</button><button class="authbtn google" data-a="google">Continue with Google</button><form id="siMail" class="card" style="gap:10px"><label for="siEmail">Or with your email<input id="siEmail" type="email" required placeholder="you@email.com"></label><button class="full" type="submit">Send me a sign-in link</button></form><div id="siMsg"></div><form id="siOtp" class="card" style="gap:10px" hidden><label for="siCode">Code from the email<input id="siCode" inputmode="numeric" autocomplete="one-time-code" maxlength="10" required placeholder="123456" style="font-family:var(--mono);font-size:22px;letter-spacing:.2em"></label><button class="full" type="submit">Sign in</button></form></div>`; $("[data-close]", el).onclick = () => el.remove(); const msg = () => { const m = state.ob.authMsg; $("#siMsg", el).innerHTML = m ? `<div class="banner">${esc(m)}</div>` : ""; if (state.ob.otpFor) $("#siOtp", el).hidden = false; }; $("#siOtp", el).onsubmit = e => { e.preventDefault(); verifyCode(state.ob.otpFor, $("#siCode", el).value); }; $$("[data-a]", el).forEach(b=>b.onclick=async()=>{ await authStart(b.dataset.a); msg(); }); $("#siMail", el).onsubmit = async e => { e.preventDefault(); await authStart("email", $("#siEmail", el).value.trim()); msg(); }; };
   const ml = $("#meLoc"); if (ml) ml.onclick = async () => { ml.disabled = true; const n = await locate(); ml.disabled = false; if (n) { $("#mTown").value = n.town; toast("Near "+n.town+". Tap Save to keep it."); } else toast("Couldn't get your location."); };
   $("#meForm").onsubmit = async e => { e.preventDefault(); const np = clone(meP()); np.blocked = picked($("#mApps")); np.town = $("#mTown").value; np.baseline = Math.max(10, Number($("#mBase").value)||np.baseline); if (await writeMe(np)) toast("Saved"); };
   const gs = $("#goShop"); if (gs) gs.onclick = () => { state.shopMid = S.me; go("shop"); };
@@ -2305,8 +2313,9 @@ async function makeCloud(){
   live.on("presence", {event:"sync"}, () => { const st = live.presenceState(); liveCb && liveCb(Object.entries(st).map(([k,v]) => ({by:k, presence:v[v.length-1]}))); });
   live.subscribe();
   const meta = session.user.user_metadata || {};
-  const myName = meta.full_name || meta.name || (session.user.email||"").split("@")[0] || "You";
+  const myName = meta.full_name || meta.name || ((session.user.email||"").split("@")[0].split(/[._-]/)[0].replace(/\d+$/,"").replace(/^./, ch => ch.toUpperCase())) || "You";
   if (!state.ob.name) state.ob.name = myName;
+  if (state.ob.step < 2) { state.ob.step = 2; state.ob.signedIn = true; }
   const fail = error => Object.assign(new Error(error.message || "error"), {code: /row-level|permission|violates/i.test(error.message||"") ? "invalid_argument" : "unavailable"});
   return {
     kind:"cloud", demo:false, me:uid, canEdit:team, canWrite:true, myName,
@@ -2666,7 +2675,7 @@ checkInterrupted();
 })();
 </script>
 <script>
-// Offline support + automatic updates (version 202611020947)
+// Offline support + automatic updates (version 202611020956)
 if ("serviceWorker" in navigator && location.protocol === "https:") {
   navigator.serviceWorker.register("sw.js").catch(function(){});
   var reloaded = false;
