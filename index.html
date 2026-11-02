@@ -971,9 +971,9 @@ const PROFILES = {
   free:{label:"Free time", line:"Less phone, more life", focusName:"Offline time"}
 };
 const TIERS = {
-  small:{label:"Small perk", cost:100, budget:20, example:"Biscuit with your coffee, drink upgrade"},
-  discount:{label:"Discount", cost:300, budget:10, example:"−30% on what you order"},
-  reward:{label:"Big reward", cost:800, budget:3, example:"Free class, full breakfast"}
+  small:{label:"Small perk", cost:400, budget:20, example:"Biscuit with your coffee, drink upgrade"},
+  discount:{label:"Discount", cost:1200, budget:10, example:"−30% on what you order"},
+  reward:{label:"Big reward", cost:3000, budget:3, example:"Free class, full breakfast"}
 };
 const PRO_PRICE = 29, FEE = 0.5;
 const BIZ = {
@@ -1119,8 +1119,11 @@ const GOAL_DEFAULTS = { study:{focus:10,move:2,points:500}, work:{focus:8,move:2
 const focusMins = plan => PLANS[plan].parts.filter(p=>p[0]==="f").reduce((s,p)=>s+p[1],0);
 
 // ================= scoring =================
-const DAILY_CAP = 150;
-function sessionPts(s, groupBonus){ if (!s.ok) return 0; let p = Math.round(s.min*0.5); if (s.kind==="move" && s.mode!=="venue" && !s.verified) p = 0; if (s.mode==="venue") p = Math.round(p*1.6); if (groupBonus) p += 10; return p; }
+const DAILY_CAP = 100;
+const CAT_CAP = {focus:60, move:60, offline:30};
+const costOf = o => (TIERS[o.tier] && TIERS[o.tier].cost) || Number(costOf(o)) || 0;
+const sessCat = s => (s.kind==="move" || s.kind==="workout") ? "move" : (s.kind==="evening" || s.kind==="lunch") ? "offline" : "focus";
+function sessionPts(s, groupBonus){ if (!s.ok) return 0; if (s.needsRecap && !s.recap) return 0; if (s.missedCheck) return 0; let p = Math.round(s.min*0.5); if (s.kind==="move" && s.mode!=="venue" && !s.verified) p = 0; if (s.mode==="venue") p = Math.round(p*1.6); if (groupBonus) p += 10; return p; }
 function groupBonusFor(pid, s){
   if (s.mode!=="group" || !s.ok || !s.group) return false;
   const g = state.groups[s.group]; if (!g) return false;
@@ -1128,11 +1131,11 @@ function groupBonusFor(pid, s){
 }
 function stats(pid){
   const p = state.players[pid] || {}; const byDay = {}; const add = (k,v) => { byDay[k] = (byDay[k]||0) + v; };
-  let focusMin = 0, weekFocus = 0, weekMove = 0, done = 0, tried = 0; const wk = new Set(weekKeys());
-  for (const s of (p.sessions||[])) { const k = dkey(s.start); tried++; if (s.ok){ done++; focusMin += s.min; if (wk.has(k)) { if (s.kind==="move" || s.kind==="workout") weekMove++; else weekFocus += s.min; } } add(k, sessionPts(s, groupBonusFor(pid, s))); }
-  const seenM = {};
-  for (const c of (p.checkins||[]).slice().sort((a,b)=>a.at-b.at)) { const k = dkey(c.at); add(k, 30); const mk = k.slice(0,7); const set = seenM[mk] = seenM[mk] || new Set(); const before = set.size; set.add(c.venueId); if (before===2 && set.size===3) add(k, 60); if (wk.has(k) && ["gym","sport"].includes(state.merchants[c.venueId]?.kind)) weekMove++; }
-  for (const k of Object.keys(p.ritual||{})) add(k, 5);
+  let focusMin = 0, weekFocus = 0, weekMove = 0, done = 0, tried = 0; const catDay = {}; const wk = new Set(weekKeys());
+  for (const s of (p.sessions||[])) { const k = dkey(s.start); tried++; if (s.ok){ done++; focusMin += s.min; if (wk.has(k)) { if (s.kind==="move" || s.kind==="workout") weekMove++; else weekFocus += s.min; } } const ck = k + "|" + sessCat(s); catDay[ck] = (catDay[ck]||0) + sessionPts(s, groupBonusFor(pid, s)); }
+  for (const [ck, v] of Object.entries(catDay)) { const [k, c] = ck.split("|"); add(k, Math.min(CAT_CAP[c] || 60, v)); }
+  const seenM = {}, ciDay = {};
+  for (const c of (p.checkins||[]).slice().sort((a,b)=>a.at-b.at)) { const k = dkey(c.at); ciDay[k] = (ciDay[k]||0) + 1; if (ciDay[k] <= 2) add(k, 30); const mk = k.slice(0,7); const set = seenM[mk] = seenM[mk] || new Set(); const before = set.size; set.add(c.venueId); if (before===2 && set.size===3) add(k, 100); if (wk.has(k) && ["gym","sport"].includes(state.merchants[c.venueId]?.kind)) weekMove++; }
   let earned = 0, weekPts = 0;
   for (const [k,v] of Object.entries(byDay)) { const c = Math.min(DAILY_CAP, v); earned += c; if (wk.has(k)) weekPts += c; }
   const active = Object.keys(byDay).filter(k=>byDay[k]>0).sort();
@@ -1180,8 +1183,8 @@ const budgetLeft = (mid, key, o) => Math.max(0, (o.budgetWeek ?? TIERS[o.tier]?.
 const myWeekAt = mid => (meP()?.coupons||[]).some(c=>c.venueId===mid && inThisWeek(c.at));
 const couponUsed = c => (state.merchants[c.venueId]?.redeemed||[]).some(r=>r.coupon===c.id);
 function nextReward(balance){
-  const costs = [...new Set(liveOffers().map(x=>x.o.cost))].sort((a,b)=>a-b);
-  const base = costs.length ? costs : [100,300,800];
+  const costs = [...new Set(liveOffers().map(x=>costOf(x.o)))].sort((a,b)=>a-b);
+  const base = costs.length ? costs : [400,1200,3000];
   const target = base.find(c=>c>balance) ?? null;
   return target;
 }
@@ -1562,7 +1565,7 @@ function openCheckinPicker(){
 }
 function openGuide(){
   const el = flow("How LifeOn works");
-  const steps = [["Lock the apps that distract you","Start a Focus or a Move session. Leave LifeOn during focus and the session stops. Want your apps back early? Solve 3 brain challenges."],["Earn points","2 minutes of focus = 1 point. Check in at a partner place with the code on the counter poster and your location = +30. Walks, runs and rides are measured by GPS. The more an action is verified, the more it's worth. Max 150 a day."],["Spend them nearby","Gyms, cafés, restaurants and shops around you, at 100, 300 and 800 points. Show the 5-minute code at the counter."],["Your data stays yours","No ads, ever. Your screen time never leaves your phone. Your group only sees your points and streak."]];
+  const steps = [["Lock the apps that distract you","Start a Focus or a Move session. Leave LifeOn during focus and the session stops. Want your apps back early? Solve 3 brain challenges."],["Earn points","2 minutes of focus = 1 point. Check in at a partner place with the code on the counter poster and your location = +30. Walks, runs and rides are measured by GPS. Every point needs a real check. Max 100 a day, with a limit for each kind of activity."],["Spend them nearby","Gyms, cafés, restaurants and shops around you, at 400, 1,200 and 3,000 points. Show the 5-minute code at the counter."],["Your data stays yours","No ads, ever. Your screen time never leaves your phone. Your group only sees your points and streak."]];
   el.innerHTML = `<div class="in"><div class="row between"><h2>How LifeOn works</h2><button class="ghost small" data-close>Close</button></div><div class="card steps">${steps.map(([t,d],i)=>`<div class="step"><span class="n">${i+1}</span><div><b>${esc(t)}</b><p class="small muted" style="margin-top:4px">${esc(d)}</p></div></div>`).join("")}</div><button class="full" data-close>Got it</button></div>`;
   $$("[data-close]", el).forEach(b=>b.onclick = () => el.remove());
 }
@@ -1686,7 +1689,7 @@ function openFocus(kind, preMode, taskLabel, prePlan, preType, blockId, interval
       ${f.task?`<div class="card"><p class="small muted">Working on</p><b>${esc(f.task)}</b></div>`:""}
       ${kind==="move" ? `<div class="card"><p class="small" style="font-weight:700">What are you doing?</p><div class="chips" id="fType">${MOVE_TYPES.map(t=>`<button type="button" class="chip" data-v="${t}" aria-pressed="${f.type===t}">${t}</button>`).join("")}</div><p class="small muted">${["Walk","Run","Bike"].includes(f.type) ? "Like Strava: GPS records your route, distance and speed. Keep LifeOn open (the screen stays on). Points only if the GPS confirms it." : "Points only at a partner place: choose At a partner place and check in with the code on the poster."}</p><p class="small" style="font-weight:700">Music? Start it first, then come back and press Start</p>${musicChips(f.type==="Run" ? "running" : f.type==="Bike" ? "cycling" : f.type==="Yoga" ? "yoga" : "workout")}</div>` : `<div class="card"><p class="small muted">Locked during the session</p>
         <div class="blocked">${(p.blocked||[]).map(a=>`<span>${ICON.lock}${esc(a)}</span>`).join("") || `<span>No apps chosen yet. Pick them in Me.</span>`}</div>
-        <p class="small muted">Open any other app for more than 10 seconds and the session stops.${f.plan.startsWith("pomo")?" During Pomodoro breaks you're free.":""}</p></div>`}
+        <p class="small muted">Open any other app for more than 10 seconds and the session stops.${f.plan.startsWith("pomo")?" During Pomodoro breaks you're free.":""} Keep the screen on, phone face down.${kind==="study"||kind==="work" ? " LifeOn will beep 1–2 times to check you're there, and at the end you'll write what you did." : ""}</p></div>`}
       <div class="card"><p class="small" style="font-weight:700">How long?</p>
         <div class="chips" id="fPlan">${KIND_PLANS[kind].map(k=>`<button type="button" class="chip" data-v="${k}" aria-pressed="${f.plan===k}">${esc(PLANS[k].label)}</button>`).join("")}</div>
         <p class="small" style="font-weight:700">Where?</p>
@@ -1726,6 +1729,10 @@ function runFocus(el, f){
     try { track.watch = navigator.geolocation.watchPosition(pos => { const c = pos.coords; if (c.accuracy > 60) return; const pt = [c.latitude, c.longitude], now = Date.now(); track.fixes++; track.denied = false; if (!track.last) { track.last = pt; track.lastT = now; track.route.push(pt); return; } const d = hav(track.last, pt); if (d > 0.01) { const hrs = Math.max(1, now - track.lastT)/3.6e6; if (d/hrs > 60) { track.last = pt; track.lastT = now; track.jumps++; return; } track.km += d; track.last = pt; track.lastT = now; if (track.route.length < 600) track.route.push(pt); } }, err => { if (err && err.code === 1) track.denied = true; }, {enableHighAccuracy:true, maximumAge:5000}); } catch(e){}
     try { if (navigator.wakeLock) navigator.wakeLock.request("screen").then(w => { if (focusRun) focusRun.wake = w; else w.release(); }).catch(()=>{}); } catch(e){}
   }
+  const lockScreen = () => { try { if (navigator.wakeLock && focusRun) navigator.wakeLock.request("screen").then(w => { if (focusRun) focusRun.wake = w; else w.release(); }).catch(()=>{}); } catch(e){} };
+  if (f.kind !== "move") lockScreen();
+  try { beep(0); } catch(e){}
+  if (f.kind==="study" || f.kind==="work") { const cks = []; phases.filter(x => x.ty==="f").forEach(ph => { const len = ph.to - ph.from; const n = Math.max(1, Math.round(len / (25*60e3))); const seg = len / n; for (let q = 0; q < n; q++) cks.push(ph.from + q*seg + Math.min(3*60e3, seg/4) + Math.random() * Math.max(0, seg/2)); }); focusRun.checks = cks.sort((x,y) => x - y); }
   unlock = { lockedUntil:0, strikes:0 };
   try { localStorage.setItem(SAFE_KEY, JSON.stringify({start, end})); } catch(e){}
   S.presence({ focusUntil: end });
@@ -1742,6 +1749,7 @@ function runFocus(el, f){
   const tick = () => {
     if (!focusRun) return;
     const now = Date.now(); if (now >= end) { finish(true); return; }
+    if (focusRun.checks && focusRun.checks.length && now >= focusRun.checks[0] && !focusRun.checkOpen) { focusRun.checks.shift(); presenceCheck(); }
     const i = phases.findIndex(x=>now < x.to); const ph = phases[i];
     const left = ph.to - now; const m = Math.floor(left/60e3), s = Math.floor(left/1e3)%60;
     const tl = $("#tLeft", el); if (tl) tl.firstChild.nodeValue = m+":"+pad(s);
@@ -1753,8 +1761,17 @@ function runFocus(el, f){
   };
   focusRun.timer = setInterval(tick, 1000); tick();
   if (f.intervals) { let lastCue = -1; const cueT = setInterval(() => { if (!focusRun) { clearInterval(cueT); return; } const e = (Date.now() - start)/1000; let idx = -1, acc = 0; for (let j = 0; j < f.intervals.length; j++) { acc += f.intervals[j][1]; if (e < acc) { idx = j; break; } } const lbl = $("#phaseLbl", el); if (lbl) lbl.textContent = idx >= 0 ? f.intervals[idx][0] + " · " + Math.ceil(acc - e) + "s" : "Keep going"; if (idx !== lastCue) { lastCue = idx; try { navigator.vibrate && navigator.vibrate([150,80,150]); } catch(err){} } }, 500); }
+  function presenceCheck(){
+    const box = document.createElement("div"); box.className = "flow night"; box.style.zIndex = 40; box.setAttribute("role","alertdialog"); box.setAttribute("aria-label","Presence check");
+    let left = 90; focusRun.checkOpen = box;
+    box.innerHTML = `<div class="in" style="min-height:100%;justify-content:center;text-align:center"><h1 style="font-size:36px;line-height:1.1">Still focusing?</h1><p class="muted">Quick check that you're really here. Tap within <b id="pcLeft">90</b> seconds, then put the phone back down.</p><button class="full" id="pcOk" style="font-size:20px;padding:20px">Yes, I'm studying</button></div>`;
+    document.body.appendChild(box); beep(3);
+    const t = setInterval(() => { left--; const e = $("#pcLeft", box); if (e) e.textContent = left; if (left % 20 === 0) beep(2); if (left <= 0) { clearInterval(t); box.remove(); if (focusRun) { focusRun.checkOpen = null; focusRun.missed = true; finish(false, "You didn't answer the presence check, so this session doesn't count."); } } }, 1000);
+    $("#pcOk", box).onclick = () => { clearInterval(t); box.remove(); if (focusRun) { focusRun.checkOpen = null; focusRun.checksOk = (focusRun.checksOk||0) + 1; } toast("Thanks! Back to work."); };
+  }
   const onVis = () => {
     if (!focusRun) return;
+    if (!document.hidden && f.kind !== "move") lockScreen();
     if (document.hidden) focusRun.hiddenAt = Date.now();
     else if (focusRun.hiddenAt) { const away = overlapFocus(focusRun.hiddenAt, Math.min(Date.now(), end)); focusRun.hiddenAt = null; if (away > 10e3) finish(false, "You left LifeOn for "+Math.round(away/1e3)+" seconds of focus time."); else tick(); }
   };
@@ -1781,9 +1798,19 @@ function runFocus(el, f){
         vNote = s.verified ? `GPS verified · ${kmv.toFixed(2)} km · ${spd.toFixed(1)} km/h` : spd > (R?R[1]:99) ? `Too fast for a ${run.type.toLowerCase()} (${spd.toFixed(0)} km/h): not verified, no points` : `Only ${kmv.toFixed(2)} km tracked: not verified, no points`; }
       else vNote = "Not verified (no GPS or check-in): no points this time";
     }
+    if (run.checkOpen) { try { run.checkOpen.remove(); } catch(e){} }
+    if (ok && (run.kind==="study" || run.kind==="work")) { s.needsRecap = true; s.checksOk = run.checksOk || 0; }
     const np = clone(meP()); np.sessions = [...(np.sessions||[]), s];
     if (ok && run.blockId && np.study && np.study.plan) { const bl = (np.study.plan.blocks||[]).find(x => x.id === run.blockId); if (bl) bl.done = true; }
     await writeMe(np);
+    if (s.needsRecap) {
+      const recent = (meP().sessions||[]).filter(x => x.recap).slice(-8).map(x => x.recap.trim().toLowerCase());
+      el.innerHTML = `<div class="in" style="min-height:100%;justify-content:center"><h1 style="font-size:36px;line-height:1.1">Last step: what did you get done?</h1>
+        <p class="muted">Write 2–3 lines on what you studied or finished. It's how we know the time was real, and it helps you remember. Your points arrive when you save.</p>
+        <form id="recapForm" class="card"><textarea id="recapText" rows="5" maxlength="600" required style="font:inherit;color:var(--night-ink);background:color-mix(in srgb, var(--night-ink) 10%, transparent);border:0;border-radius:12px;padding:12px;width:100%" placeholder="e.g. Chapter 4 of Corporate Finance: NPV and IRR, did exercises 4.1–4.6, still unsure about WACC."></textarea><p class="small muted" id="recapCount">At least 60 characters</p><button class="full" type="submit">Save and get my points</button></form></div>`;
+      const ta = $("#recapText", el); ta.oninput = () => { const n = ta.value.trim().length; $("#recapCount", el).textContent = n >= 60 ? "Good" : (60 - n) + " more characters"; };
+      await new Promise(res => { $("#recapForm", el).onsubmit = async e => { e.preventDefault(); const txt = ta.value.trim(); if (txt.length < 60) { toast("Write a little more: at least 60 characters"); return; } if (recent.includes(txt.toLowerCase())) { toast("This is the same as a previous session. Describe what you did today."); return; } if (new Set(txt.toLowerCase().replace(/[^a-zà-ú]/g,"")).size < 8) { toast("Use real words, please"); return; } const np2 = clone(meP()); const ss = (np2.sessions||[]).find(x => x.id === s.id); if (ss) { ss.recap = txt.slice(0,600); s.recap = ss.recap; } await writeMe(np2); res(); }; });
+    }
     el.innerHTML = `<div class="in" style="min-height:100%;justify-content:center;text-align:center">
       <h1 style="font-size:42px;line-height:1">${!ok ? "Session stopped" : (run.kind==="move" && run.mode!=="venue" && !s.verified) ? "Not verified" : "Done."}</h1>
       <p class="muted">${ok ? (run.kind==="move" ? `You moved for ${fmtMin(mins)}.` : `You stayed focused for ${fmtMin(totalFocus)}.`) : esc(why||"")}</p>
@@ -1882,7 +1909,7 @@ function openBored(){
       <div class="row between"><button class="ghost small" data-back>‹ Change</button><button class="ghost small" data-close>Close</button></div>
       <h2>Ideas for ${label}</h2>
       <div class="opt"><span class="tag" style="color:var(--accent)">Places open now · ${offers.length}</span>
-        ${offers.length ? `<div class="list">${offers.map(x=>`<div style="display:flex;flex-direction:column;gap:8px"><div class="offer two"><div class="ico">${ICON[x.m.kind]||ICON.other}</div><div><div class="t">${esc(x.o.title)}</div><div class="b">${esc(x.m.name)} · ${esc(placeDist(x.m))}</div><div class="chips" style="margin-top:6px"><span class="chip hot">${x.o.flashUntil?"Flash · ":""}${esc(offerWindow(x.o))}</span><span class="chip">${x.o.cost} pts</span>${x.m.example?'<span class="chip ex">Example</span>':""}</div></div></div>
+        ${offers.length ? `<div class="list">${offers.map(x=>`<div style="display:flex;flex-direction:column;gap:8px"><div class="offer two"><div class="ico">${ICON[x.m.kind]||ICON.other}</div><div><div class="t">${esc(x.o.title)}</div><div class="b">${esc(x.m.name)} · ${esc(placeDist(x.m))}</div><div class="chips" style="margin-top:6px"><span class="chip hot">${x.o.flashUntil?"Flash · ":""}${esc(offerWindow(x.o))}</span><span class="chip">${costOf(x.o)} pts</span>${x.m.example?'<span class="chip ex">Example</span>':""}</div></div></div>
           <div class="row"><button class="ghost small" data-claim="${esc(x.mid)}|${esc(x.key)}" style="flex:1">Get it</button><button class="small" data-checkin="${esc(x.mid)}" style="flex:1">I'm there: check in</button></div></div>`).join("")}</div>`
         : `<p class="muted small">No partner offers open right now in your area. Plenty of other ideas below.</p>`}</div>
       ${acts.length?`<div class="opt"><span class="tag" style="color:var(--plum)">Happening soon</span><div class="list">${activityCards(acts,2)}</div></div>`:""}
@@ -1933,8 +1960,8 @@ function offerRow(x){
   return `<div class="offer"><div class="ico">${ICON[m.kind]||ICON.other}</div>
     <div style="min-width:0"><div class="t">${esc(o.title)}</div><div class="b">${esc(m.name)} · ${esc(placeDist(m))}</div>
       <div class="chips" style="margin-top:6px"><span class="chip on">${esc(TIERS[o.tier]?.label||"Reward")}</span>${o.flashUntil?`<span class="chip hot">Flash · ${esc(offerWindow(o))}</span>`:o.offPeak?`<span class="chip ${avail?"hot":""}">${avail?"Quiet hours now":esc(offerWindow(o))}</span>`:`<span class="chip">Any time</span>`}<span class="chip">${left} left this week</span>${m.example?`<span class="chip ex">Example</span>`:""}</div></div>
-    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px"><div class="cost">${o.cost}<small>pts</small></div>
-      <button class="small" data-claim="${esc(mid)}|${esc(key)}" ${(bal<o.cost||left<=0||already||!S.canWrite)?"disabled":""}>${left<=0?"Gone":already?"Next week":"Get"}</button></div></div>`;
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px"><div class="cost">${costOf(o)}<small>pts</small></div>
+      <button class="small" data-claim="${esc(mid)}|${esc(key)}" ${(bal<costOf(o)||left<=0||already||!S.canWrite)?"disabled":""}>${left<=0?"Gone":already?"Next week":"Get"}</button></div></div>`;
 }
 function bindOfferButtons(){ $$("#view [data-claim]").forEach(b=>b.addEventListener("click", ()=>{ const [mid,key] = b.dataset.claim.split("|"); confirmClaim(mid,key); })); }
 function confirmClaim(mid, key){
@@ -1942,15 +1969,15 @@ function confirmClaim(mid, key){
   const sc = flow("Get reward"); sc.style.zIndex = 30;
   sc.innerHTML = `<div class="in"><div class="row between"><h2>${esc(o.title)}</h2><button class="ghost small" data-close>Close</button></div>
     <div class="card"><p><b>${esc(m.name)}</b> · ${esc(placeDist(m))}</p>${o.detail?`<p class="muted">${esc(o.detail)}</p>`:""}<p class="small muted">${esc(TIERS[o.tier]?.label||"")} · valid ${esc(offerWindow(o))}</p>
-    <div class="row between"><span class="muted">Cost</span><span style="font-family:var(--display);font-weight:800;font-size:22px;color:var(--accent)">${o.cost} pts</span></div>
+    <div class="row between"><span class="muted">Cost</span><span style="font-family:var(--display);font-weight:800;font-size:22px;color:var(--accent)">${costOf(o)} pts</span></div>
     <p class="small muted">One reward per place per week. At the counter, tap "Show code": it lasts 5 minutes, so screenshots don't work.</p>
-    <button class="full" id="doClaim">Spend ${o.cost} points</button></div></div>`;
+    <button class="full" id="doClaim">Spend ${costOf(o)} points</button></div></div>`;
   $("[data-close]", sc).onclick = () => sc.remove();
   $("#doClaim", sc).onclick = async () => {
-    const st = stats(S.me); if (st.balance < o.cost) { toast("Not enough points yet"); return; }
+    const st = stats(S.me); if (st.balance < costOf(o)) { toast("Not enough points yet"); return; }
     if (budgetLeft(mid, key, o) <= 0) { toast("This week's rewards are gone. Try next week."); return; }
     if (myWeekAt(mid)) { toast("One reward per place per week. Try another place."); return; }
-    const np = clone(meP()); np.coupons = [...(np.coupons||[]), {id:rid(8), venueId:mid, offerKey:key, title:o.title, tier:o.tier, venue:m.name, town:m.town, window:offerWindow(o), cost:o.cost, at:Date.now()}];
+    const np = clone(meP()); np.coupons = [...(np.coupons||[]), {id:rid(8), venueId:mid, offerKey:key, title:o.title, tier:o.tier, venue:m.name, town:m.town, window:offerWindow(o), cost:costOf(o), at:Date.now()}];
     $("#doClaim", sc).disabled = true;
     if (await writeMe(np)) { $$(".flow").forEach(f=>f.remove()); state.exploreTab="wallet"; go("explore"); toast("In your wallet. Show it at the counter."); }
     else $("#doClaim", sc).disabled = false;
@@ -1958,7 +1985,7 @@ function confirmClaim(mid, key){
 }
 function viewExplore(){
   const t = state.exploreTab, st = stats(S.me);
-  const all = liveOffers().sort((a,b)=>dist(a.m)-dist(b.m) || a.o.cost-b.o.cost);
+  const all = liveOffers().sort((a,b)=>dist(a.m)-dist(b.m) || costOf(a.o)-costOf(b.o));
   const shown = state.cat==="all" ? all : all.filter(x=>CATS[state.cat][1].includes(x.m.kind));
   const wallet = (meP().coupons||[]).slice().reverse();
   const acts = liveActivities();
@@ -2077,19 +2104,18 @@ function viewMe(){
     <button type="button" class="ghost small" id="meLoc" style="align-self:flex-start">${ICON.pin} Use my location</button>
     <label for="mBase">Daily time on these apps when you started (minutes)<input id="mBase" type="number" min="10" max="900" value="${p.baseline}"></label>
     <button class="full ghost" type="submit">Save</button></form>
-  <section class="card"><h2>How points work</h2><p class="small muted">The more an action is verified, the more it's worth.</p>
+  <section class="card"><h2>How points work</h2><p class="small muted">Points are hard to earn on purpose: every one needs a real check, and there's a daily limit for each kind of activity, so studying alone can't fill your wallet.</p>
     <div class="list">
-      <div class="row between"><span>Focus, every 2 minutes</span><b>+1</b></div>
-      <div class="row between"><span>Focus at a partner place</span><b>+60%</b></div>
+      <div class="row between"><span>Study or work focus · phone down, presence checks, written recap</span><b>+1 / 2 min · max 60 a day</b></div>
+      <div class="row between"><span>Walk, run, ride confirmed by GPS · guided workout</span><b>+1 / 2 min · max 60 a day</b></div>
+      <div class="row between"><span>Offline time and cooking · phone down</span><b>+1 / 2 min · max 30 a day</b></div>
+      <div class="row between"><span>At a partner place (code + location)</span><b>+60%</b></div>
+      <div class="row between"><span>Check-in at a partner place (code + location)</span><b>+30 · max 2 a day</b></div>
       <div class="row between"><span>Group session, a friend finishes too</span><b>+10</b></div>
-      <div class="row between"><span>Check-in at a partner place</span><b>+30</b></div>
-      <div class="row between"><span>Offline timer for a free idea</span><b>+1 every 2 min</b></div>
-      <div class="row between"><span>Work shutdown routine</span><b>+5 once a day</b></div>
+      <div class="row between"><span>Explorer: 3 different places in a month</span><b>+100</b></div>
       <div class="row between"><span>Every 7 days in a row</span><b>+50</b></div>
-      <div class="row between"><span>Walk, run, ride confirmed by GPS</span><b>+1 every 2 min</b></div>
-      <div class="row between"><span>Explorer: 3 different places in a month</span><b>+60</b></div>
-      <div class="row between"><span>Daily maximum</span><b>150</b></div></div>
-    <p class="small muted">Rewards come in three levels: ${Object.values(TIERS).map(t=>t.label+" "+t.cost+" pts").join(", ")}. One reward per place per week, so places can keep offering them.</p></section>
+      <div class="row between"><span>Daily maximum</span><b>100</b></div></div>
+    <p class="small muted">Rewards: Small perk 400 points (about a week), Discount 1,200 (2–3 weeks), Big reward 3,000 (about a month). One reward per place per week.</p></section>
   <section class="card"><h3>How we check it's real</h3><div class="list small">
     <div class="row between" style="align-items:flex-start"><span><b>Verified</b> · check-in code on the counter poster plus your location within 300 m; coupons with a 5-minute code</span><span class="chip on">Full points</span></div>
     <div class="row between" style="align-items:flex-start"><span><b>Tracked</b> · Focus stops if you leave the app; walks, runs and rides measured by GPS at a realistic speed</span><span class="chip on">Full points</span></div>
@@ -2196,7 +2222,7 @@ function viewShop(){
         <div class="grid2"><label for="oFrom">From<input id="oFrom" type="time" value="14:30"></label><label for="oTo">To<input id="oTo" type="time" value="17:30"></label></div></div>
       <p class="small muted">Each person can get one reward from you per week. When the weekly maximum is reached, the reward pauses until Monday.</p>
       <button class="full" type="submit">Publish reward</button></form>`}
-    <section class="card"><h3>Your rewards</h3>${offers.length?`<div class="list">${offers.map(([k,o])=>`<div class="row between"><div style="min-width:0"><b>${esc(o.title)}</b><div class="small muted">${esc(TIERS[o.tier]?.label||"")} · ${o.cost} pts · ${esc(offerWindow(o))} · ${weekClaims(mid,k)}/${o.budgetWeek||TIERS[o.tier]?.budget} this week</div></div><div class="row" style="gap:6px"><button class="ghost small" data-toggle="${esc(k)}">${o.active?"Pause":"Resume"}</button><button class="ghost small" data-del="${esc(k)}">Delete</button></div></div>`).join("")}</div>`:`<p class="muted small">No rewards yet.</p>`}</section>`;
+    <section class="card"><h3>Your rewards</h3>${offers.length?`<div class="list">${offers.map(([k,o])=>`<div class="row between"><div style="min-width:0"><b>${esc(o.title)}</b><div class="small muted">${esc(TIERS[o.tier]?.label||"")} · ${costOf(o)} pts · ${esc(offerWindow(o))} · ${weekClaims(mid,k)}/${o.budgetWeek||TIERS[o.tier]?.budget} this week</div></div><div class="row" style="gap:6px"><button class="ghost small" data-toggle="${esc(k)}">${o.active?"Pause":"Resume"}</button><button class="ghost small" data-del="${esc(k)}">Delete</button></div></div>`).join("")}</div>`:`<p class="muted small">No rewards yet.</p>`}</section>`;
   }
   if (t==="acts") body = `${acts.filter(([,a])=>a.active && a.date>=today()).length>=planDef(mid).acts ? lockBox("More activities","Your "+planDef(mid).label+" plan includes "+planDef(mid).acts+" upcoming activit"+(planDef(mid).acts>1?"ies":"y")+". Starter has 3, Pro and Plus are unlimited.") : `<form class="card" id="actForm"><h2>New activity</h2><p class="small muted">Courses, events, sport, workshops. LifeOn users see them in Activities and in "I'm bored".</p>
       <label for="aTitle">What<input id="aTitle" maxlength="60" required placeholder="e.g. Yoga in the park"></label>
@@ -2591,8 +2617,8 @@ function agendaItems(fromDay, days){
   out.push(...expandMine(start, end));
   return out.sort((a,b) => a.s - b.s);
 }
-const AG_COL = {cal:"var(--muted)", exam:"var(--bad)", plan:"var(--accent)", invite:"var(--sport)", mine:"var(--teal)"};
-const AG_LBL = {cal:"Calendar", exam:"Exam", plan:"Study plan", invite:"Invite", mine:"Mine"};
+const AG_COL = {cal:"var(--muted)", exam:"var(--bad)", plan:"var(--accent)", invite:"var(--sport)", mine:"var(--teal)", meal:"var(--sun)"};
+const AG_LBL = {cal:"Calendar", exam:"Exam", plan:"Study plan", invite:"Invite", mine:"Mine", meal:"Meal"};
 const hm = t => { const d = new Date(t); return pad(d.getHours()) + ":" + pad(d.getMinutes()); };
 function agendaRow(it){
   const act = it.kind==="plan" ? (it.done ? `<span class="chip on">Done</span>` : `<button class="small" data-plan-start="${esc(it.id)}">Start</button>`) : it.kind==="invite" ? `<button class="ghost small" data-inv-open="${esc(it.id)}">Open</button>` : it.kind==="mine" ? `<button class="ghost small" data-ev-edit="${esc(it.id)}">Edit</button>` : "";
@@ -2756,61 +2782,131 @@ function openAI(goal){
 }
 
 // ================= workouts =================
-const WORKOUTS = [
-  {id:"c5k", name:"First 5 km: run and walk", mins:30, level:"Beginner", gps:"Run", plan:"m30", intervals:[["Warm-up walk",300],...Array(8).fill(0).flatMap(() => [["Run easy",60],["Walk",90]]),["Cool-down walk",300]], what:"Run 1 minute, walk 90 seconds, 8 times. The phone buzzes when it's time to switch."},
-  {id:"walk30", name:"Brisk walk", mins:30, level:"Everyone", gps:"Walk", plan:"m30", what:"Walk fast enough that talking takes a little effort. GPS checks the distance."},
-  {id:"bike45", name:"Easy bike ride", mins:45, level:"Everyone", gps:"Bike", plan:"m45", what:"Steady pace on flat roads or the Olona cycle path."},
-  {id:"body20", name:"20-minute bodyweight", mins:20, level:"Beginner", steps:[["Jumping jacks",40],["Rest",20],["Squats",40],["Rest",20],["Push-ups (knees are fine)",40],["Rest",20],["Lunges",40],["Rest",20],["Plank",40],["Rest",20],["Glute bridge",40],["Rest",40]], rounds:2, what:"No equipment. 40 seconds on, 20 off, two rounds."},
-  {id:"core10", name:"10-minute core", mins:10, level:"Everyone", steps:[["Plank",30],["Rest",15],["Dead bug",40],["Rest",15],["Side plank left",25],["Side plank right",25],["Rest",15],["Bicycle crunch",40],["Rest",15],["Superman hold",30]], rounds:1, what:"Short and effective, good after studying."},
-  {id:"mob15", name:"Mobility and stretching", mins:15, level:"Everyone", steps:[["Neck rolls",45],["Shoulder circles",45],["Cat-cow",60],["Hip flexor stretch left",45],["Hip flexor stretch right",45],["Hamstring stretch",60],["Child's pose",60],["Chest opener",45],["Deep breathing",90]], rounds:1, what:"For long days at the desk. Slow, no pain."},
-  {id:"hiit15", name:"Park HIIT", mins:15, level:"Intermediate", steps:[["High knees",30],["Rest",15],["Squat jumps",30],["Rest",15],["Mountain climbers",30],["Rest",15],["Bench step-ups",30],["Rest",15],["Burpees",30],["Rest",45]], rounds:2, what:"Find a bench in the park. Hard but short."}
+const howTo = name => "https://www.youtube.com/results?search_query=" + encodeURIComponent("how to do " + name + " exercise correct form");
+// [name, type, muscles, cue]
+const EXERCISES = [
+  ["Jumping jacks","home","Full body","Jump feet apart while raising your arms, then back."],["Squats","home","Legs, glutes","Feet shoulder-width, sit back, knees over toes, chest up."],["Push-ups","home","Chest, arms","Body straight, lower chest to the floor, push back up."],["Knee push-ups","home","Chest, arms","Like a push-up, knees on the floor. Great to start."],["Lunges","home","Legs, glutes","Step forward, both knees at 90°, push back."],["Reverse lunges","home","Legs, glutes","Step back instead of forward: easier on the knees."],["Glute bridge","home","Glutes, back","Lying down, feet flat, lift your hips and squeeze."],["Plank","home","Core","Forearms down, body in one straight line, breathe."],["Side plank","home","Core, sides","On one forearm, hips up, body straight."],["Mountain climbers","home","Core, cardio","In push-up position, run your knees to your chest."],["Burpees","home","Full body","Squat, jump back to plank, push-up, jump up."],["High knees","home","Cardio","Run on the spot bringing the knees up high."],["Dead bug","home","Core","On your back, lower opposite arm and leg slowly."],["Bicycle crunch","home","Core","Elbow towards the opposite knee, alternate."],["Superman hold","home","Back","On your belly, lift arms and legs, hold."],["Wall sit","home","Legs","Back against the wall, knees at 90°, hold."],["Chair dips","home","Triceps","Hands on a chair behind you, bend and push up."],["Calf raises","home","Calves","Rise on your toes, slowly down."],["Bird dog","home","Core, back","On all fours, extend opposite arm and leg."],["Russian twist","home","Core","Seated, lean back, rotate side to side."],["Squat jumps","home","Legs, cardio","Squat down, jump up, land softly."],["Step-ups","home","Legs","Step onto a chair or bench, alternate legs."],
+  ["Cat-cow","stretch","Back","On all fours, round then arch your back slowly."],["Child's pose","stretch","Back, hips","Sit on your heels, arms forward, relax."],["Hamstring stretch","stretch","Legs","Leg straight, reach towards your toes, no bouncing."],["Hip flexor stretch","stretch","Hips","Half kneeling, push hips forward gently."],["Chest opener","stretch","Chest, shoulders","Hands behind your back, open the chest."],["Neck rolls","stretch","Neck","Slow half circles, no forcing."],["Shoulder circles","stretch","Shoulders","Big slow circles forward and back."],["Deep breathing","stretch","Relax","In for 4, hold 4, out for 6."],
+  ["Barbell squat","gym","Legs, glutes","Bar on upper back, squat to parallel, drive up."],["Bench press","gym","Chest, arms","Bar to mid-chest, elbows at 45°, press up."],["Deadlift","gym","Back, legs","Flat back, bar close to legs, stand up with hips."],["Lat pulldown","gym","Back","Pull the bar to your upper chest, slow back up."],["Seated cable row","gym","Back","Pull to your belly, squeeze shoulder blades."],["Shoulder press","gym","Shoulders","Press dumbbells overhead, don't arch your back."],["Leg press","gym","Legs","Feet shoulder-width, lower to 90°, push."],["Dumbbell row","gym","Back","One hand on the bench, pull the dumbbell to your hip."],["Bicep curl","gym","Biceps","Elbows still, curl up, slow down."],["Tricep pushdown","gym","Triceps","Elbows tucked, push the rope down."],["Leg curl","gym","Hamstrings","Curl the pad towards your glutes, slow back."],["Hip thrust","gym","Glutes","Back on a bench, bar on hips, lift and squeeze."],["Treadmill run","gym","Cardio","Easy pace you can talk at."],["Rowing machine","gym","Cardio, back","Legs, then body, then arms."],["Exercise bike","gym","Cardio","Steady pace, slight resistance."],
+  ["Running","outdoor","Cardio","Relaxed shoulders, short steps."],["Brisk walking","outdoor","Cardio","Fast enough that talking takes effort."],["Cycling","outdoor","Cardio, legs","Steady pace, helmet on."],["Stair climbing","outdoor","Legs, cardio","Use the rail, one step at a time."],["Bench step-ups","outdoor","Legs","Park bench, step up and down, alternate."]
 ];
+const EX_TYPES = {home:"Home", gym:"Gym", outdoor:"Outdoor", stretch:"Stretching"};
+const sets = (list, work, rest, n) => list.flatMap(x => Array(n).fill(0).flatMap(() => [[x, work], ["Rest", rest]]));
+const WORKOUTS = [
+  {id:"c5k", type:"outdoor", name:"First 5 km: run and walk", mins:30, level:"Beginner", gps:"Run", plan:"m30", intervals:[["Warm-up walk",300],...Array(8).fill(0).flatMap(() => [["Run easy",60],["Walk",90]]),["Cool-down walk",300]], what:"Run 1 minute, walk 90 seconds, 8 times. A beep tells you when to switch."},
+  {id:"walk30", type:"outdoor", name:"Brisk walk", mins:30, level:"Everyone", gps:"Walk", plan:"m30", what:"Fast enough that talking takes a little effort. GPS checks the distance."},
+  {id:"bike45", type:"outdoor", name:"Easy bike ride", mins:45, level:"Everyone", gps:"Bike", plan:"m45", what:"Steady pace on flat roads or the Olona cycle path."},
+  {id:"hiit15", type:"outdoor", name:"Park HIIT", level:"Intermediate", steps:[["High knees",30],["Rest",15],["Squat jumps",30],["Rest",15],["Mountain climbers",30],["Rest",15],["Bench step-ups",30],["Rest",15],["Burpees",30],["Rest",45]], rounds:2, what:"Find a bench in the park. Hard but short."},
+  {id:"body20", type:"home", name:"20-minute bodyweight", level:"Beginner", steps:[["Jumping jacks",40],["Rest",20],["Squats",40],["Rest",20],["Knee push-ups",40],["Rest",20],["Lunges",40],["Rest",20],["Plank",40],["Rest",20],["Glute bridge",40],["Rest",40]], rounds:2, what:"No equipment. 40 seconds on, 20 off, two rounds."},
+  {id:"full30", type:"home", name:"Full body at home", level:"Intermediate", steps:[["Squats",45],["Rest",15],["Push-ups",45],["Rest",15],["Reverse lunges",45],["Rest",15],["Mountain climbers",45],["Rest",15],["Glute bridge",45],["Rest",15],["Plank",45],["Rest",45]], rounds:3, what:"Three rounds, 45 seconds on and 15 off."},
+  {id:"core10", type:"home", name:"10-minute core", level:"Everyone", steps:[["Plank",30],["Rest",15],["Dead bug",40],["Rest",15],["Side plank",50],["Rest",15],["Bicycle crunch",40],["Rest",15],["Superman hold",30]], rounds:1, what:"Short and effective, good after studying."},
+  {id:"mob15", type:"home", name:"Mobility and stretching", level:"Everyone", steps:[["Neck rolls",45],["Shoulder circles",45],["Cat-cow",60],["Hip flexor stretch",90],["Hamstring stretch",60],["Child's pose",60],["Chest opener",45],["Deep breathing",90]], rounds:1, what:"For long days at the desk. Slow, no pain."},
+  {id:"gymfull", type:"gym", name:"Gym full body", level:"Beginner", steps:sets(["Leg press","Lat pulldown","Shoulder press","Seated cable row","Plank"], 45, 75, 3), rounds:1, what:"3 sets of each: about 10–12 reps in 45 seconds, then rest."},
+  {id:"gymupper", type:"gym", name:"Gym upper body", level:"Intermediate", steps:sets(["Bench press","Dumbbell row","Shoulder press","Bicep curl","Tricep pushdown"], 45, 75, 3), rounds:1, what:"Chest, back, shoulders and arms."},
+  {id:"gymlower", type:"gym", name:"Gym lower body", level:"Intermediate", steps:sets(["Barbell squat","Hip thrust","Leg curl","Calf raises"], 45, 90, 3), rounds:1, what:"Legs and glutes. Warm up 5 minutes on the bike first."},
+  {id:"gymcardio", type:"gym", name:"Gym cardio mix", level:"Everyone", steps:[["Exercise bike",300],["Rowing machine",300],["Treadmill run",600],["Rest",60],["Exercise bike",300]], rounds:1, what:"25 minutes switching machines."}
+];
+const wkMins = w => w.mins || Math.round(w.steps.reduce((a,s) => a + s[1], 0) * (w.rounds||1) / 60);
 const MUSIC = [["Spotify","https://open.spotify.com/search/"],["Apple Music","https://music.apple.com/search?term="],["YouTube Music","https://music.youtube.com/search?q="]];
 const musicChips = q => `<div class="chips">${MUSIC.map(([l,u]) => `<a class="chip" href="${esc(u + encodeURIComponent(q))}" target="_blank" rel="noopener">${ICON.music} ${l}</a>`).join("")}</div>`;
-function viewTrain(){
-  return `<div class="row"><a href="#today" class="link small">‹ Today</a></div>
-  <section class="card" style="background:var(--sport);color:var(--sport-ink)"><h2>Workouts</h2><p class="small" style="opacity:.9">Pick one and press Start. Outdoor ones are checked with GPS; the indoor ones run on a guided timer with the phone in front of you, not in your hand.</p></section>
-  ${WORKOUTS.map(w => `<section class="card"><div class="row between"><h3>${esc(w.name)}</h3><span class="chip">${w.mins} min · ${esc(w.level)}</span></div><p class="small muted">${esc(w.what)}</p>${w.steps ? `<p class="small">${esc(w.steps.filter(s => s[0]!=="Rest").map(s => s[0]).join(" · "))}${w.rounds > 1 ? " · ×"+w.rounds : ""}</p>` : ""}<button class="small" data-wk="${w.id}" style="align-self:flex-start;background:var(--sport);color:var(--sport-ink)">Start${w.gps ? " · GPS" : ""}</button></section>`).join("")}
-  <section class="card"><h3>Music for your workout</h3><p class="small muted">Start your playlist first, then come back to LifeOn and press Start.</p>${musicChips("workout")}</section>
-  <section class="card"><h3>Want a plan made for you?</h3><p class="small muted">Your AI can build a 2-week plan and LifeOn puts it in your agenda.</p><button class="ghost small" data-ai="workout" style="align-self:flex-start">${ICON.spark} Plan with AI</button></section>`;
+function myWorkouts(){ return state.myWorkouts || []; }
+async function saveMyWorkouts(list){ state.myWorkouts = list; try { await S.setPrivate("workouts", {list}); } catch(e){ toast("Couldn't save"); } }
+function wkCard(w, mine){
+  return `<section class="card"><div class="row between"><h3>${esc(w.name)}</h3><span class="chip">${wkMins(w)} min${w.level ? " · "+esc(w.level) : ""}</span></div>${w.what ? `<p class="small muted">${esc(w.what)}</p>` : ""}
+    ${w.steps ? `<div class="chips">${[...new Set(w.steps.filter(s => s[0]!=="Rest").map(s => s[0]))].map(n => `<a class="chip" href="${esc(howTo(n))}" target="_blank" rel="noopener" title="How to do it">▶ ${esc(n)}</a>`).join("")}</div>` : ""}
+    <div class="row wrap"><button class="small" data-wk="${esc(w.id)}" style="background:var(--sport);color:var(--sport-ink)">Start${w.gps ? " · GPS" : ""}</button>${mine ? `<button class="ghost small" data-wk-edit="${esc(w.id)}">Edit</button>` : ""}</div></section>`;
 }
-function bindTrain(){ $$("[data-wk]").forEach(b => b.onclick = () => startWorkout(b.dataset.wk)); $$("#view [data-ai]").forEach(b => b.onclick = () => openAI(b.dataset.ai)); }
+function viewTrain(){
+  const t = state.trainTab || "ready", ty = state.trainType || "all", q = (state.exQuery || "").toLowerCase();
+  const seg = `<div class="seg" role="group" aria-label="Workouts">${[["ready","Ready-made"],["mine","My workouts"],["library","Exercises"]].map(([k,l]) => `<button type="button" data-tt2="${k}" aria-pressed="${t===k}">${l}</button>`).join("")}</div>`;
+  const typeChips = `<div class="chips">${[["all","All"],["home","Home"],["gym","Gym"],["outdoor","Outdoor"]].concat(t==="library" ? [["stretch","Stretching"]] : []).map(([k,l]) => `<button type="button" class="chip" data-wtype="${k}" aria-pressed="${ty===k}">${l}</button>`).join("")}</div>`;
+  let body = "";
+  const wod = WORKOUTS[Math.floor(Date.now()/864e5) % WORKOUTS.length];
+  if (t==="ready") body = `<section class="card" style="border:2px solid var(--sport)"><span class="small" style="font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--sport)">Workout of the day</span><h2>${esc(wod.name)}</h2><p class="small muted">${wkMins(wod)} min · ${esc(EX_TYPES[wod.type]||"")} · ${esc(wod.what||"")}</p><button class="small" data-wk="${esc(wod.id)}" style="align-self:flex-start;background:var(--sport);color:var(--sport-ink)">Start${wod.gps ? " · GPS" : ""}</button></section>
+    <section class="card"><h3>Plan your training week</h3><p class="small muted">LifeOn puts 3 workouts in your agenda (Monday, Wednesday, Friday) at the time you choose, with a reminder. You can move or delete them.</p><div class="row"><input id="wkTime" type="time" value="18:30" aria-label="Time"><button class="small" id="wkPlan">Add to my agenda</button></div></section>
+    ${typeChips}${WORKOUTS.filter(w => (ty==="all" || w.type===ty) && w.id !== wod.id).map(w => wkCard(w)).join("")}`;
+  if (t==="mine") body = `<section class="card"><h3>Create your workout</h3><p class="small muted">Pick exercises from the list, set how long and how much rest. LifeOn guides you with a timer and a video for each exercise.</p><button class="full" data-wk-new style="background:var(--sport);color:var(--sport-ink)">+ New workout</button></section>${myWorkouts().length ? myWorkouts().map(w => wkCard(w, true)).join("") : `<p class="small muted" style="text-align:center">No workouts of yours yet.</p>`}`;
+  if (t==="library") { const list = EXERCISES.filter(e => (ty==="all" || e[1]===ty) && (!q || (e[0]+" "+e[2]).toLowerCase().includes(q)));
+    body = `<section class="card"><input id="exSearch" type="search" placeholder="Search an exercise (e.g. squat, back, core)" value="${esc(state.exQuery||"")}" aria-label="Search exercises">${typeChips}<div class="list">${list.map(e => `<div class="row between" style="align-items:flex-start"><div style="min-width:0"><b>${esc(e[0])}</b><div class="small muted">${esc(EX_TYPES[e[1]])} · ${esc(e[2])}</div><div class="small">${esc(e[3])}</div></div><a class="btn small ghostlink" href="${esc(howTo(e[0]))}" target="_blank" rel="noopener">▶ Video</a></div>`).join("") || `<p class="small muted">No exercise found.</p>`}</div></section>`; }
+  return `<div class="row"><a href="#today" class="link small">‹ Today</a></div>
+  <section class="card" style="background:var(--sport);color:var(--sport-ink)"><h2>Workouts</h2><p class="small" style="opacity:.9">Home, gym or outdoor. Every exercise has a ▶ video that shows how to do it. Outdoor workouts are checked with GPS; the others run on a guided timer with LifeOn open.</p></section>
+  ${seg}${body}
+  <section class="card"><h3>Music</h3><p class="small muted">Start your playlist first, then come back to LifeOn and press Start.</p>${musicChips("workout")}</section>
+  <section class="card"><h3>A plan made for you</h3><p class="small muted">Your AI builds a 2-week plan and LifeOn puts it in your agenda.</p><button class="ghost small" data-ai="workout" style="align-self:flex-start">${ICON.spark} Plan with AI</button></section>`;
+}
+function bindTrain(){
+  $$("[data-tt2]").forEach(b => b.onclick = () => { state.trainTab = b.dataset.tt2; render(); });
+  $$("[data-wtype]").forEach(b => b.onclick = () => { state.trainType = b.dataset.wtype; render(); });
+  $$("[data-wk]").forEach(b => b.onclick = () => startWorkout(b.dataset.wk));
+  $$("[data-wk-edit]").forEach(b => b.onclick = () => openBuilder(b.dataset.wkEdit));
+  const nb = $("[data-wk-new]"); if (nb) nb.onclick = () => openBuilder();
+  const wp = $("#wkPlan"); if (wp) wp.onclick = async () => { const t = $("#wkTime").value || "18:30"; const mon = addDays(new Date(), -((new Date().getDay()+6)%7)); const pick = profile()==="active" ? ["walk30","full30","c5k"] : ["walk30","body20","mob15"]; const evs = [0,2,4].map((off, i) => { let d = addDays(mon, off); if (dkey(d) < today()) d = addDays(d, 7); const w = WORKOUTS.find(x => x.id === pick[i]); const e = toMin(t) + wkMins(w); return {id:"w"+rid(7), title:"Workout: " + w.name, date:dkey(d), start:t, end:pad(Math.floor(e/60)%24)+":"+pad(e%60), loc:"", repeat:"none", remind:15, src:"train"}; }); await saveMyEvents([...myEvents().filter(e => e.src !== "train"), ...evs]); toast("3 workouts added to your agenda"); go("agenda"); };
+  const es = $("#exSearch"); if (es) es.oninput = () => { state.exQuery = es.value; const pos = es.selectionStart; render(); const n = $("#exSearch"); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch(e){} } };
+  $$("#view [data-ai]").forEach(b => b.onclick = () => openAI(b.dataset.ai));
+}
+function openBuilder(id){
+  const old = id ? myWorkouts().find(w => w.id === id) : null;
+  const w = old ? JSON.parse(JSON.stringify(old)) : {id:"w" + rid(6), name:"", type:"home", rounds:2, items:[]};
+  const el = flow("Your workout"); el.style.zIndex = 26;
+  const draw = () => {
+    el.innerHTML = `<div class="in"><div class="row between"><h2>${old ? "Edit workout" : "New workout"}</h2><button class="ghost small" data-close>Close</button></div>
+      <div class="card"><label for="bName">Name<input id="bName" maxlength="40" value="${esc(w.name)}" placeholder="e.g. My morning routine"></label>
+        <div class="grid2"><label for="bType">Where<select id="bType">${["home","gym","outdoor"].map(k => `<option value="${k}" ${w.type===k?"selected":""}>${EX_TYPES[k]}</option>`).join("")}</select></label><label for="bRounds">Rounds<input id="bRounds" type="number" min="1" max="10" value="${w.rounds}"></label></div></div>
+      <div class="card"><h3>Exercises · ${w.items.length}</h3>${w.items.length ? `<div class="list">${w.items.map((x,i) => `<div class="row between"><div><b>${esc(x.name)}</b><div class="small muted">${x.work}s work · ${x.rest}s rest</div></div><div class="row" style="gap:6px"><a class="btn small ghostlink" href="${esc(howTo(x.name))}" target="_blank" rel="noopener">▶</a><button class="ghost small" data-up="${i}" ${i?"":"disabled"} aria-label="Move up">↑</button><button class="ghost small" data-rm="${i}" aria-label="Remove">✕</button></div></div>`).join("")}</div>` : `<p class="small muted">Add your first exercise below.</p>`}
+        <form id="bAdd" style="display:flex;flex-direction:column;gap:10px"><label for="bEx">Exercise<input id="bEx" list="exList" required placeholder="Type to search: squats, plank…"><datalist id="exList">${EXERCISES.map(e => `<option value="${esc(e[0])}">${esc(EX_TYPES[e[1]])} · ${esc(e[2])}</option>`).join("")}</datalist></label>
+          <div class="grid2"><label for="bWork">Work (seconds)<input id="bWork" type="number" min="10" max="900" value="40"></label><label for="bRest">Rest (seconds)<input id="bRest" type="number" min="0" max="300" value="20"></label></div>
+          <button class="ghost full" type="submit">+ Add exercise</button></form></div>
+      <button class="full" data-save style="background:var(--sport);color:var(--sport-ink)" ${w.items.length?"":"disabled"}>Save workout</button>${old ? `<button class="ghost full" data-delw style="color:var(--bad)">Delete workout</button>` : ""}</div>`;
+    const keep = () => { w.name = $("#bName", el).value; w.type = $("#bType", el).value; w.rounds = Math.max(1, Math.min(10, Number($("#bRounds", el).value)||1)); };
+    $("[data-close]", el).onclick = () => el.remove();
+    $("#bAdd", el).onsubmit = e => { e.preventDefault(); keep(); const name = $("#bEx", el).value.trim(); if (!name) return; w.items.push({name:name.slice(0,40), work:Math.max(10, Number($("#bWork", el).value)||40), rest:Math.max(0, Number($("#bRest", el).value)||0)}); draw(); const n = $("#bEx", el); if (n) n.focus(); };
+    $$("[data-rm]", el).forEach(b => b.onclick = () => { keep(); w.items.splice(Number(b.dataset.rm), 1); draw(); });
+    $$("[data-up]", el).forEach(b => b.onclick = () => { keep(); const i = Number(b.dataset.up); [w.items[i-1], w.items[i]] = [w.items[i], w.items[i-1]]; draw(); });
+    $("[data-save]", el).onclick = async () => { keep(); if (!w.name.trim()) w.name = "My workout"; const full = {...w, steps: w.items.flatMap(x => x.rest ? [[x.name, x.work], ["Rest", x.rest]] : [[x.name, x.work]]), what: w.items.length + " exercises · " + w.rounds + " round" + (w.rounds>1?"s":"")}; await saveMyWorkouts([...myWorkouts().filter(x => x.id !== w.id), full]); el.remove(); state.trainTab = "mine"; toast("Workout saved"); render(); };
+    const dw = $("[data-delw]", el); if (dw) dw.onclick = async () => { await saveMyWorkouts(myWorkouts().filter(x => x.id !== w.id)); el.remove(); render(); };
+  };
+  draw();
+}
 function startWorkout(id){
-  const w = WORKOUTS.find(x => x.id === id); if (!w) return;
+  const w = WORKOUTS.find(x => x.id === id) || myWorkouts().find(x => x.id === id); if (!w) return;
   if (w.gps) { openFocus("move", null, w.name, w.plan, w.gps, null, w.intervals || null); return; }
   runGuided(w);
 }
+function beep(n){ try { const ac = window.__lifeonAC || (window.__lifeonAC = new (window.AudioContext || window.webkitAudioContext)()); if (ac.state === "suspended") ac.resume(); for (let i = 0; i < (n === 0 ? 0 : (n||1)); i++) { const o = ac.createOscillator(), g = ac.createGain(); o.frequency.value = 880; g.gain.value = 0.15; o.connect(g); g.connect(ac.destination); const t = ac.currentTime + i*0.3; o.start(t); o.stop(t + 0.18); } } catch(e){} if (n !== 0) try { navigator.vibrate && navigator.vibrate(200); } catch(e){} }
 function runGuided(w){
   const steps = []; for (let r = 0; r < (w.rounds||1); r++) for (const s of w.steps) steps.push(s);
   const total = steps.reduce((a,s) => a + s[1], 0);
   const el = flow(w.name, true); let i = 0, left = steps[0][1], paused = false, timer = null, hiddenAt = null, wake = null, done = 0;
-  try { if (navigator.wakeLock) navigator.wakeLock.request("screen").then(x => wake = x).catch(() => {}); } catch(e){}
+  const lock = () => { try { if (navigator.wakeLock) navigator.wakeLock.request("screen").then(x => wake = x).catch(() => {}); } catch(e){} };
+  lock(); beep(1);
   const start = Date.now();
-  const draw = () => { const s = steps[i], nx = steps[i+1];
+  const draw = () => { const s = steps[i], nx = steps[i+1]; const ex = EXERCISES.find(e => e[0] === s[0]);
     el.innerHTML = `<div class="in" style="min-height:100%;justify-content:center;text-align:center">
       <p class="small muted" style="font-weight:700;letter-spacing:.08em;text-transform:uppercase">${esc(w.name)} · ${i+1}/${steps.length}</p>
       <h1 style="font-size:40px;line-height:1.05;${s[0]==="Rest" ? "opacity:.7" : ""}">${esc(s[0])}</h1>
+      ${ex ? `<p class="small muted">${esc(ex[3])}</p>` : ""}
+      ${s[0]!=="Rest" ? `<a class="btn small ghostlink" data-howto href="${esc(howTo(s[0]))}" target="_blank" rel="noopener" style="align-self:center">▶ How to do it (pauses the timer)</a>` : ""}
       <p style="font-family:var(--display);font-weight:800;font-size:84px;font-variant-numeric:tabular-nums;color:${s[0]==="Rest" ? "var(--teal)" : "var(--accent)"}" id="gLeft">${left}</p>
       <p class="muted">${nx ? "Next: " + esc(nx[0]) : "Last one!"}</p>
       <div class="qbar" style="background:color-mix(in srgb, var(--night-ink) 15%, transparent)"><i style="width:${Math.round(done/total*100)}%;background:var(--accent)"></i></div>
       <div class="row" style="justify-content:center"><button class="ghost" data-pause>${paused ? "Resume" : "Pause"}</button><button class="ghost" data-skip>Skip</button></div>
-      <p class="small muted">Keep LifeOn open: leave it for more than 10 seconds and the workout stops.</p>
+      <p class="small muted">Keep LifeOn open: leave it for more than 10 seconds (without pausing) and the workout stops. Skipped exercises don't count.</p>
       <button class="ghost full" data-quit>End workout</button></div>`;
     $("[data-pause]", el).onclick = () => { paused = !paused; draw(); };
-    $("[data-skip]", el).onclick = () => next();
+    $("[data-skip]", el).onclick = () => next(true);
     $("[data-quit]", el).onclick = () => finish(false, "You ended the workout early.");
+    const ht = $("[data-howto]", el); if (ht) ht.addEventListener("click", () => { paused = true; setTimeout(draw, 50); });
   };
-  const next = () => { done += steps[i][1]; i++; if (i >= steps.length) { finish(true); return; } left = steps[i][1]; try { navigator.vibrate && navigator.vibrate(steps[i][0]==="Rest" ? 120 : [80,60,80]); } catch(e){} draw(); };
-  timer = setInterval(() => { if (paused) return; left--; const g = $("#gLeft", el); if (g) g.textContent = left; if (left <= 0) next(); }, 1000);
-  const onVis = () => { if (document.hidden) hiddenAt = Date.now(); else if (hiddenAt) { const away = Date.now() - hiddenAt; hiddenAt = null; if (away > 10e3 && !paused) finish(false, "You left LifeOn for " + Math.round(away/1e3) + " seconds."); } };
+  const next = skipped => { if (!skipped) done += steps[i][1]; i++; if (i >= steps.length) { finish(true); return; } left = steps[i][1]; beep(steps[i][0]==="Rest" ? 1 : 2); draw(); };
+  timer = setInterval(() => { if (paused) return; left--; const g = $("#gLeft", el); if (g) g.textContent = left; if (left === 3) beep(1); if (left <= 0) next(false); }, 1000);
+  const onVis = () => { if (document.hidden) hiddenAt = Date.now(); else { lock(); if (hiddenAt) { const away = Date.now() - hiddenAt; hiddenAt = null; if (away > 10e3 && !paused) finish(false, "You left LifeOn for " + Math.round(away/1e3) + " seconds."); } } };
   document.addEventListener("visibilitychange", onVis);
   async function finish(ok, why){
     clearInterval(timer); document.removeEventListener("visibilitychange", onVis); try { wake && wake.release(); } catch(e){}
-    const mins = Math.max(1, Math.round((Date.now() - start)/60e3));
-    const fullDone = ok || done >= total * 0.8;
-    const s = {id:rid(8), start, min: fullDone ? Math.round(total/60) : mins, mode:"solo", kind:"workout", type:w.name, ok: fullDone};
+    const fullDone = done >= total * 0.8 && (ok || done >= total * 0.8);
+    const s = {id:rid(8), start, min: Math.round(done/60), mode:"solo", kind:"workout", type:w.name, ok: fullDone};
     const np = clone(meP()); np.sessions = [...(np.sessions||[]), s]; await writeMe(np);
-    el.innerHTML = `<div class="in" style="min-height:100%;justify-content:center;text-align:center"><h1 style="font-size:42px">${fullDone ? "Well done." : "Workout stopped"}</h1><p class="muted">${fullDone ? esc(w.name) + " · " + Math.round(total/60) + " min" : esc(why||"")}</p>${fullDone ? `<p style="font-family:var(--display);font-weight:800;font-size:56px;color:var(--accent)">+${sessionPts(s,false)}</p><p class="small muted">points · tracked by the guided timer</p>` : ""}<button class="full" data-close>Back</button></div>`;
+    el.innerHTML = `<div class="in" style="min-height:100%;justify-content:center;text-align:center"><h1 style="font-size:42px">${fullDone ? "Well done." : "Workout stopped"}</h1><p class="muted">${fullDone ? esc(w.name) + " · " + Math.round(done/60) + " min" : esc(why || "Less than 80% of the workout was done, so no points this time.")}</p>${fullDone ? `<p style="font-family:var(--display);font-weight:800;font-size:56px;color:var(--accent)">+${sessionPts(s,false)}</p><p class="small muted">points · counted only for the time actually done on the guided timer</p>` : ""}<button class="full" data-close>Back</button></div>`;
     $("[data-close]", el).onclick = () => { el.remove(); render(); };
   }
   draw();
@@ -2819,23 +2915,80 @@ function runGuided(w){
 // ================= eat well =================
 const RECIPES = [
   {id:"oats", name:"Overnight oats", mins:5, when:"Breakfast", ing:["50 g oat flakes","150 ml milk or soy drink","1 spoon yogurt","1 fruit (banana or berries)","A few nuts"], steps:["Mix oats, milk and yogurt in a jar.","Leave it in the fridge overnight.","In the morning add the fruit and nuts."]},
+  {id:"bowl", name:"Yogurt power bowl", mins:5, when:"Breakfast", ing:["170 g Greek yogurt","1 spoon honey","1 handful of granola","Fresh fruit"], steps:["Put the yogurt in a bowl.","Add granola and fruit on top.","Finish with honey."]},
+  {id:"toast", name:"Avocado and egg toast", mins:10, when:"Breakfast", ing:["2 slices wholemeal bread","½ avocado","1 egg","Lemon, salt, chilli"], steps:["Toast the bread.","Mash the avocado with lemon and salt.","Cook the egg (fried or boiled) and put it on top."]},
   {id:"chick", name:"Chickpea and tomato salad", mins:10, when:"Lunch", ing:["1 can of chickpeas","10 cherry tomatoes","½ red onion","Feta or tuna","Olive oil, lemon, basil"], steps:["Rinse the chickpeas.","Cut tomatoes and onion.","Mix everything with oil, lemon, salt and basil."]},
+  {id:"farro", name:"Farro salad with vegetables", mins:25, when:"Lunch", ing:["80 g farro","1 courgette","1 pepper","Mozzarella or feta","Olive oil, basil"], steps:["Boil the farro (about 20 minutes).","Grill or pan-cook the chopped vegetables.","Mix with cheese, oil and basil. Good cold too."]},
+  {id:"wrap", name:"Hummus and vegetable wrap", mins:10, when:"Lunch", ing:["1 wholemeal wrap","3 spoons hummus","Lettuce, carrot, cucumber","Chicken or falafel (optional)"], steps:["Spread the hummus on the wrap.","Add the sliced vegetables and protein.","Roll it tight and cut in half."]},
   {id:"pasta", name:"Wholemeal pasta, tuna and courgettes", mins:20, when:"Lunch or dinner", ing:["80 g wholemeal pasta","1 courgette","1 small can of tuna","1 garlic clove","Olive oil, chilli"], steps:["Boil the pasta.","Cook the sliced courgette with garlic and oil for 8 minutes.","Add the tuna, then the drained pasta and a spoon of its water."]},
+  {id:"lentils", name:"Pasta e lenticchie", mins:30, when:"Lunch or dinner", ing:["70 g short pasta","1 can of lentils","1 carrot, 1 celery stick, ½ onion","2 spoons tomato passata","Olive oil, rosemary"], steps:["Fry the chopped vegetables in oil for 5 minutes.","Add lentils, passata and 500 ml water, boil 10 minutes.","Add the pasta and cook it in the soup."]},
   {id:"frittata", name:"Vegetable frittata", mins:20, when:"Dinner", ing:["3 eggs","1 pepper or 1 courgette","1 handful of spinach","20 g parmesan","Salt and pepper"], steps:["Cook the chopped vegetables in a pan for 5 minutes.","Beat the eggs with parmesan, pour them in.","Cover and cook on low heat for 10 minutes."]},
   {id:"salmon", name:"Baked salmon and vegetables", mins:25, when:"Dinner", ing:["1 salmon fillet","1 potato or sweet potato","Broccoli or green beans","Olive oil, lemon, rosemary"], steps:["Cut the potato into cubes, roast at 200 °C for 10 minutes.","Add salmon and vegetables, oil and lemon.","Roast 12–15 more minutes."]},
-  {id:"bowl", name:"Yogurt power bowl", mins:5, when:"Snack", ing:["170 g Greek yogurt","1 spoon honey","1 handful of granola","Fresh fruit"], steps:["Put the yogurt in a bowl.","Add granola and fruit on top.","Finish with honey."]}
+  {id:"chicken", name:"Lemon chicken with rice", mins:25, when:"Dinner", ing:["150 g chicken breast","70 g basmati rice","1 lemon","Spinach or salad","Olive oil, garlic"], steps:["Cook the rice.","Pan-cook the sliced chicken with garlic, then add lemon juice.","Serve with rice and greens."]},
+  {id:"minestrone", name:"Quick minestrone", mins:30, when:"Dinner", ing:["Frozen mixed vegetables","1 can of beans","1 potato","Vegetable stock","Parmesan rind (optional)"], steps:["Put vegetables, diced potato and stock in a pot.","Simmer 20 minutes, add the beans.","Serve with olive oil and parmesan."]}
 ];
-function viewEat(){
-  return `<div class="row"><a href="#today" class="link small">‹ Today</a></div>
-  <section class="card" style="background:var(--teal);color:var(--teal-ink)"><h2>Eat well</h2><p class="small" style="opacity:.9">Quick, cheap and healthy. Press "Cook it": the timer starts with your phone down, so cooking earns points too.</p></section>
-  ${RECIPES.map(r => `<section class="card"><div class="row between"><h3>${esc(r.name)}</h3><span class="chip">${r.mins} min · ${esc(r.when)}</span></div>
+const recipeVideo = name => "https://www.youtube.com/results?search_query=" + encodeURIComponent("ricetta " + name);
+const gzUrl = q => "https://www.giallozafferano.it/ricerca-ricette/" + encodeURIComponent(q) + "/";
+const MEALDB = "https://www.themealdb.com/api/json/v1/1/";
+const mealCache = {};
+async function mealGet(path){ if (mealCache[path]) return mealCache[path]; const r = await fetch(MEALDB + path); if (!r.ok) throw new Error("mealdb"); const j = await r.json(); mealCache[path] = j.meals || []; return mealCache[path]; }
+function recipeOfDay(){ const n = Math.floor(Date.now()/864e5); return RECIPES[n % RECIPES.length]; }
+function myMeals(){ return state.myMeals || {plan:{}, saved:[]}; }
+async function saveMeals(m){ state.myMeals = m; try { await S.setPrivate("meals", m); } catch(e){ toast("Couldn't save"); } }
+function recipeCard(r){
+  return `<section class="card"><div class="row between"><h3>${esc(r.name)}</h3><span class="chip">${r.mins} min · ${esc(r.when)}</span></div>
     <details><summary class="small" style="cursor:pointer;font-weight:700">Ingredients and steps</summary><ul class="small" style="margin:8px 0;padding-left:18px">${r.ing.map(x => `<li>${esc(x)}</li>`).join("")}</ul><ol class="small" style="margin:0;padding-left:18px">${r.steps.map(x => `<li>${esc(x)}</li>`).join("")}</ol></details>
-    <div class="row wrap"><button class="small" data-cook="${r.id}">Cook it · phone down</button><button class="ghost small" data-plan-meal="${r.id}">Add to agenda</button></div></section>`).join("")}
-  <section class="card"><h3>A whole week of meals?</h3><p class="small muted">Ask your AI for a simple plan and LifeOn puts it in your agenda.</p><button class="ghost small" data-ai="meals" style="align-self:flex-start">${ICON.spark} Plan with AI</button></section>`;
+    <div class="row wrap"><button class="small" data-cook="${r.id}">Cook it · phone down</button><a class="btn small ghostlink" href="${esc(recipeVideo(r.name))}" target="_blank" rel="noopener">▶ Video</a><button class="ghost small" data-plan-meal="${r.id}">Add to week</button></div></section>`;
+}
+function viewEat(){
+  const t = state.eatTab || "today", rd = recipeOfDay(), mm = myMeals();
+  const seg = `<div class="seg" role="group" aria-label="Eat well">${[["today","Recipes"],["search","Search"],["week","Week plan"]].map(([k,l]) => `<button type="button" data-et2="${k}" aria-pressed="${t===k}">${l}</button>`).join("")}</div>`;
+  let body = "";
+  if (t==="today") body = `<section class="card" style="border:2px solid var(--teal)"><span class="small" style="font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--teal)">Recipe of the day</span><h2>${esc(rd.name)}</h2><p class="small muted">${rd.mins} min · ${esc(rd.when)} · ${esc(rd.ing.slice(0,3).join(", "))}…</p><div class="row wrap"><button class="small" data-cook="${rd.id}">Cook it · phone down</button><a class="btn small ghostlink" href="${esc(recipeVideo(rd.name))}" target="_blank" rel="noopener">▶ Video</a></div></section>
+    ${["Breakfast","Lunch","Dinner"].map(w => `<h3 style="margin-top:6px">${w}</h3>${RECIPES.filter(r => r.when.includes(w)).map(recipeCard).join("")}`).join("")}`;
+  if (t==="search") { const res = state.mealRes;
+    body = `<section class="card"><h3>Search thousands of recipes</h3><form id="mealForm" class="row"><input id="mealQ" type="search" placeholder="e.g. chicken, pasta, salmon" value="${esc(state.mealQ||"")}" aria-label="Search recipes"><button class="small" type="submit">Search</button></form>
+      <div class="chips">${[["Vegetarian","Vegetarian"],["Seafood","Fish"],["Chicken","Chicken"],["Pasta","Pasta"],["Breakfast","Breakfast"],["Vegan","Vegan"]].map(([c,l]) => `<button type="button" class="chip" data-mcat="${c}">${l}</button>`).join("")}<button type="button" class="chip hot" data-mrand>Surprise me</button></div>
+      <p class="small muted">From TheMealDB (in English). For Italian recipes: <a class="link" href="${esc(gzUrl(state.mealQ || "ricette sane"))}" target="_blank" rel="noopener">search on GialloZafferano</a>.</p></section>
+      ${res === "loading" ? `<p class="small muted" style="text-align:center">Loading…</p>` : res === "error" ? `<div class="banner warn">Couldn't load recipes right now. Try again, or search on GialloZafferano.</div>` : Array.isArray(res) ? (res.length ? `<section class="card"><div class="list">${res.slice(0,20).map(m => `<button class="pickrow" data-meal="${esc(m.idMeal)}"><img src="${esc(m.strMealThumb)}/preview" alt="" width="44" height="44" style="border-radius:10px;object-fit:cover"><span><span class="t" style="display:block;font-weight:700">${esc(m.strMeal)}</span><span class="small muted">${esc([m.strCategory, m.strArea].filter(Boolean).join(" · ") || "Tap to see the recipe")}</span></span></button>`).join("")}</div></section>` : `<p class="small muted" style="text-align:center">No recipe found. Try in English, e.g. "chicken".</p>`) : ""}
+      ${mm.saved.length ? `<section class="card"><h3>Saved recipes</h3><div class="list">${mm.saved.map(m => `<button class="pickrow" data-meal="${esc(m.id)}"><img src="${esc(m.thumb)}/preview" alt="" width="44" height="44" style="border-radius:10px;object-fit:cover"><span class="t" style="font-weight:700">${esc(m.name)}</span></button>`).join("")}</div></section>` : ""}`; }
+  if (t==="week") { const days = DAYS; const opts = [["",""], ...RECIPES.map(r => ["b:"+r.id, r.name]), ...mm.saved.map(m => ["m:"+m.id, m.name])];
+    body = `<section class="card"><h3>This week's meals</h3><p class="small muted">Choose lunch and dinner. Then add them to your agenda with a reminder, and get the shopping list.</p>
+      <div class="list">${days.map((d,i) => `<div style="display:flex;flex-direction:column;gap:6px"><b>${d}</b><div class="grid2">${["lunch","dinner"].map(sl => `<select data-mp="${i}|${sl}" aria-label="${d} ${sl}">${opts.map(([v,l]) => `<option value="${esc(v)}" ${((mm.plan[i]||{})[sl]||"")===v?"selected":""}>${v ? esc(l) : (sl==="lunch" ? "Lunch: —" : "Dinner: —")}</option>`).join("")}</select>`).join("")}</div></div>`).join("")}</div>
+      <div class="row wrap"><button class="small" id="mpAgenda">Add to my agenda</button><button class="ghost small" id="mpShop">Shopping list</button><button class="ghost small" data-ai="meals">${ICON.spark} Plan with AI</button></div><div id="shopList"></div></section>`; }
+  return `<div class="row"><a href="#today" class="link small">‹ Today</a></div>
+  <section class="card" style="background:var(--teal);color:var(--teal-ink)"><h2>Eat well</h2><p class="small" style="opacity:.9">Quick, cheap and healthy. "Cook it" starts a phone-down timer: cooking instead of scrolling earns points too.</p></section>
+  ${seg}${body}`;
+}
+function mealName(v){ if (!v) return ""; const [k,id] = v.split(":"); if (k==="b") return (RECIPES.find(r => r.id===id)||{}).name || ""; return (myMeals().saved.find(m => m.id===id)||{}).name || ""; }
+function openMeal(id){
+  const el = flow("Recipe"); el.style.zIndex = 26; el.innerHTML = `<div class="in"><p class="muted">Loading…</p></div>`;
+  mealGet("lookup.php?i=" + encodeURIComponent(id)).then(ms => { const m = ms[0]; if (!m) { el.remove(); toast("Recipe not found"); return; }
+    const ing = []; for (let i = 1; i <= 20; i++) { const a = (m["strIngredient"+i]||"").trim(), b = (m["strMeasure"+i]||"").trim(); if (a) ing.push((b ? b + " " : "") + a); }
+    const saved = myMeals().saved.some(x => x.id === m.idMeal);
+    el.innerHTML = `<div class="in"><div class="row between"><h2>${esc(m.strMeal)}</h2><button class="ghost small" data-close>Close</button></div>
+      <img src="${esc(m.strMealThumb)}" alt="" style="width:100%;border-radius:18px;aspect-ratio:16/10;object-fit:cover">
+      <div class="row wrap"><button class="small" data-cookm>Cook it · phone down</button>${m.strYoutube ? `<a class="btn small ghostlink" href="${esc(m.strYoutube)}" target="_blank" rel="noopener">▶ Video</a>` : `<a class="btn small ghostlink" href="${esc(recipeVideo(m.strMeal))}" target="_blank" rel="noopener">▶ Video</a>`}<button class="ghost small" data-savem>${saved ? "Saved ✓" : "Save for my week"}</button></div>
+      <div class="card"><h3>Ingredients</h3><ul class="small" style="margin:0;padding-left:18px">${ing.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>
+      <div class="card"><h3>Method</h3><p class="small" style="white-space:pre-line">${esc(m.strInstructions||"")}</p></div>
+      <p class="small muted">Recipe from TheMealDB${m.strSource ? ` · <a class="link" href="${esc(m.strSource)}" target="_blank" rel="noopener">original source</a>` : ""}.</p></div>`;
+    $("[data-close]", el).onclick = () => el.remove();
+    $("[data-cookm]", el).onclick = () => { el.remove(); openFocus("evening", null, "Cooking: " + m.strMeal, "l60"); };
+    $("[data-savem]", el).onclick = async () => { const mm = myMeals(); if (!mm.saved.some(x => x.id === m.idMeal)) { await saveMeals({...mm, saved:[...mm.saved, {id:m.idMeal, name:m.strMeal, thumb:m.strMealThumb}]}); toast("Saved: choose it in Week plan"); } $("[data-savem]", el).textContent = "Saved ✓"; };
+  }).catch(() => { el.innerHTML = `<div class="in"><div class="banner warn">Couldn't load the recipe. Check your connection.</div><button class="full" data-close>Close</button></div>`; $("[data-close]", el).onclick = () => el.remove(); });
 }
 function bindEat(){
+  $$("[data-et2]").forEach(b => b.onclick = () => { state.eatTab = b.dataset.et2; render(); });
   $$("[data-cook]").forEach(b => b.onclick = () => { const r = RECIPES.find(x => x.id === b.dataset.cook); openFocus("evening", null, "Cooking: " + r.name, r.mins <= 30 ? "l30" : "l60"); });
-  $$("[data-plan-meal]").forEach(b => b.onclick = () => { const r = RECIPES.find(x => x.id === b.dataset.planMeal); openEventEditor(null, {title:"Cook: " + r.name, start:"19:30", end:"20:15", remind:30}); });
+  $$("[data-plan-meal]").forEach(b => b.onclick = () => { state.eatTab = "week"; render(); toast("Choose the day for " + (RECIPES.find(x => x.id === b.dataset.planMeal)||{}).name); });
+  const run = async path => { state.mealRes = "loading"; render(); try { state.mealRes = await mealGet(path); } catch(e){ state.mealRes = "error"; } if (route()==="eat") render(); };
+  const mf = $("#mealForm"); if (mf) mf.onsubmit = e => { e.preventDefault(); state.mealQ = $("#mealQ").value.trim(); if (state.mealQ) run("search.php?s=" + encodeURIComponent(state.mealQ)); };
+  $$("[data-mcat]").forEach(b => b.onclick = () => run("filter.php?c=" + encodeURIComponent(b.dataset.mcat)));
+  const mr = $("[data-mrand]"); if (mr) mr.onclick = async () => { try { const m = await (await fetch(MEALDB + "random.php")).json(); if (m.meals && m.meals[0]) openMeal(m.meals[0].idMeal); } catch(e){ toast("Couldn't load a recipe right now"); } };
+  $$("[data-meal]").forEach(b => b.onclick = () => openMeal(b.dataset.meal));
+  $$("[data-mp]").forEach(sel => sel.onchange = async () => { const [d, sl] = sel.dataset.mp.split("|"); const mm = myMeals(); const plan = {...mm.plan, [d]: {...(mm.plan[d]||{}), [sl]: sel.value}}; await saveMeals({...mm, plan}); });
+  const ma = $("#mpAgenda"); if (ma) ma.onclick = async () => { const mm = myMeals(), ws = weekStart(); const evs = []; for (let i = 0; i < 7; i++) for (const sl of ["lunch","dinner"]) { const v = (mm.plan[i]||{})[sl]; if (!v) continue; const d = dkey(addDays(ws, i)); if (d < today()) continue; evs.push({id:"m"+rid(6), title:(sl==="lunch" ? "Lunch: " : "Dinner: ") + mealName(v), date:d, start: sl==="lunch" ? "13:00" : "20:00", end: sl==="lunch" ? "13:45" : "20:45", loc:"", repeat:"none", remind:30, src:"meals"}); } if (!evs.length) { toast("Choose some meals first"); return; } await saveMyEvents([...myEvents().filter(e => e.src !== "meals"), ...evs]); toast(evs.length + " meals added with a reminder"); };
+  const ms = $("#mpShop"); if (ms) ms.onclick = () => { const mm = myMeals(); const items = []; const names = []; for (let i = 0; i < 7; i++) for (const sl of ["lunch","dinner"]) { const v = (mm.plan[i]||{})[sl]; if (!v) continue; if (v.startsWith("b:")) { const r = RECIPES.find(x => x.id === v.slice(2)); if (r) items.push(...r.ing); } else names.push(mealName(v)); } const uniq = [...new Set(items)]; const box = $("#shopList"); if (!uniq.length && !names.length) { toast("Choose some meals first"); return; } box.innerHTML = `<div class="banner"><b>Shopping list</b><ul class="small" style="margin:6px 0;padding-left:18px">${uniq.map(x => `<li>${esc(x)}</li>`).join("")}${names.map(n => `<li>Ingredients for ${esc(n)} (see the recipe)</li>`).join("")}</ul><button class="ghost small" id="copyShop">Copy</button></div>`; $("#copyShop").onclick = async () => { try { await navigator.clipboard.writeText(uniq.join("\n")); toast("Copied"); } catch(e){ toast("Couldn't copy"); } }; };
   $$("#view [data-ai]").forEach(b => b.onclick = () => openAI(b.dataset.ai));
 }
 
@@ -2922,6 +3075,9 @@ function boot(store){
   S.getPrivate("shop").then(d => { if (my!==gen) return; state.myCode = d?.code || null; if (!$(".flow") && route()==="shop") render(); });
   state.myAgenda = []; state.myReminders = [];
   S.getPrivate("agenda").then(d => { if (my!==gen) return; state.myAgenda = (d && d.events) || []; if (!$(".flow")) render(); });
+  state.myWorkouts = []; state.myMeals = {plan:{}, saved:[]};
+  S.getPrivate("workouts").then(d => { if (my!==gen) return; state.myWorkouts = (d && d.list) || []; });
+  S.getPrivate("meals").then(d => { if (my!==gen) return; state.myMeals = {plan:{}, saved:[], ...(d||{})}; });
   S.getPrivate("reminders").then(d => { if (my!==gen) return; state.myReminders = (d && d.list) || []; });
   if (route()==="shop" && !state.shopMid) state.shopMid = S.me;
   render();
@@ -2976,7 +3132,7 @@ checkInterrupted();
 })();
 </script>
 <script>
-// Offline support + automatic updates (version 202611022046)
+// Offline support + automatic updates (version 202611022101)
 if ("serviceWorker" in navigator && location.protocol === "https:") {
   navigator.serviceWorker.register("sw.js").catch(function(){});
   var reloaded = false;
