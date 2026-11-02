@@ -1,0 +1,1371 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LifeOn</title>
+<meta name="description" content="Phone down. Life on. Focus, move and earn rewards from local shops.">
+<meta name="theme-color" content="#0E2B26">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="LifeOn">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+
+/* Layout: one phone-width column, bottom tab bar; Focus, "I'm bored" and dialogs open as full-screen flows. Home adapts to the chosen profile. */
+:root{
+  --bg:#EEF2EF; --surface:#FFFFFF; --sunk:#F5F7F5; --ink:#13201C; --muted:#5B6B65; --line:#DCE3DF;
+  --accent:#EE5A2F; --accent-ink:#FFFFFF; --teal:#0F6B5E; --teal-ink:#FFFFFF; --teal-soft:#DDEFEA;
+  --night:#0E2B26; --night-ink:#EAF4F1; --plum:#5B3F8C; --plum-ink:#FFFFFF;
+  --sun:#E9A21F; --good:#1F8A5B; --warn:#B7791F; --bad:#C2412D; --sport:#2563C9; --sport-ink:#FFFFFF;
+  --display:"Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --body:"Figtree", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --r:18px; --shadow:0 1px 2px rgba(19,32,28,.06), 0 8px 24px rgba(19,32,28,.06);
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0B1110; --surface:#151E1C; --sunk:#111917; --ink:#E8EFEC; --muted:#98A9A3; --line:#25322F;
+  --accent:#FF6B3F; --accent-ink:#1A0C06; --teal:#2FA894; --teal-ink:#06110F; --teal-soft:#16332D;
+  --night:#08201C; --night-ink:#E3F1ED; --plum:#9C82D6; --plum-ink:#140A26;
+  --sun:#F2B640; --good:#47B884; --warn:#E0A64A; --bad:#F07560; --sport:#6A9BF0; --sport-ink:#06101F; --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0B1110; --surface:#151E1C; --sunk:#111917; --ink:#E8EFEC; --muted:#98A9A3; --line:#25322F;
+  --accent:#FF6B3F; --accent-ink:#1A0C06; --teal:#2FA894; --teal-ink:#06110F; --teal-soft:#16332D;
+  --night:#08201C; --night-ink:#E3F1ED; --plum:#9C82D6; --plum-ink:#140A26;
+  --sun:#F2B640; --good:#47B884; --warn:#E0A64A; --bad:#F07560; --sport:#6A9BF0; --sport-ink:#06101F; --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25); color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45}
+.app{max-width:460px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;background:var(--bg);position:relative}
+@media (min-width:700px){body{padding-block:24px}.app{border-radius:28px;box-shadow:0 0 0 1px var(--line), 0 30px 80px rgba(0,0,0,.12);overflow:hidden}}
+main{flex:1;padding-block:8px 104px;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));display:flex;flex-direction:column;gap:14px}
+header.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:14px 4px;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px))}
+.brand{font-family:var(--display);font-weight:800;font-size:24px;letter-spacing:-.02em;display:flex;align-items:center;gap:8px}
+.brand .dot{width:22px;height:22px;border-radius:50%;background:var(--accent);position:relative;flex:none}
+.brand .dot::after{content:"";position:absolute;left:50%;top:3px;width:3px;height:9px;margin-left:-1.5px;border-radius:2px;background:var(--accent-ink)}
+.brand b{color:var(--accent)}
+.where{font-size:12px;color:var(--muted);font-weight:700;text-align:right}
+h1,h2,h3{font-family:var(--display);margin:0;letter-spacing:-.01em;text-wrap:balance}
+h2{font-size:20px;font-weight:700}
+h3{font-size:16px;font-weight:700}
+p{margin:0}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+.card{background:var(--surface);border-radius:var(--r);padding:16px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:12px;min-width:0}
+.row{display:flex;align-items:center;gap:12px;min-width:0}
+.between{justify-content:space-between}
+.wrap{flex-wrap:wrap}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.banner{font-size:13px;background:var(--teal-soft);color:var(--ink);border-radius:12px;padding:10px 12px}
+.banner.warn{background:color-mix(in srgb, var(--sun) 22%, transparent)}
+.banner.bad{background:color-mix(in srgb, var(--bad) 14%, transparent)}
+button,.btn{font:inherit;font-weight:700;border:0;border-radius:999px;padding:12px 18px;cursor:pointer;background:var(--accent);color:var(--accent-ink);display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none}
+button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:3px solid color-mix(in srgb, var(--accent) 55%, transparent);outline-offset:2px}
+button.ghost{background:var(--sunk);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
+button.teal{background:var(--teal);color:var(--teal-ink)}
+button.small{padding:8px 12px;font-size:13px}
+button.full{width:100%}
+button:disabled{opacity:.45;cursor:not-allowed}
+a.link{color:var(--accent);font-weight:700;text-decoration:none}
+label{font-size:13px;font-weight:600;color:var(--muted);display:flex;flex-direction:column;gap:6px;min-width:0}
+input,select{font:inherit;color:var(--ink);background:var(--sunk);border:1px solid var(--line);border-radius:12px;padding:11px 12px;width:100%;min-width:0}
+input[type=checkbox]{width:20px;height:20px;accent-color:var(--teal);flex:none}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{font-size:12px;font-weight:700;border-radius:999px;padding:5px 10px;background:var(--sunk);color:var(--muted);box-shadow:inset 0 0 0 1px var(--line);white-space:nowrap}
+.chip.on{background:var(--teal-soft);color:var(--teal);box-shadow:none}
+.chip.hot{background:color-mix(in srgb, var(--accent) 16%, transparent);color:var(--accent);box-shadow:none}
+.chip.pro{background:var(--plum);color:var(--plum-ink);box-shadow:none}
+.chip.ex{background:transparent;color:var(--muted);box-shadow:none;border:1px dashed var(--line)}
+button.chip{cursor:pointer;padding:8px 12px;font-size:13px}
+button.chip[aria-pressed="true"]{background:var(--teal);color:var(--teal-ink);box-shadow:none}
+.hero{background:var(--teal);color:var(--teal-ink);border-radius:22px;padding:16px 18px;display:grid;grid-template-columns:1fr auto;gap:6px 16px;align-items:center;box-shadow:var(--shadow)}
+.hero .lbl{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;opacity:.8}
+.hero .pts{font-family:var(--display);font-weight:800;font-size:44px;line-height:.95;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.hero .pts small{font-size:16px;font-weight:700;margin-left:4px;opacity:.85}
+.hero .sub{font-size:13px;opacity:.9}
+.hero .next{grid-column:1/-1;display:flex;flex-direction:column;gap:6px;margin-top:6px}
+.hero .bar{height:8px;border-radius:99px;background:color-mix(in srgb, var(--teal-ink) 22%, transparent);overflow:hidden}
+.hero .bar i{display:block;height:100%;background:var(--teal-ink);border-radius:99px}
+.streak{display:flex;flex-direction:column;align-items:center;gap:2px;background:color-mix(in srgb, var(--teal-ink) 12%, transparent);border-radius:16px;padding:10px 12px;min-width:80px}
+.streak .n{font-family:var(--display);font-weight:800;font-size:26px;line-height:1}
+.streak .t{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;opacity:.85}
+.bigbtn{width:100%;border-radius:22px;padding:18px;display:grid;grid-template-columns:52px 1fr auto;gap:14px;align-items:center;text-align:left;box-shadow:var(--shadow)}
+.bigbtn .bi{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;background:color-mix(in srgb, currentColor 16%, transparent)}
+.bigbtn .bi svg{width:28px;height:28px}
+.bigbtn .bt{font-family:var(--display);font-weight:800;font-size:22px;line-height:1.1;display:block}
+.bigbtn .bs{font-size:13px;font-weight:600;opacity:.88;margin-top:3px;display:block}
+.bigbtn.focus{background:var(--night);color:var(--night-ink)}
+.bigbtn.bored{background:var(--accent);color:var(--accent-ink)}
+.bigbtn.soft{background:var(--surface);color:var(--ink);padding:14px 16px}
+.bigbtn.soft .bt{font-size:17px}
+.bigbtn.soft .bi{width:44px;height:44px;color:var(--teal);background:var(--teal-soft)}
+.bigbtn .go{font-size:22px;opacity:.8}
+.stat{background:var(--sunk);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.stat .n{font-family:var(--display);font-weight:800;font-size:18px;font-variant-numeric:tabular-nums;line-height:1.15}
+.stat .k{font-size:12px;color:var(--muted);font-weight:600}
+.list{display:flex;flex-direction:column}
+.list > *{padding-block:12px;border-top:1px solid var(--line)}
+.list > *:first-child{border-top:0;padding-top:0}
+.list > *:last-child{padding-bottom:0}
+.offer{display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center;min-width:0}
+.offer.two{grid-template-columns:44px 1fr}
+.ico{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;background:var(--sunk);color:var(--teal);flex:none}
+.ico svg{width:22px;height:22px}
+.offer .t{font-weight:700;line-height:1.25}
+.offer .b{font-size:13px;color:var(--muted)}
+.cost{font-family:var(--display);font-weight:800;font-size:18px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.cost small{display:block;font-family:var(--body);font-size:11px;color:var(--muted);font-weight:600}
+.lb{display:grid;grid-template-columns:22px 32px 1fr auto;gap:10px;align-items:center}
+.lb .rk{font-family:var(--display);font-weight:800;color:var(--muted);text-align:center}
+.lb img,.ava{width:32px;height:32px;border-radius:50%;flex:none}
+.lb .nm{font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lb .sc{font-family:var(--display);font-weight:800;font-variant-numeric:tabular-nums;text-align:right}
+.lb.me .nm{color:var(--accent)}
+.live{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--teal)}
+.live::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--teal);box-shadow:0 0 0 4px color-mix(in srgb, var(--teal) 25%, transparent)}
+.coupon{border:2px dashed var(--line);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.code{font-family:var(--mono);font-weight:700;font-size:24px;letter-spacing:.08em}
+.qr{width:120px;height:120px;background:#fff;padding:6px;border-radius:10px;flex:none}
+.qr img,.qr canvas{width:100%!important;height:100%!important}
+.used{opacity:.55}
+.empty{text-align:center;padding:16px 8px;color:var(--muted);display:flex;flex-direction:column;gap:10px;align-items:center}
+.seg{display:flex;background:var(--sunk);border-radius:999px;padding:4px;gap:4px;box-shadow:inset 0 0 0 1px var(--line);overflow-x:auto}
+.seg button{flex:1;background:transparent;color:var(--muted);padding:8px 8px;font-size:13px;white-space:nowrap}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+.task{display:flex;align-items:center;gap:10px}
+.task.done span{text-decoration:line-through;color:var(--muted)}
+.lock{border:1px dashed var(--plum);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:8px;background:color-mix(in srgb, var(--plum) 7%, transparent)}
+.lock h3{display:flex;align-items:center;gap:8px}
+.lock svg{width:16px;height:16px;color:var(--plum)}
+.plan{border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:8px;background:var(--sunk)}
+.plan.pro{background:var(--plum);color:var(--plum-ink)}
+.plan .price{font-family:var(--display);font-weight:800;font-size:28px}
+.plan ul{margin:0;padding-left:18px;font-size:13px;display:flex;flex-direction:column;gap:4px}
+.big{font-family:var(--display);font-weight:800;font-size:34px;font-variant-numeric:tabular-nums;line-height:1}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:5;padding-bottom:env(safe-area-inset-bottom, 0px);padding-left:max(8px, env(safe-area-inset-left, 0px));padding-right:max(8px, env(safe-area-inset-right, 0px));background:color-mix(in srgb, var(--surface) 92%, transparent);backdrop-filter:blur(12px);border-top:1px solid var(--line)}
+nav.tabs .in{max-width:460px;margin:0 auto;display:flex;justify-content:space-around}
+@media (min-width:700px){nav.tabs{position:sticky;bottom:0}}
+nav.tabs a{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:9px 2px 10px;color:var(--muted);text-decoration:none;font-size:11px;font-weight:700;min-width:0}
+nav.tabs a svg{width:22px;height:22px}
+nav.tabs a[aria-current="page"]{color:var(--accent)}
+.flow{position:fixed;inset:0;z-index:20;overflow:auto;display:flex;justify-content:center;background:var(--bg);color:var(--ink)}
+.flow.night{background:var(--night);color:var(--night-ink)}
+.flow > .in{width:100%;max-width:460px;padding-block:calc(18px + env(safe-area-inset-top, 0px)) calc(24px + env(safe-area-inset-bottom, 0px));padding-left:max(18px, env(safe-area-inset-left, 0px));padding-right:max(18px, env(safe-area-inset-right, 0px));display:flex;flex-direction:column;gap:16px}
+.flow.night .card{background:color-mix(in srgb, var(--night-ink) 8%, transparent);box-shadow:none;color:var(--night-ink)}
+.flow.night .muted{color:color-mix(in srgb, var(--night-ink) 70%, transparent)}
+.flow.night label{color:color-mix(in srgb, var(--night-ink) 75%, transparent)}
+.flow.night button.chip{background:color-mix(in srgb, var(--night-ink) 10%, transparent);color:var(--night-ink);box-shadow:none}
+.flow.night button.chip[aria-pressed="true"]{background:var(--night-ink);color:var(--night)}
+.flow.night input,.flow.night select{background:color-mix(in srgb, var(--night-ink) 10%, transparent);color:var(--night-ink);border-color:transparent}
+.flow.night select option{color:#13201C}
+.flow.night button.ghost{background:color-mix(in srgb, var(--night-ink) 12%, transparent);color:var(--night-ink);box-shadow:none}
+.timer{display:grid;place-items:center;margin:8px auto}
+.timer svg{width:260px;height:260px;max-width:100%;grid-area:1/1}
+.timer .t{grid-area:1/1;font-family:var(--display);font-weight:800;font-size:56px;letter-spacing:-.02em;font-variant-numeric:tabular-nums;text-align:center;line-height:1}
+.timer .t small{display:block;font-family:var(--body);font-size:13px;font-weight:700;opacity:.75;letter-spacing:.06em;text-transform:uppercase;margin-top:8px}
+.blocked{display:flex;flex-wrap:wrap;gap:8px}
+.blocked span{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;padding:7px 11px;border-radius:999px;background:color-mix(in srgb, var(--night-ink) 10%, transparent)}
+.blocked span svg{width:14px;height:14px}
+.opt{border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:10px;background:var(--surface);box-shadow:var(--shadow)}
+.opt .tag{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom, 0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-weight:700;font-size:14px;z-index:40;max-width:calc(100% - 32px);text-align:center}
+.welcome{display:flex;flex-direction:column;gap:16px;padding-top:8px}
+.welcome h1{font-size:40px;font-weight:800;line-height:1;letter-spacing:-.03em}
+.welcome h1 span{color:var(--accent)}
+.pick{display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center;text-align:left;background:var(--surface);color:var(--ink);border-radius:18px;padding:14px 16px;box-shadow:var(--shadow)}
+.pick .ico{background:var(--teal-soft)}
+.pick b{font-family:var(--display);font-size:18px;display:block}
+.pick span.s{font-size:13px;color:var(--muted);font-weight:500;display:block}
+.poster{background:var(--night);color:var(--night-ink);border-radius:18px;padding:18px;display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center}
+.poster .code{font-size:28px}
+.tech{display:flex;flex-direction:column;gap:8px}
+.tech ol{margin:0;padding-left:20px;font-size:14px;display:flex;flex-direction:column;gap:4px}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.tile{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 4px;border-radius:18px;background:var(--surface);box-shadow:var(--shadow);color:var(--ink);font-size:12px;font-weight:700;text-align:center}
+.tile .ti{width:46px;height:46px;border-radius:15px;display:grid;place-items:center}
+.tile .ti svg{width:24px;height:24px}
+.goals{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.goal{display:flex;flex-direction:column;align-items:center;gap:2px;text-align:center}
+.ring{width:78px;height:78px;position:relative;display:grid;place-items:center;margin-bottom:4px}
+.ring svg{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg)}
+.ring b{font-family:var(--display);font-size:18px;font-variant-numeric:tabular-nums}
+.bars{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;align-items:end;height:130px}
+.bars div{display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end;font-size:11px;color:var(--muted);font-weight:700}
+.bars i{display:block;width:100%;border-radius:8px 8px 4px 4px;background:var(--teal);min-height:4px}
+.bars .today i{background:var(--accent)}
+.bigbtn.move{background:var(--sport);color:var(--sport-ink)}
+.steps{display:flex;flex-direction:column;gap:16px}
+.step{display:grid;grid-template-columns:40px 1fr;gap:12px;align-items:start}
+.step .n{width:40px;height:40px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-family:var(--display);font-weight:800;font-size:18px}
+.linkbtn{background:none;color:inherit;padding:0;font-size:inherit;font-weight:700;text-decoration:underline;border-radius:0}
+.hello{font-size:28px;font-weight:800;letter-spacing:-.02em}
+.qbar{height:8px;border-radius:99px;background:var(--sunk);overflow:hidden}
+.qbar i{display:block;height:100%;background:var(--sport);border-radius:99px}
+.pickrow{display:grid!important;grid-template-columns:44px 1fr;gap:12px;align-items:center;width:100%;background:none!important;color:inherit!important;border-radius:0!important;padding:12px 0!important;text-align:left;font-weight:500!important}
+@media (prefers-reduced-motion: no-preference){.card,.hero,.bigbtn,.opt,.pick{animation:rise .3s ease both}@keyframes rise{from{transform:translateY(6px);opacity:.6}to{transform:none;opacity:1}}}
+
+@media (display-mode: standalone){ header.top{padding-top:max(14px, env(safe-area-inset-top, 0px))} }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand"><span class="dot" aria-hidden="true"></span>Life<b>On</b></div>
+    <div class="where" id="whereLabel"></div>
+  </header>
+  <main id="view" aria-live="polite"><div class="card"><p class="muted">Loading…</p></div></main>
+  <nav class="tabs" aria-label="Sections"><div class="in" id="tabs"></div></nav>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+(function(){
+"use strict";
+// ================= helpers =================
+const $ = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => [...r.querySelectorAll(s)];
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const pad = n => String(n).padStart(2,"0");
+const dkey = d => { d = new Date(d); return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); };
+const today = () => dkey(Date.now());
+const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate()+n); return x; };
+const weekStart = () => { const x = new Date(); x.setHours(0,0,0,0); return addDays(x, -((x.getDay()+6)%7)); };
+const weekKeys = () => [...Array(7)].map((_,i)=>dkey(addDays(weekStart(),i)));
+const inThisWeek = t => t >= weekStart().getTime();
+const monthStart = () => { const x = new Date(); return new Date(x.getFullYear(), x.getMonth(), 1).getTime(); };
+const DAYS = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+const rid = (n=6) => { const a="ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; let s=""; for (const v of crypto.getRandomValues(new Uint32Array(n))) s+=a[v%a.length]; return s; };
+const fmtMin = m => m >= 60 ? Math.floor(m/60)+" h"+(m%60?" "+(m%60)+" min":"") : m+" min";
+const eur = n => "€"+(Math.round(n*100)/100).toFixed(2).replace(/\.00$/,"");
+const fmtDate = k => { const d = new Date(k+"T12:00"); return DAYS[(d.getDay()+6)%7]+" "+d.getDate()+"/"+(d.getMonth()+1); };
+const daysTo = k => Math.round((new Date(k+"T12:00") - new Date(today()+"T12:00"))/864e5);
+async function sha(s){ const t = String(s||"").trim().toUpperCase(); try { const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(t)); return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join(""); } catch(e){ let h=2166136261; for (const c of t) { h^=c.charCodeAt(0); h=Math.imul(h,16777619); } return "f"+(h>>>0).toString(16); } }
+function toast(msg){ const t=document.createElement("div"); t.className="toast"; t.setAttribute("role","status"); t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(), 2800); }
+function pivaValid(p){ p = String(p||"").replace(/\s/g,""); if (!/^\d{11}$/.test(p)) return false; let s = 0; for (let i=0;i<11;i++){ let d = +p[i]; if (i%2===1){ d*=2; if (d>9) d-=9; } s+=d; } return s%10===0; }
+const atecoValid = a => /^\d{2}(\.\d{1,2}){1,2}$/.test(String(a||"").trim());
+function shuffle(a, seed){ const x=[...a]; let s=seed||Date.now(); for (let i=x.length-1;i>0;i--){ s=(s*9301+49297)%233280; const j=Math.floor(s/233280*(i+1)); [x[i],x[j]]=[x[j],x[i]]; } return x; }
+
+// ================= world =================
+const TOWNS = {"Castellanza":[45.611,8.896],"Legnano":[45.596,8.915],"Busto Arsizio":[45.611,8.849],"Olgiate Olona":[45.633,8.885],"Marnate":[45.628,8.902],"Rescaldina":[45.617,8.951],"Cerro Maggiore":[45.594,8.951],"San Vittore Olona":[45.586,8.943],"Canegrate":[45.570,8.928],"San Giorgio su Legnano":[45.574,8.913],"Parabiago":[45.558,8.947],"Nerviano":[45.555,8.977]};
+function km(a,b){ const A=TOWNS[a], B=TOWNS[b]; if(!A||!B) return 99; const dx=(A[1]-B[1])*78, dy=(A[0]-B[0])*111; return Math.sqrt(dx*dx+dy*dy); }
+const distLabel = t => { const me = myTown(); if (t===me) return "in "+t; return t+" · about "+Math.max(1,Math.round(km(me,t)))+" km"; };
+const SOCIAL = ["Instagram","TikTok","YouTube","Snapchat","X","Facebook","BeReal","Games"];
+const KIND = {cafe:"Café / bar", gym:"Gym / sport", food:"Restaurant", library:"Study space", culture:"Culture / courses", sport:"Sports shop", services:"Local services", other:"Other"};
+const PROFILES = {
+  study:{label:"Study", line:"University or high school, 18+", focusName:"Study focus"},
+  work:{label:"Work", line:"In an office or remote", focusName:"Work focus"},
+  active:{label:"Stay active", line:"Move more, scroll less", focusName:"Move session"},
+  free:{label:"Free time", line:"Less phone, more life", focusName:"Offline time"}
+};
+const TIERS = {
+  small:{label:"Small perk", cost:100, budget:20, example:"Biscuit with your coffee, drink upgrade"},
+  discount:{label:"Discount", cost:300, budget:10, example:"−30% on what you order"},
+  reward:{label:"Big reward", cost:800, budget:3, example:"Free class, full breakfast"}
+};
+const PRO_PRICE = 29, FEE = 0.5;
+const ICON = {
+  cafe:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8z"/><path d="M17 9h1.5a2.5 2.5 0 0 1 0 5H17"/><path d="M8 3v2M12 3v2"/></svg>',
+  gym:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 7v10M18 7v10M3 10v4M21 10v4M6 12h12"/></svg>',
+  food:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 3v8a2 2 0 0 0 4 0V3M9 11v10M17 3c-2 2-2 6 0 8v10"/></svg>',
+  library:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5a2 2 0 0 1 2-2h12v16H6a2 2 0 0 0-2 2zM8 7h6"/></svg>',
+  culture:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5H3zM5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 21h18"/></svg>',
+  other:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v8H4v-8M2 7h20v5H2zM12 22V7"/></svg>',
+  walk:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13" cy="4" r="2"/><path d="M9 21l2-6 3 3v5M7 12l3-4 3 1 2 3 3 1"/></svg>',
+  friends:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="3.5"/><circle cx="17" cy="9" r="2.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M15 14.5a5 5 0 0 1 6.5 4.8"/></svg>',
+  lock:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
+  focus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/></svg>',
+  spark:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 17l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/></svg>',
+  book:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 5h7a3 3 0 0 1 3 3v12a2 2 0 0 0-2-2H2zM22 5h-7a3 3 0 0 0-3 3v12a2 2 0 0 1 2-2h8z"/></svg>',
+  bulb:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.5 1 2.5h6c0-1 .3-1.8 1-2.5A6 6 0 0 0 12 3z"/></svg>',
+  brief:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 13h18"/></svg>',
+  leaf:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19c8 0 14-6 14-15C10 4 5 9 5 15v4zM5 19l7-7"/></svg>',
+  shop:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l2-5h14l2 5M3 9h18v2a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0V9zM5 13v7h14v-7"/></svg>',
+  cal:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
+  moon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>',
+  team:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/><path d="M9 12l2 2 4-4"/></svg>'
+};
+const TAB_ICON = { today:ICON.focus, explore:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg>', friends:ICON.friends, shop:ICON.shop, team:ICON.team, me:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>' };
+
+ICON.sport = ICON.gym; ICON.services = ICON.other;
+// Ideas for "I'm bored": [title, detail, mood, minutes, outdoor]
+const IDEAS = [
+  ["30-minute walk","Phone in your pocket. The Parco Alto Milanese sits between Castellanza, Legnano and Busto Arsizio.","move",30,1],
+  ["Bike ride along the Olona","The Valle Olona cycle path runs through several towns in the area.","move",60,1],
+  ["Easy 5 km run","Slow pace, no music. Just you and your breath.","move",30,1],
+  ["Park workout","Squats, push-ups, lunges: 4 rounds of 10 on a bench.","move",30,1],
+  ["Stretching session","15 minutes on the floor. Your back will thank you.","move",30,0],
+  ["Dance to 5 songs","Kitchen, living room, anywhere. Nobody's watching.","move",30,0],
+  ["Explore a street you've never walked","Every town has one. Go find yours.","move",60,1],
+  ["Walk to a café in the next town","Turn the trip into the activity.","move",60,1],
+  ["Take the stairs challenge","Up and down your building 10 times.","move",30,0],
+  ["20 pages of a book","Outdoors if you can, phone in another room.","relax",30,0],
+  ["Cook a recipe you've never tried","No scrolling while you cook.","relax",60,0],
+  ["Journal for 10 minutes","Three things that went well today, one thing to change.","relax",30,0],
+  ["Listen to a whole album","Phone face-down, eyes closed.","relax",60,0],
+  ["Sit in a park and people-watch","No headphones. Notice five details.","relax",30,1],
+  ["Tea and a jigsaw or crossword","Paper, pen, and time.","relax",60,0],
+  ["Tidy one drawer","Small win, instant calm.","relax",30,0],
+  ["Long shower, no phone in the bathroom","Simple, underrated.","relax",30,0],
+  ["Call a friend and meet for a walk","A real call, then outside.","people",60,1],
+  ["Visit family","Grandparents count double.","people",120,0],
+  ["Board game night","Invite two friends, dust off a game.","people",120,0],
+  ["Coffee with a classmate or colleague","Someone you only text: meet them.","people",60,0],
+  ["Cook dinner for someone","Share the table, phones in a basket.","people",120,0],
+  ["Ask your group for a game of football or padel","Use the With friends card below.","people",120,1],
+  ["Write a postcard to someone far away","Old school, big smile on arrival.","people",30,0],
+  ["Volunteer for an afternoon","Most towns have associations that need hands.","people",120,0],
+  ["Visit your town library","Borrow one book you'd never pick online.","learn",60,0],
+  ["20 minutes of a language, on paper","Ten new words, then use them in five sentences.","learn",30,0],
+  ["Read a paper newspaper at a café","One article, start to finish.","learn",30,0],
+  ["Learn three chords on a guitar","Or any instrument at home.","learn",60,0],
+  ["Teach a friend something you know","You'll learn it better too.","learn",60,0],
+  ["Watch the stars for 15 minutes","Find one constellation without an app.","learn",30,1],
+  ["Sketch something outside","A tree, a bench, a building. Bad drawings welcome.","create",30,1],
+  ["Write one page of a story","Start with: 'The phone stopped working at 8 p.m.'","create",30,0],
+  ["Bake bread or cookies","Your home will smell amazing.","create",120,0],
+  ["Plant something","Basil on the balcony is a perfect start.","create",30,0],
+  ["Fix something broken","That thing you keep postponing.","create",60,0],
+  ["Origami: make 5 paper cranes","Fold, focus, repeat.","create",30,0],
+  ["Rearrange your room","New layout, new energy.","create",60,0],
+  ["Run in the nearest park","20–30 minutes, any pace. Leave the headphones at home.","outdoor",30,1],
+  ["Sunset at Parco Alto Milanese","A 30-minute walk, then watch the sky turn orange.","outdoor",60,1],
+  ["Explore your town centre","Find one shop or café you've never walked into.","outdoor",60,1],
+  ["Parco del Roccolo by bike","Flat paths between fields and farmhouses near Canegrate, Parabiago and Busto Garolfo.","outdoor",120,1],
+  ["Paths along the Ticino","Walk or cycle in the Parco del Ticino, about 20 minutes by car.","outdoor",120,1],
+  ["Lake Varese cycle path","A flat loop of about 28 km around the lake. Bring a friend and a picnic.","outdoor",120,1],
+  ["Hike at Campo dei Fiori","Trails above Varese with views over the lakes.","outdoor",120,1],
+  ["A night of camping","Lake Maggiore and Lake Varese have campsites within an hour. Tent, friends, no Wi-Fi.","outdoor",120,1],
+  ["Join a local sports team","Football, volleyball, padel: check Activities for teams looking for players.","people",60,0]
+];
+const MOODS = [["move","Moving"],["outdoor","Outdoors & trails"],["relax","Relaxing"],["people","Seeing people"],["learn","Learning"],["create","Making something"]];
+const MOOD_KINDS = {outdoor:["gym","sport"], move:["gym","sport"], relax:["cafe","library"], people:["cafe","food"], learn:["library","culture"], create:["culture","cafe"]};
+
+const TECHNIQUES = [
+  {id:"pomodoro", name:"Pomodoro", what:"Work in 25-minute blocks with 5-minute breaks. After four blocks, take a longer break.", steps:["Pick one task.","Focus for 25 minutes, no phone.","Break for 5 minutes: stand up, drink water.","Repeat four times, then rest 20–30 minutes."], start:{plan:"pomo2"}},
+  {id:"recall", name:"Active recall", what:"Close the book and pull the information out of your memory. Remembering is what makes it stick.", steps:["Read a section once.","Close it and write everything you remember.","Check what you missed.","Repeat on the missing parts."], start:{plan:"50"}},
+  {id:"spaced", name:"Spaced repetition", what:"Review the same topic at growing intervals: the next day, after 3 days, after a week.", steps:["Study a topic today.","Review it tomorrow for 10 minutes.","Again in 3 days, then in a week.","Add the reviews as tasks in your study plan."], start:null},
+  {id:"feynman", name:"Feynman technique", what:"Explain the topic in simple words as if to a 12-year-old. Where you get stuck is what you don't know yet.", steps:["Write the topic at the top of a page.","Explain it in plain words.","Find the gaps and go back to the source.","Simplify again."], start:{plan:"25"}},
+  {id:"blocks", name:"Time blocking", what:"Give each subject a fixed slot in your day, like an appointment.", steps:["List what you must study this week.","Put each item in a 50-minute block.","Protect the blocks: phone locked.","Review on Sunday evening."], start:{plan:"50"}},
+  {id:"interleave", name:"Interleaving", what:"Mix related topics in one session instead of doing one for hours. Harder, but you remember more.", steps:["Pick 2–3 related topics.","Switch every 20–25 minutes.","Do exercises mixing them.","Note which one feels weakest."], start:{plan:"pomo2"}}
+];
+const PLANS = {
+  "25":{label:"25 min", parts:[["f",25]]},
+  "50":{label:"50 min", parts:[["f",50]]},
+  "90":{label:"90 min", parts:[["f",90]]},
+  "pomo2":{label:"Pomodoro ×2", parts:[["f",25],["b",5],["f",25]]},
+  "pomo4":{label:"Pomodoro ×4", parts:[["f",25],["b",5],["f",25],["b",5],["f",25],["b",5],["f",25]]},
+  "l30":{label:"30 min", parts:[["f",30]]}, "l45":{label:"45 min", parts:[["f",45]]}, "l60":{label:"60 min", parts:[["f",60]]},
+  "e120":{label:"2 hours", parts:[["f",120]]},
+  "m30":{label:"30 min", parts:[["f",30]]}, "m45":{label:"45 min", parts:[["f",45]]}, "m60":{label:"60 min", parts:[["f",60]]}, "m90":{label:"90 min", parts:[["f",90]]}
+};
+const KIND_PLANS = { study:["pomo2","pomo4","50","90"], work:["50","90","pomo2"], lunch:["l30","l45","l60"], evening:["l60","e120"], move:["m30","m45","m60","m90"] };
+const KIND_NAME = { study:"Study focus", work:"Work focus", lunch:"Lunch offline", evening:"Offline evening", move:"Move session" };
+const MOVE_TYPES = ["Walk","Run","Bike","Gym","Sport","Yoga"];
+const CATS = { all:["All",[]], fitness:["Fitness",["gym","sport"]], food:["Food",["food"]], cafe:["Cafés & study",["cafe","library"]], more:["Services & culture",["culture","services","other"]] };
+const GOAL_DEFAULTS = { study:{focus:10,move:2,points:500}, work:{focus:8,move:2,points:400}, active:{focus:3,move:4,points:400}, free:{focus:3,move:3,points:300} };
+const focusMins = plan => PLANS[plan].parts.filter(p=>p[0]==="f").reduce((s,p)=>s+p[1],0);
+
+// ================= scoring =================
+const DAILY_CAP = 150;
+function sessionPts(s, groupBonus){ if (!s.ok) return 0; let p = Math.round(s.min*0.5); if (s.kind==="move" && s.mode!=="venue") p = Math.min(30, p); if (s.mode==="venue") p = Math.round(p*1.6); if (groupBonus) p += 10; return p; }
+function groupBonusFor(pid, s){
+  if (s.mode!=="group" || !s.ok || !s.group) return false;
+  const g = state.groups[s.group]; if (!g) return false;
+  return (g.members||[]).some(mid => mid!==pid && (state.players[mid]?.sessions||[]).some(o => o.ok && o.mode==="group" && o.group===s.group && Math.abs(o.start - s.start) < 20*60e3));
+}
+function stats(pid){
+  const p = state.players[pid] || {}; const byDay = {}; const add = (k,v) => { byDay[k] = (byDay[k]||0) + v; };
+  let focusMin = 0, weekFocus = 0, weekMove = 0, done = 0, tried = 0; const wk = new Set(weekKeys());
+  for (const s of (p.sessions||[])) { const k = dkey(s.start); tried++; if (s.ok){ done++; focusMin += s.min; if (wk.has(k)) { if (s.kind==="move") weekMove++; else weekFocus += s.min; } } add(k, sessionPts(s, groupBonusFor(pid, s))); }
+  const seenM = {};
+  for (const c of (p.checkins||[]).slice().sort((a,b)=>a.at-b.at)) { const k = dkey(c.at); add(k, 30); const mk = k.slice(0,7); const set = seenM[mk] = seenM[mk] || new Set(); const before = set.size; set.add(c.venueId); if (before===2 && set.size===3) add(k, 60); if (wk.has(k) && ["gym","sport"].includes(state.merchants[c.venueId]?.kind)) weekMove++; }
+  for (const k of Object.keys(p.free||{})) add(k, 10);
+  for (const k of Object.keys(p.ritual||{})) add(k, 5);
+  let earned = 0, weekPts = 0;
+  for (const [k,v] of Object.entries(byDay)) { const c = Math.min(DAILY_CAP, v); earned += c; if (wk.has(k)) weekPts += c; }
+  const active = Object.keys(byDay).filter(k=>byDay[k]>0).sort();
+  let run = 0, prev = null, bonus = 0;
+  for (const k of active){ run = (prev && dkey(addDays(new Date(prev+"T12:00"),1))===k) ? run+1 : 1; if (run%7===0){ bonus += 50; if (wk.has(k)) weekPts += 50; } prev = k; }
+  let streak = 0, d = new Date(); if (!byDay[dkey(d)]) d = addDays(d,-1); while (byDay[dkey(d)]) { streak++; d = addDays(d,-1); }
+  const spent = (p.coupons||[]).reduce((s,c)=>s+Number(c.cost||0),0);
+  return { earned: earned+bonus, balance: earned+bonus-spent, weekPts, streak, focusMin, weekFocus, weekMove, byDay, done, tried, todayPts: Math.min(DAILY_CAP, byDay[today()]||0) };
+}
+
+// ================= shops =================
+const billing = mid => state.billing[mid] || {};
+const approved = mid => billing(mid).status === "approved";
+const isPro = mid => billing(mid).plan === "pro";
+function shopOffers(mid){
+  const m = state.merchants[mid]; if (!m) return [];
+  let list = Object.entries(m.offers||{}).filter(([,o])=>o.active).sort((a,b)=>(a[1].createdAt||0)-(b[1].createdAt||0));
+  list = list.filter(([,o]) => !o.flashUntil || (isPro(mid) && Date.now() < o.flashUntil));
+  if (!isPro(mid)) list = list.filter(([,o])=>!o.flashUntil).slice(0,1);
+  return list;
+}
+function shopActivities(mid){
+  const m = state.merchants[mid]; if (!m) return [];
+  let list = Object.entries(m.activities||{}).filter(([,a])=>a.active && a.date >= today()).sort((a,b)=>(a[1].date+a[1].time).localeCompare(b[1].date+b[1].time));
+  if (!isPro(mid)) list = list.slice(0,1);
+  return list;
+}
+function liveOffers(){ const out=[]; for (const mid of Object.keys(state.merchants)) if (approved(mid)) for (const [key,o] of shopOffers(mid)) out.push({mid, key, o, m:state.merchants[mid]}); return out; }
+function liveActivities(){ const out=[]; for (const mid of Object.keys(state.merchants)) if (approved(mid)) for (const [key,a] of shopActivities(mid)) out.push({mid, key, a, m:state.merchants[mid]}); return out.sort((x,y)=>(x.a.date+x.a.time).localeCompare(y.a.date+y.a.time) || km(myTown(),x.m.town)-km(myTown(),y.m.town)); }
+function offerWindow(o){
+  if (o.flashUntil) return "until "+new Date(o.flashUntil).toTimeString().slice(0,5);
+  if (!o.offPeak) return "Any time";
+  const ds = (o.days||[]).map(i=>DAYS[i]); const dt = ds.length===7?"Every day":ds.join(",")==="Mon,Tue,Wed,Thu,Fri"?"Mon–Fri":ds.join(", ");
+  return dt+" "+o.from+"–"+o.to;
+}
+function offerNow(o, now=new Date()){
+  if (o.flashUntil) return Date.now() < o.flashUntil;
+  if (!o.offPeak) return true;
+  if (!(o.days||[]).includes((now.getDay()+6)%7)) return false;
+  const hm = pad(now.getHours())+":"+pad(now.getMinutes()); return hm >= o.from && hm < o.to;
+}
+function weekClaims(mid, key){ let n=0; for (const p of Object.values(state.players)) for (const c of (p.coupons||[])) if (c.venueId===mid && c.offerKey===key && inThisWeek(c.at)) n++; return n; }
+const budgetLeft = (mid, key, o) => Math.max(0, (o.budgetWeek ?? TIERS[o.tier]?.budget ?? 10) - weekClaims(mid, key));
+const myWeekAt = mid => (meP()?.coupons||[]).some(c=>c.venueId===mid && inThisWeek(c.at));
+const couponUsed = c => (state.merchants[c.venueId]?.redeemed||[]).some(r=>r.coupon===c.id);
+function nextReward(balance){
+  const costs = [...new Set(liveOffers().map(x=>x.o.cost))].sort((a,b)=>a-b);
+  const base = costs.length ? costs : [100,300,800];
+  const target = base.find(c=>c>balance) ?? null;
+  return target;
+}
+
+// ================= stores =================
+function avatar(name){
+  const ini = (name||"?").replace(/^Example:\s*/,"").replace(/[^\p{L}\s]/gu,"").trim().split(/\s+/).map(w=>w[0]||"").join("").slice(0,2).toUpperCase() || "?";
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" rx="32" fill="#0F6B5E"/><text x="32" y="41" font-family="Arial" font-size="24" font-weight="700" fill="#fff" text-anchor="middle">${esc(ini)}</text></svg>`;
+  return "data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg);
+}
+const DEMO_KEY = "lifeon-demo-v4", BANNER_KEY = "lifeon-banner-off";
+const bannerOff = () => { try { return localStorage.getItem(BANNER_KEY) === "1"; } catch(e){ return false; } };
+async function makeDemo(){
+  const me = "demo-me", now = Date.now(), H = 3600e3, D = 24*H;
+  const sess = (daysAgo, min, mode, extra={}) => ({id:rid(6), start: now - daysAgo*D - 2*H, min, mode, ok:true, kind:"study", ...extra});
+  const ex = k => dkey(now + k*D);
+  const players = {
+    [me]: {profile:"study", baseline:190, town:"Castellanza", blocked:["Instagram","TikTok","YouTube"], joined:dkey(now-20*D),
+      sessions:[sess(0,40,"solo",{kind:"move",type:"Run"}), sess(1,50,"group",{group:"DEMO42"}), sess(2,60,"venue",{kind:"move",type:"Gym",venueId:"d2"}), sess(2,50,"solo"), sess(2,25,"solo"), sess(3,90,"venue",{venueId:"d3"}), sess(4,50,"solo"), {id:"f1",start:now-5*D,min:12,mode:"solo",ok:false,kind:"study"}, sess(5,50,"solo"), sess(6,50,"solo")],
+      checkins:[{at:now-3*D, venueId:"d1"}, {at:now-2*D, venueId:"d2"}], free:{[dkey(now-2*D)]:true}, ritual:{}, coupons:[],
+      study:{exams:[{id:"e1",name:"Corporate Finance",date:ex(12)},{id:"e2",name:"Marketing",date:ex(26)}], tasks:[{id:"t1",text:"Chapter 4: review with active recall",exam:"e1",done:false,day:today()},{id:"t2",text:"Exercises 4.1–4.6",exam:"e1",done:true,day:today()},{id:"t3",text:"Case study notes",exam:"e2",done:false,day:today()}]},
+      work:{date:today(), top3:[{t:"Finish the client report",done:false},{t:"Reply to supplier",done:true},{t:"Plan next week",done:false}]}},
+    "demo-1": {profile:"study", baseline:240, town:"Legnano", blocked:["TikTok"], joined:dkey(now-15*D), sessions:[sess(1,50,"group",{group:"DEMO42", start: now-D-2*H+5*60e3}), sess(1,90,"solo"), sess(2,50,"venue",{venueId:"d3"}), sess(3,50,"solo"), sess(4,90,"solo")], checkins:[], free:{}, coupons:[]},
+    "demo-2": {profile:"work", baseline:150, town:"Busto Arsizio", blocked:["Instagram"], joined:dkey(now-10*D), sessions:[sess(2,50,"solo",{kind:"work"})], checkins:[{at:now-D, venueId:"d2"}], free:{[dkey(now-D)]:true}, coupons:[{id:"cX",venueId:"d1",offerKey:"k1",title:"Biscuit with your coffee",cost:100,at:now-2*D,tier:"small"}]},
+    "demo-3": {profile:"free", baseline:200, town:"Rescaldina", blocked:["YouTube","Games"], joined:dkey(now-9*D), sessions:[sess(1,60,"solo",{kind:"evening"}), sess(2,50,"solo")], checkins:[], free:{}, coupons:[]}
+  };
+  const names = {[me]:"You (demo)", "demo-1":"Example: Giulia", "demo-2":"Example: Marco", "demo-3":"Example: Sara"};
+  const shop = (name, kind, town, code, offers, activities, extra={}) => ({name, kind, town, address:"Example street 1", piva:"00000000000", ateco:"56.30.00", contact:"example", avgTicket:6, codeHash: code, owner:"team", example:true, createdAt:now-30*D, offers, activities, redeemed:[], ...extra});
+  const merchants = {
+    d1: shop("Example café","cafe","Castellanza", await sha("CAFE24"),
+      {k1:{title:"Biscuit with your coffee", tier:"small", cost:100, costToYou:0.3, budgetWeek:20, offPeak:true, days:[0,1,2,3,4], from:"14:00", to:"18:00", active:true, createdAt:now-9e5},
+       k2:{title:"−30% on breakfast", tier:"discount", cost:300, costToYou:1.5, budgetWeek:10, offPeak:true, days:[0,1,2,3,4], from:"09:30", to:"11:30", active:true, createdAt:now-8e5},
+       k3:{title:"−50% on any drink", tier:"small", cost:100, costToYou:1, budgetWeek:10, flashUntil: now+55*60e3, active:true, createdAt:now-1e5}},
+      {a1:{title:"Latte art workshop", type:"workshop", date:ex(2), time:"18:30", note:"Learn to pour a heart. Max 8 people.", deal:"−20% for LifeOn users", audience:"all", active:true}},
+      {redeemed:[{coupon:"cX", player:"demo-2", at:now-2*D+H, offerKey:"k1", newCustomer:true, cost:0.3}]}),
+    d2: shop("Example gym","gym","Legnano", await sha("GYM77"),
+      {k1:{title:"Free trial class", tier:"reward", cost:800, costToYou:0, budgetWeek:3, offPeak:true, days:[0,1,2,3,4], from:"10:00", to:"16:00", active:true, createdAt:now-7e5}, k2:{title:"−20% on your first month", tier:"discount", cost:300, costToYou:8, budgetWeek:5, offPeak:false, days:[], from:"", to:"", active:true, createdAt:now-6e5}},
+      {a1:{title:"Yoga in the park", type:"sport", date:ex(3), time:"10:00", note:"Bring a mat. Beginners welcome.", deal:"First session free with LifeOn", audience:"all", active:true},
+       a2:{title:"5-a-side football: 2 players needed", type:"team", date:ex(1), time:"20:30", note:"Friendly level, every Thursday.", deal:"−20% on the pitch fee", audience:"all", active:true}}),
+    d4: shop("Example sports shop","sport","Legnano", await sha("RUN10"),
+      {k1:{title:"−15% on running shoes", tier:"discount", cost:300, costToYou:6, budgetWeek:5, offPeak:false, days:[], from:"", to:"", active:true, createdAt:now-3e5}},
+      {a1:{title:"Saturday group run, 5 km", type:"sport", date:ex(5), time:"09:00", note:"Easy pace, all levels. Meet at the shop.", deal:"Free energy bar for LifeOn users", audience:"all", active:true}}),
+    d3: shop("Example study café","library","Busto Arsizio", await sha("STUDY5"),
+      {k1:{title:"2 hours study table + drink", tier:"discount", cost:300, costToYou:1.2, budgetWeek:10, offPeak:false, days:[], from:"", to:"", active:true, createdAt:now-6e5},
+       k2:{title:"Free refill all afternoon", tier:"small", cost:100, costToYou:0.4, budgetWeek:20, offPeak:true, days:[0,1,2,3,4], from:"14:00", to:"19:00", active:true, createdAt:now-5e5}},
+      {a1:{title:"Silent study room, exam week", type:"study", date:ex(1), time:"14:00", note:"Phones in a box at the door.", deal:"Table reserved for LifeOn users", audience:"study", active:true},
+       a2:{title:"After-work board games", type:"event", date:ex(4), time:"19:00", note:"Meet new people, no phones on the table.", deal:"Free drink with check-in", audience:"work", active:true}}),
+    [me]: {...shop("Your shop (demo)","cafe","Castellanza", await sha("SHOP1"), {k1:{title:"Free extra shot", tier:"small", cost:100, costToYou:0.25, budgetWeek:15, offPeak:true, days:[0,1,2,3,4], from:"15:00", to:"17:00", active:true, createdAt:now-4e5}}, {}), owner:me}
+  };
+  const billing = { d1:{status:"approved", plan:"pro"}, d2:{status:"approved", plan:"pro"}, d3:{status:"approved", plan:"pro"}, d4:{status:"approved", plan:"free"}, [me]:{status:"approved", plan:"free"} };
+  const teamkeys = { d1:{code:"CAFE24"}, d2:{code:"GYM77"}, d3:{code:"STUDY5"}, d4:{code:"RUN10"} };
+  const groups = { DEMO42:{name:"Study group (example)", members:[me,"demo-1","demo-2","demo-3"], createdBy:me, createdAt:now-9*D, plans:[{by:"demo-1", text:"Studying at Example study café from 15:00. Who's in?", at: now-40*60e3}]} };
+  const data = {players, merchants, billing, teamkeys, groups};
+  try { const saved = JSON.parse(localStorage.getItem(DEMO_KEY) || "null"); if (saved && saved.players) Object.assign(data, saved); } catch(e){}
+  const persist = () => { try { localStorage.setItem(DEMO_KEY, JSON.stringify(data)); } catch(e){} };
+  const priv = { shop:{code:"SHOP1"} };
+  const subs = {}; const emit = c => (subs[c]||[]).forEach(f=>f(data[c]));
+  return {
+    demo:true, me, canEdit:true, canWrite:true,
+    names: async ids => Object.fromEntries(ids.map(id=>[id,{name:names[id]||"Someone", avatarUrl:avatar(names[id]||"?"), isMe:id===me}])),
+    on(c, f){ (subs[c]=subs[c]||[]).push(f); f(data[c]); },
+    async save(c, id, body){ data[c][id] = JSON.parse(JSON.stringify(body)); persist(); emit(c); },
+    async remove(c, id){ delete data[c][id]; persist(); emit(c); },
+    async getPrivate(k){ return priv[k]||null; }, async setPrivate(k, v){ priv[k] = v; },
+    presence(){}, onLive(f){ f([{by:"demo-1", presence:{focusUntil: now + 32*60e3}}]); }
+  };
+}
+async function makeLive(){
+  if (!window.claude || !window.claude.use) return null;
+  let db, user;
+  try { [db, user] = await Promise.all([window.claude.use("db"), window.claude.use("user")]); } catch(e){ return null; }
+  if (!db || !user) return null;
+  const me = await user.id(); if (!me) return null;
+  const canEdit = await user.canEdit(); const cw = await user.can("data.write");
+  let room = null; try { room = await window.claude.use("room"); } catch(e){}
+  const q = {}; const serial = (k, fn) => (q[k] = (q[k]||Promise.resolve()).then(fn, fn));
+  const toMap = s => { const m = {}; s.docs.forEach(d=>{ if (d.exists) m[d.id] = d.data(); }); return m; };
+  return {
+    demo:false, me, canEdit, canWrite: cw !== false,
+    names: async ids => { const ps = await user.profiles(ids); const out={}; ids.forEach(id=>{ const p=ps[id]||{}; out[id]={name:p.name||"Someone", avatarUrl:p.avatarUrl||avatar("?"), isMe:id===me}; }); return out; },
+    on(c, f){ db.collection(c).onSnapshot(s=>f(toMap(s)), e=>{ console.warn(c, e && e.code); f({}); }); },
+    save(c, id, body){ return serial(c+"/"+id, ()=>db.doc(c+"/"+id).set(body)); },
+    remove(c, id){ return serial(c+"/"+id, ()=>db.doc(c+"/"+id).delete()); },
+    async getPrivate(k){ try { const s = await db.doc("data/users/"+me+"/"+k).get(); return s.exists ? s.data() : null; } catch(e){ return null; } },
+    setPrivate(k, v){ return serial("p/"+k, ()=>db.doc("data/users/"+me+"/"+k).set(v)); },
+    presence(patch){ if (room) room.presence(patch).catch(()=>{}); },
+    onLive(f){ if (room) room.onPeers(ch => f(ch.peers), ()=>{}); }
+  };
+}
+
+// ================= state =================
+let S = null;
+const COLS = ["players","merchants","billing","teamkeys","groups"];
+const state = { players:{}, merchants:{}, billing:{}, teamkeys:{}, groups:{}, ready:{}, live:[], exploreTab:"offers", cat:"all", shopTab:"results", teamTab:"apps", shopMid:null, myCode:null, setup:null, ideaSeed:Date.now() };
+const meP = () => state.players[S.me];
+const profile = () => (meP()||{}).profile || "study";
+const myTown = () => (meP()||{}).town || "Castellanza";
+const clone = o => JSON.parse(JSON.stringify(o||{}));
+const myGroups = () => Object.entries(state.groups).filter(([,g])=>(g.members||[]).includes(S.me));
+function prunePlayer(p){
+  const cut = Date.now() - 90*864e5;
+  p.sessions = (p.sessions||[]).filter(s=>s.start>cut).slice(-300);
+  p.checkins = (p.checkins||[]).filter(s=>s.at>cut);
+  const fk = dkey(cut);
+  p.free = Object.fromEntries(Object.entries(p.free||{}).filter(([k])=>k>=fk));
+  p.ritual = Object.fromEntries(Object.entries(p.ritual||{}).filter(([k])=>k>=fk));
+  if (p.study) p.study.tasks = (p.study.tasks||[]).filter(t=>!t.done || (t.day||"") >= dkey(Date.now()-14*864e5)).slice(-200);
+  return p;
+}
+async function writeMe(p){
+  try { p = prunePlayer(p); p.updatedAt = Date.now(); await S.save("players", S.me, p); return true; }
+  catch(e){ toast(e && e.code==="invalid_argument" ? "You can't save yet. Ask the LifeOn team for Contributor access." : "Couldn't save. Check your connection and try again."); return false; }
+}
+async function saveShop(mid, m){
+  try { await S.save("merchants", mid, m); return true; }
+  catch(e){ toast(e && e.code==="invalid_argument" ? "You can't save this shop. Ask the LifeOn team for access." : "Couldn't save. Try again."); return false; }
+}
+
+// ================= routing =================
+const ALL_ROUTES = ["today","explore","friends","shop","team","me","study","learn"];
+function tabs(){
+  const t = [];
+  if (meP()) t.push(["today","Today"],["explore","Nearby"],["friends","Friends"]);
+  if (state.merchants[S.me]) t.push(["shop","My shop"]);
+  if (S.canEdit) t.push(["team","Team"]);
+  if (meP()) t.push(["me","Me"]);
+  return t;
+}
+let CUR = (() => { try { const h=(location.hash||"").slice(1); return ALL_ROUTES.includes(h) ? h : null; } catch(e){ return null; } })();
+const route = () => ALL_ROUTES.includes(CUR) ? CUR : (meP() ? "today" : state.merchants[S.me] ? "shop" : "today");
+function go(r){ if (!ALL_ROUTES.includes(r)) return; CUR = r; if (r==="shop" && !state.shopMid) state.shopMid = S.me; try { history.replaceState(null, "", "#"+r); } catch(e){} render(); try { window.scrollTo(0,0); } catch(e){} }
+window.addEventListener("hashchange", () => { const h = (location.hash||"").slice(1); if (h !== CUR && ALL_ROUTES.includes(h)) go(h); });
+document.addEventListener("click", e => { const a = e.target.closest && e.target.closest('a[href^="#"]'); if (!a) return; e.preventDefault(); go(a.getAttribute("href").slice(1)); });
+function renderTabs(){ const r = route(); const t = tabs(); $("#tabs").innerHTML = t.length > 1 ? t.map(([k,l])=>`<a href="#${k}" ${k===r||(r==="study"||r==="learn")&&k==="today"?'aria-current="page"':""}>${TAB_ICON[k]}<span>${l}</span></a>`).join("") : ""; }
+
+function render(){
+  if (!S) return;
+  renderTabs();
+  $("#whereLabel").innerHTML = (meP()?esc(PROFILES[profile()]?.label||"")+" · "+esc(myTown()):"")+(S.demo?'<br><span class="chip ex" style="display:inline-block;margin-top:4px">Demo</span>':"");
+  const v = $("#view");
+  if (!state.ready.players || !state.ready.merchants) { v.innerHTML = `<div class="card"><p class="muted">Loading…</p></div>`; return; }
+  const r = route();
+  const needSetup = !meP() || !meP().profile;
+  if (r==="team") { v.innerHTML = S.canEdit ? viewTeam() : `<div class="card"><h2>Team</h2><p class="muted">Only the LifeOn team can open this section.</p></div>`; if (S.canEdit) bindTeam(); }
+  else if (r==="shop") { v.innerHTML = viewShop(); bindShop(); }
+  else if (needSetup) { v.innerHTML = viewWelcome(); bindWelcome(); }
+  else if (r==="today") { v.innerHTML = viewToday(); bindToday(); }
+  else if (r==="study") { v.innerHTML = viewStudy(); bindStudy(); }
+  else if (r==="learn") { v.innerHTML = viewLearn(); bindLearn(); }
+  else if (r==="explore") { v.innerHTML = viewExplore(); bindExplore(); }
+  else if (r==="friends") { v.innerHTML = viewFriends(); bindFriends(); }
+  else { v.innerHTML = viewMe(); bindMe(); }
+  if (S.demo && !bannerOff()) {
+    v.insertAdjacentHTML("afterbegin", '<div class="banner row between" style="align-items:flex-start"><span><b>Demo mode.</b> Example people and places, saved only on this device. Place codes: CAFE24, GYM77, STUDY5, RUN10.</span><span class="row" style="gap:6px;flex:none"><button class="ghost small" data-demo-reset>Reset</button><button class="ghost small" data-demo-hide aria-label="Hide this message">✕</button></span></div>');
+    const rs = $("[data-demo-reset]", v); if (rs) rs.onclick = () => { if (rs.dataset.armed!=="1") { rs.dataset.armed="1"; rs.textContent="Sure?"; return; } try { localStorage.removeItem(DEMO_KEY); } catch(e){} location.reload(); };
+    const hd = $("[data-demo-hide]", v); if (hd) hd.onclick = () => { try { localStorage.setItem(BANNER_KEY, "1"); } catch(e){} render(); };
+  }
+  $$("[data-guide]").forEach(b=>b.onclick=()=>openGuide());
+  hydrateNames();
+}
+async function hydrateNames(root=document){
+  const els = $$("[data-uid]", root); if (!els.length) return;
+  const ps = await S.names([...new Set(els.map(e=>e.dataset.uid))]);
+  els.forEach(e => { const p = ps[e.dataset.uid]; if (!p) return; if (e.tagName==="IMG") e.src = p.avatarUrl; else e.textContent = p.isMe && !S.demo ? (p.name||"You")+" (you)" : p.name; });
+}
+function townOptions(sel){ return Object.keys(TOWNS).map(t=>`<option ${t===sel?"selected":""}>${esc(t)}</option>`).join(""); }
+function toggleChips(container, single){ if (!container) return; $$("[data-v]", container).forEach(b=>b.addEventListener("click",()=>{ if (single) $$("[data-v]", container).forEach(x=>x.setAttribute("aria-pressed","false")); b.setAttribute("aria-pressed", single ? "true" : String(b.getAttribute("aria-pressed")!=="true")); })); }
+const picked = c => $$('[aria-pressed="true"]', c).map(b=>b.dataset.v);
+function flow(label, night){ const el = document.createElement("div"); el.className = "flow"+(night?" night":""); el.setAttribute("role","dialog"); el.setAttribute("aria-modal","true"); el.setAttribute("aria-label",label); document.body.appendChild(el); return el; }
+
+// ================= welcome =================
+function viewWelcome(){
+  const st = state.setup;
+  if (!st) return `<section class="welcome">
+    <h1>Phone down.<br><span>Life on.</span></h1>
+    <p class="muted">Lock the apps that eat your time, focus on what matters, and get rewards from places around you. What brings you here?</p>
+    ${[["study",ICON.book,"Study","University or high school (18+). Focus, study plan, techniques."],["work",ICON.brief,"Work","Office or remote. Deep work, lunch offline, end-of-day routine."],["active",ICON.walk,"Stay active","Move more, scroll less. Workouts, sport, fitness rewards."],["free",ICON.leaf,"Free time","Less scrolling, more life. Ideas and activities near you."],["shop",ICON.shop,"I have a business","Bring new customers in your quiet hours."]].map(([k,ic,t,s])=>`<button class="pick" data-pick="${k}"><span class="ico">${ic}</span><span><b>${t}</b><span class="s">${s}</span></span><span class="muted">›</span></button>`).join("")}
+  </section>`;
+  return `<section class="welcome">
+    <button class="ghost small" data-back style="align-self:flex-start">‹ Back</button>
+    <h1>${esc(PROFILES[st].label)}<br><span>set-up.</span></h1>
+    <form class="card" id="welcomeForm">
+      <div><p class="small" style="font-weight:700;margin-bottom:8px">Apps to lock during ${esc(PROFILES[st].focusName.toLowerCase())}</p>
+        <div class="chips" id="wApps">${SOCIAL.map(a=>`<button type="button" class="chip" data-v="${a}" aria-pressed="${["Instagram","TikTok","YouTube"].includes(a)}">${a}</button>`).join("")}</div></div>
+      <label for="wBase">Your daily time on these apps today (minutes)<input id="wBase" type="number" inputmode="numeric" min="10" max="900" value="180"></label>
+      <p class="small muted">Find it in Screen Time (iPhone) or Digital Wellbeing (Android). It's your personal starting point.</p>
+      <label for="wTown">Where do you live?<select id="wTown">${townOptions(meP()?.town||"Castellanza")}</select></label>
+      <button class="full" type="submit" ${S.canWrite?"":"disabled"}>Start</button>
+      ${S.canWrite?"":`<p class="small muted">To join the pilot, ask the LifeOn team for Contributor access.</p>`}
+    </form></section>`;
+}
+function bindWelcome(){
+  $$("[data-pick]").forEach(b=>b.onclick=()=>{ if (b.dataset.pick==="shop") { state.shopMid = S.me; go("shop"); return; } state.setup = b.dataset.pick; render(); });
+  const bk = $("[data-back]"); if (bk) bk.onclick = () => { state.setup = null; render(); };
+  const f = $("#welcomeForm"); if (!f) return;
+  toggleChips($("#wApps"), false);
+  f.addEventListener("submit", async e => {
+    e.preventDefault();
+    const p = { ...clone(meP()), profile: state.setup, blocked: picked($("#wApps")), baseline: Math.max(10, Number($("#wBase").value)||180), town: $("#wTown").value, joined: meP()?.joined || today() };
+    for (const k of ["sessions","checkins","coupons"]) p[k] = p[k] || [];
+    p.free = p.free || {}; p.ritual = p.ritual || {};
+    if (await writeMe(p)) { state.setup = null; openGuide(); }
+  });
+}
+
+// ================= today =================
+function heroBlock(st){
+  const next = nextReward(st.balance);
+  return `<section class="hero"><div><div class="lbl">Points to spend</div><div class="pts">${st.balance}<small>pts</small></div><div class="sub">+${st.todayPts} today · +${st.weekPts} this week · <button class="linkbtn" data-guide>How points work</button></div></div>
+    <div class="streak"><span class="n">${st.streak}</span><span class="t">day streak</span></div>
+    ${next?`<div class="next"><div class="small" style="font-weight:700">Next reward in ${next-st.balance} pts</div><div class="bar"><i style="width:${Math.min(100,Math.round(st.balance/next*100))}%"></i></div></div>`:`<div class="next"><div class="small" style="font-weight:700">You can afford every reward. Go treat yourself.</div></div>`}</section>`;
+}
+function liveFriends(){
+  const ids = new Set(myGroups().flatMap(([,g])=>g.members||[])); const seen = new Set();
+  return state.live.filter(p => p.by && p.by!==S.me && ids.has(p.by) && p.presence && p.presence.focusUntil > Date.now() && !seen.has(p.by) && seen.add(p.by));
+}
+const liveRows = live => live.map(x=>`<div class="row"><img class="ava" alt="" data-uid="${esc(x.by)}" src="${avatar("?")}"><span data-uid="${esc(x.by)}" style="font-weight:700">Someone</span><span class="muted small" style="margin-left:auto">${Math.max(1,Math.round((x.presence.focusUntil-Date.now())/60e3))} min left</span></div>`).join("");
+function bigFocus(kind, sub){ return `<button class="bigbtn ${kind==="move"?"move":"focus"}" data-focus="${kind}"><span class="bi">${kind==="evening"?ICON.moon:kind==="move"?ICON.walk:ICON.focus}</span><span><span class="bt">${esc(KIND_NAME[kind])}</span><span class="bs">${esc(sub)}</span></span><span class="go">›</span></button>`; }
+const boredBtn = small => small ? `<button class="bigbtn soft" id="goBored"><span class="bi">${ICON.spark}</span><span><span class="bt">I'm bored</span><span class="bs">${IDEAS.length}+ ideas and places near ${esc(myTown())}</span></span><span class="go">›</span></button>`
+  : `<button class="bigbtn bored" id="goBored"><span class="bi">${ICON.spark}</span><span><span class="bt">I'm bored</span><span class="bs">Ideas, places and activities near ${esc(myTown())}, right now</span></span><span class="go">›</span></button>`;
+function lockedLine(){ const b = meP().blocked||[]; return b.length ? b.slice(0,3).join(", ")+(b.length>3?" +"+(b.length-3):"")+" locked" : "Lock distractions"; }
+function activityCards(list, n){ return list.slice(0,n).map(({mid,a,m})=>`<div class="offer two"><div class="ico">${ICON[m.kind]||ICON.cal}</div><div style="min-width:0"><div class="t">${esc(a.title)}</div>${a.type==="team"?`<div class="chips" style="margin:4px 0"><span class="chip" style="background:color-mix(in srgb, var(--sport) 15%, transparent);color:var(--sport);box-shadow:none">Looking for players</span></div>`:""}<div class="b">${esc(fmtDate(a.date))} · ${esc(a.time)} · ${esc(m.name)}, ${esc(distLabel(m.town))}</div>${a.deal?`<div class="chips" style="margin-top:6px"><span class="chip hot">${esc(a.deal)}</span>${m.example?'<span class="chip ex">Example</span>':""}</div>`:""}</div></div>`).join(""); }
+function hello(){ const h = new Date().getHours(); return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening"; }
+function quickTiles(){
+  const prof = profile(); const fk = prof==="work"?"work":prof==="free"?"evening":"study";
+  const t = [["focus", prof==="free"?ICON.moon:ICON.focus, prof==="free"?"Offline":"Focus", "var(--accent)"],["move", ICON.walk, "Move", "var(--sport)"],["bored", ICON.spark, "I'm bored", "var(--plum)"],["checkin", ICON.shop, "Check in", "var(--teal)"]];
+  return `<section class="tiles" aria-label="Quick start">${t.map(([k,ic,l,c])=>`<button class="tile" data-quick="${k}" data-fk="${fk}"><span class="ti" style="background:color-mix(in srgb, ${c} 15%, transparent);color:${c}">${ic}</span>${l}</button>`).join("")}</section>`;
+}
+function myGoals(){ return {...GOAL_DEFAULTS[profile()], ...((meP()||{}).goals||{})}; }
+function ring(v, max, color, label, unit){ const r=32, C=2*Math.PI*r, f=Math.min(1, max ? v/max : 0); return `<div class="goal"><div class="ring"><svg viewBox="0 0 78 78" aria-hidden="true"><circle cx="39" cy="39" r="${r}" fill="none" stroke="var(--sunk)" stroke-width="9"/><circle cx="39" cy="39" r="${r}" fill="none" stroke="${color}" stroke-width="9" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C*(1-f)}"/></svg><b>${esc(String(v))}</b></div><div class="small" style="font-weight:700">${esc(label)}</div><div class="small muted">of ${esc(String(max))}${esc(unit)}</div></div>`; }
+function goalsBlock(st){ const g = myGoals(); return `<section class="card"><div class="row between"><h3>This week's goals</h3><a class="link small" href="#me">Edit</a></div><div class="goals">${ring(Math.round(st.weekFocus/6)/10, g.focus, "var(--accent)", "Focus", " h")}${ring(st.weekMove, g.move, "var(--sport)", "Workouts", "")}${ring(st.weekPts, g.points, "var(--teal)", "Points", "")}</div></section>`; }
+function explorerCount(){ const ms = dkey(Date.now()).slice(0,7); return new Set(((meP()||{}).checkins||[]).filter(c=>dkey(c.at).slice(0,7)===ms).map(c=>c.venueId)).size; }
+function explorerCard(){ const n = Math.min(3, explorerCount()); return `<section class="card"><div class="row between"><h3>Explorer quest</h3><span class="chip ${n>=3?"on":""}">${n>=3?"Done · +60":"+60 pts"}</span></div><p class="small muted">Check in at 3 different places this month. A café, a gym, a shop you've never tried.</p><div class="qbar"><i style="width:${Math.round(n/3*100)}%"></i></div><p class="small" style="font-weight:700">${n}/3 places this month</p></section>`; }
+function activeMain(p){
+  const fit = liveOffers().filter(x=>["gym","sport"].includes(x.m.kind)).sort((a,b)=>km(myTown(),a.m.town)-km(myTown(),b.m.town)).slice(0,3);
+  const sport = liveActivities().filter(x=>["sport","team","outdoor"].includes(x.a.type)).slice(0,3);
+  return `${bigFocus("move", "Walk, run, bike, gym · phone in your pocket")}
+  <section class="card"><div class="row between"><h3>Sport and teams nearby</h3><a class="link small" href="#explore" data-tab="activities">All</a></div>${sport.length?`<div class="list">${activityCards(sport,3)}</div>`:`<p class="muted small">Classes, teams looking for players and outdoor events will show up here.</p>`}</section>
+  <section class="card"><div class="row between"><h3>Fitness rewards near you</h3><a class="link small" href="#explore" data-cat="fitness">All</a></div>${fit.length?`<div class="list">${fit.map(offerRow).join("")}</div>`:`<p class="muted small">Gyms and sports shops will show up here.</p>`}</section>
+  ${explorerCard()}
+  ${boredBtn(true)}`;
+}
+function openCheckinPicker(){
+  const places = Object.entries(state.merchants).filter(([mid])=>approved(mid)).sort((a,b)=>km(myTown(),a[1].town)-km(myTown(),b[1].town));
+  const el = flow("Check in");
+  el.innerHTML = `<div class="in"><div class="row between"><h2>Where are you?</h2><button class="ghost small" data-close>Close</button></div><p class="muted">Pick the place, then type the code on the poster at the counter. +30 points, and it counts for the Explorer quest.</p><div class="card"><div class="list">${places.map(([mid,m])=>`<button class="pickrow" data-ci="${esc(mid)}"><span class="ico">${ICON[m.kind]||ICON.other}</span><span><span class="t" style="display:block;font-weight:700">${esc(m.name)}</span><span class="small muted">${esc(KIND[m.kind]||"")} · ${esc(distLabel(m.town))}</span></span></button>`).join("") || '<p class="muted">No partner places yet.</p>'}</div></div></div>`;
+  $("[data-close]", el).onclick = () => el.remove();
+  $$("[data-ci]", el).forEach(b=>b.onclick=()=>{ el.remove(); checkIn(b.dataset.ci); });
+}
+function openGuide(){
+  const el = flow("How LifeOn works");
+  const steps = [["Lock the apps that distract you","Start a Focus or a Move session. Leave LifeOn during focus and the session stops. Want your apps back early? Solve 3 brain challenges."],["Earn points","2 minutes of focus = 1 point. Check in at a partner place with the code on the counter poster = +30. The more an action is verified, the more it's worth. Max 150 a day."],["Spend them nearby","Gyms, cafés, restaurants and shops around you, at 100, 300 and 800 points. Show the 5-minute code at the counter."],["Your data stays yours","No ads, ever. Your screen time never leaves your phone. Your group only sees your points and streak."]];
+  el.innerHTML = `<div class="in"><div class="row between"><h2>How LifeOn works</h2><button class="ghost small" data-close>Close</button></div><div class="card steps">${steps.map(([t,d],i)=>`<div class="step"><span class="n">${i+1}</span><div><b>${esc(t)}</b><p class="small muted" style="margin-top:4px">${esc(d)}</p></div></div>`).join("")}</div><button class="full" data-close>Got it</button></div>`;
+  $$("[data-close]", el).forEach(b=>b.onclick = () => el.remove());
+}
+function progressBlock(st){
+  const days = [...Array(7)].map((_,i)=>dkey(addDays(new Date(),i-6)));
+  const vals = days.map(k=>Math.min(DAILY_CAP, st.byDay[k]||0)); const mx = Math.max(30, ...vals);
+  const last = [...Array(7)].map((_,i)=>Math.min(DAILY_CAP, st.byDay[dkey(addDays(new Date(),i-13))]||0)).reduce((a,b)=>a+b,0); const cur = vals.reduce((a,b)=>a+b,0);
+  return `<section class="card"><div class="row between"><h3>Your last 7 days</h3><span class="chip ${cur>=last?"on":""}">${cur>=last?"Up":"Down"} · ${cur} vs ${last} pts</span></div><div class="bars">${days.map((k,i)=>`<div class="${k===today()?"today":""}"><span>${vals[i]||""}</span><i style="height:${Math.round(vals[i]/mx*85)}%"></i>${DAYS[(new Date(k+"T12:00").getDay()+6)%7].slice(0,2)}</div>`).join("")}</div><p class="small muted">Only you see this. Points per day, compared with the 7 days before.</p></section>`;
+}
+function viewToday(){
+  const p = meP(), st = stats(S.me), prof = profile();
+  const live = liveFriends();
+  const plans = myGroups().flatMap(([,g])=>(g.plans||[]).map(x=>({...x, g:g.name}))).filter(x=>Date.now()-x.at < 6*3600e3).sort((a,b)=>b.at-a.at).slice(0,2);
+  const nearOffers = liveOffers().filter(x=>offerNow(x.o)).sort((a,b)=>km(myTown(),a.m.town)-km(myTown(),b.m.town)).slice(0,2);
+  let main = "";
+  if (prof==="study") {
+    const exams = (p.study?.exams||[]).filter(e=>e.date>=today()).sort((a,b)=>a.date.localeCompare(b.date));
+    const tasks = (p.study?.tasks||[]).filter(t=>!t.done).slice(0,3);
+    main = `${bigFocus("study", lockedLine()+" · Pomodoro ready")}
+    <section class="card"><div class="row between"><h3>Study plan</h3><a class="link small" href="#study">Open</a></div>
+      ${exams.length?`<div class="row"><span class="big">${daysTo(exams[0].date)}</span><div><b>days to ${esc(exams[0].name)}</b><div class="small muted">${esc(fmtDate(exams[0].date))}${exams.length>1?" · then "+esc(exams[1].name):""}</div></div></div>`:`<p class="muted small">Add your exams and get a countdown with daily tasks.</p>`}
+      ${tasks.length?`<div class="list">${tasks.map(t=>`<label class="task" style="flex-direction:row;color:var(--ink)"><input type="checkbox" data-task="${esc(t.id)}"><span>${esc(t.text)}</span></label>`).join("")}</div>`:""}
+    </section>
+    <a href="#learn" class="bigbtn soft" style="text-decoration:none"><span class="bi">${ICON.bulb}</span><span><span class="bt">Study techniques</span><span class="bs">Pomodoro, active recall, Feynman and more</span></span><span class="go">›</span></a>
+    ${boredBtn(true)}`;
+  } else if (prof==="work") {
+    const w = p.work && p.work.date===today() ? p.work : {date:today(), top3:[{t:"",done:false},{t:"",done:false},{t:"",done:false}]};
+    const evening = new Date().getHours() >= 16;
+    const ritualDone = !!(p.ritual||{})[today()];
+    main = `${bigFocus("work", lockedLine()+" · deep work")}
+    <section class="card"><div class="row between"><h3>Top 3 for today</h3><span class="small muted">${w.top3.filter(x=>x.done&&x.t).length}/3 done</span></div>
+      <p class="small muted">Three things that would make today a good day. Do them before anything else.</p>
+      <div class="list">${w.top3.map((x,i)=>`<div class="task ${x.done?"done":""}"><input type="checkbox" aria-label="Done" data-top="${i}" ${x.done?"checked":""} ${x.t?"":"disabled"}><input data-topt="${i}" value="${esc(x.t)}" placeholder="Priority ${i+1}" style="padding:8px 10px"></div>`).join("")}</div></section>
+    ${bigFocus("lunch", "30–60 min break without the phone, food deals nearby")}
+    <section class="card"><div class="row between"><h3>End-of-day shutdown</h3>${ritualDone?'<span class="chip on">Done · +5</span>':'<span class="chip">+5 pts</span>'}</div>
+      ${evening||ritualDone?`<div class="list" id="ritual">${["Write tomorrow's Top 3","Close every tab and app you don't need","Phone in another room for the first hour at home"].map((t,i)=>`<label class="task" style="flex-direction:row;color:var(--ink)"><input type="checkbox" data-rit="${i}" ${ritualDone?"checked disabled":""}><span>${t}</span></label>`).join("")}</div>`:`<p class="small muted">Comes up after 16:00: a 2-minute routine to stop thinking about work tonight.</p>`}
+      <p class="small muted">Tip for long screen days: every 20 minutes look 20 feet (6 m) away for 20 seconds.</p></section>
+    ${boredBtn(true)}`;
+  } else if (prof==="active") { main = activeMain(p); } else {
+    const acts = liveActivities();
+    main = `${boredBtn(false)}
+    ${bigFocus("evening", lockedLine()+" · 1–2 hours offline")}
+    <section class="card"><div class="row between"><h3>Happening near you</h3><a class="link small" href="#explore" data-tab="activities">All</a></div>
+      ${acts.length?`<div class="list">${activityCards(acts,3)}</div>`:`<p class="muted small">Courses, events and sport from local places will show up here.</p>`}</section>
+    <section class="card"><h3>This week's challenge</h3><p>One evening offline. Two hours, phone locked, out or with people.</p>
+      ${(()=>{ const done = (p.sessions||[]).some(s=>s.ok && s.kind==="evening" && s.min>=60 && inThisWeek(s.start)); return done?'<span class="chip on">Done this week</span>':'<span class="chip">Not yet</span>'; })()}</section>
+    ${explorerCard()}`;
+  }
+  return `<h1 class="hello">${hello()}</h1>${heroBlock(st)}${quickTiles()}${goalsBlock(st)}${main}
+  ${live.length?`<section class="card"><div class="row between"><h3>Focusing right now</h3><span class="live">${live.length} live</span></div><div class="list">${liveRows(live)}</div><button class="ghost full" data-join-focus>Join them</button></section>`:""}
+  ${plans.length?`<section class="card"><h3>Plans from your groups</h3><div class="list">${plans.map(x=>`<div class="row" style="align-items:flex-start"><img class="ava" alt="" data-uid="${esc(x.by)}" src="${avatar("?")}"><div style="min-width:0"><div class="small"><b data-uid="${esc(x.by)}">Someone</b> · ${esc(x.g)}</div><div>${esc(x.text)}</div></div></div>`).join("")}</div></section>`:""}
+  ${nearOffers.length?`<section class="card"><div class="row between"><h3>Open now near you</h3><a href="#explore" class="link small">All</a></div><div class="list">${nearOffers.map(offerRow).join("")}</div></section>`:""}`;
+}
+function bindToday(){
+  $$("[data-quick]").forEach(b=>b.onclick=()=>{ const k = b.dataset.quick; if (k==="focus") openFocus(b.dataset.fk); else if (k==="move") openFocus("move"); else if (k==="bored") openBored(); else openCheckinPicker(); });
+  $$("[data-cat]").forEach(a=>a.addEventListener("click",()=>{ state.cat = a.dataset.cat; state.exploreTab = "offers"; }));
+  $$("[data-focus]").forEach(b=>b.onclick=()=>openFocus(b.dataset.focus));
+  const gb = $("#goBored"); if (gb) gb.onclick = () => openBored();
+  const j = $("[data-join-focus]"); if (j) j.onclick = () => openFocus(profile()==="work"?"work":profile()==="free"?"evening":"study", "group");
+  $$("[data-tab]").forEach(a=>a.addEventListener("click",()=>{ state.exploreTab = a.dataset.tab; }));
+  $$("[data-task]").forEach(c=>c.onchange=async()=>{ const np = clone(meP()); const t = np.study.tasks.find(x=>x.id===c.dataset.task); if (t){ t.done = true; t.day = today(); } if (await writeMe(np)) toast("Nice. One less."); });
+  $$("[data-topt]").forEach(inp=>inp.onchange=async()=>{ const np = clone(meP()); if (!np.work || np.work.date!==today()) np.work = {date:today(), top3:[{t:"",done:false},{t:"",done:false},{t:"",done:false}]}; np.work.top3[+inp.dataset.topt].t = inp.value.trim().slice(0,80); await writeMe(np); });
+  $$("[data-top]").forEach(c=>c.onchange=async()=>{ const np = clone(meP()); if (!np.work || np.work.date!==today()) return; np.work.top3[+c.dataset.top].done = c.checked; if (await writeMe(np) && c.checked) toast("Priority done."); });
+  const rit = $("#ritual"); if (rit) { const boxes = $$("[data-rit]", rit); boxes.forEach(b=>b.onchange=async()=>{ if (boxes.every(x=>x.checked)) { const np = clone(meP()); np.ritual = {...(np.ritual||{}), [today()]:true}; if (await writeMe(np)) toast("Shutdown done: +5. Enjoy your evening."); } }); }
+  bindOfferButtons();
+}
+
+// ================= study =================
+function viewStudy(){
+  const s = meP().study || {exams:[], tasks:[]};
+  const exams = (s.exams||[]).slice().sort((a,b)=>a.date.localeCompare(b.date));
+  const tasks = s.tasks||[];
+  return `<div class="row"><a href="#today" class="link small">‹ Today</a></div>
+  <section class="card"><h2>Exams</h2>
+    ${exams.length?`<div class="list">${exams.map(e=>{ const d = daysTo(e.date); return `<div class="row between"><div><b>${esc(e.name)}</b><div class="small muted">${esc(fmtDate(e.date))} · ${d<0?"done":d===0?"today":d+" days"}</div></div><button class="ghost small" data-delexam="${esc(e.id)}" aria-label="Remove exam">Remove</button></div>`; }).join("")}</div>`:`<p class="muted small">No exams yet.</p>`}
+    <form id="examForm" class="row wrap"><input id="exName" maxlength="50" placeholder="Exam, e.g. Statistics" aria-label="Exam name" required style="flex:2 1 160px"><input id="exDate" type="date" aria-label="Exam date" required style="flex:1 1 130px"><button class="teal small" type="submit">Add</button></form></section>
+  <section class="card"><h2>Tasks</h2><p class="small muted">Break the work into pieces you can finish in one Focus session.</p>
+    ${tasks.length?`<div class="list">${tasks.map(t=>`<div class="task ${t.done?"done":""}"><input type="checkbox" data-t="${esc(t.id)}" ${t.done?"checked":""} aria-label="Done"><span style="flex:1;min-width:0">${esc(t.text)}${t.exam?` <span class="chip">${esc(exams.find(e=>e.id===t.exam)?.name||"")}</span>`:""}</span><button class="ghost small" data-focus-task="${esc(t.id)}" ${t.done?"disabled":""}>Focus</button></div>`).join("")}</div>`:`<p class="muted small">No tasks yet.</p>`}
+    <form id="taskForm" class="row wrap"><input id="tkText" maxlength="80" placeholder="e.g. Chapter 3 summary" aria-label="Task" required style="flex:2 1 160px"><select id="tkExam" aria-label="Exam" style="flex:1 1 120px"><option value="">No exam</option>${exams.map(e=>`<option value="${esc(e.id)}">${esc(e.name)}</option>`).join("")}</select><button class="teal small" type="submit">Add</button></form></section>
+  <section class="card"><h3>Suggested rhythm</h3><p class="small muted">Two Pomodoro ×2 blocks a day (about 2 hours of real focus), plus a 10-minute review of yesterday's topic. Spread repetition over the days before each exam.</p><a class="link small" href="#learn">See all techniques</a></section>`;
+}
+function bindStudy(){
+  const base = () => { const np = clone(meP()); np.study = np.study || {exams:[], tasks:[]}; np.study.exams = np.study.exams||[]; np.study.tasks = np.study.tasks||[]; return np; };
+  $("#examForm").onsubmit = async e => { e.preventDefault(); const np = base(); np.study.exams.push({id:rid(5), name:$("#exName").value.trim(), date:$("#exDate").value}); if (await writeMe(np)) toast("Exam added"); };
+  $("#taskForm").onsubmit = async e => { e.preventDefault(); const np = base(); np.study.tasks.push({id:rid(5), text:$("#tkText").value.trim(), exam:$("#tkExam").value, done:false, day:today()}); if (await writeMe(np)) toast("Task added"); };
+  $$("[data-delexam]").forEach(b=>b.onclick=async()=>{ const np = base(); np.study.exams = np.study.exams.filter(x=>x.id!==b.dataset.delexam); await writeMe(np); });
+  $$("[data-t]").forEach(c=>c.onchange=async()=>{ const np = base(); const t = np.study.tasks.find(x=>x.id===c.dataset.t); if (t){ t.done = c.checked; t.day = today(); } await writeMe(np); });
+  $$("[data-focus-task]").forEach(b=>b.onclick=()=>{ const t = (meP().study?.tasks||[]).find(x=>x.id===b.dataset.focusTask); openFocus("study", null, t?.text); });
+}
+function viewLearn(){
+  return `<div class="row"><a href="#today" class="link small">‹ Today</a></div>
+  <section class="card"><h2>Study techniques</h2><p class="small muted">Methods backed by learning research. Pick one, try it in your next Focus session.</p></section>
+  ${TECHNIQUES.map(t=>`<section class="card tech"><h3>${esc(t.name)}</h3><p>${esc(t.what)}</p><ol>${t.steps.map(s=>`<li>${esc(s)}</li>`).join("")}</ol>${t.start?`<button class="teal small" data-try="${esc(t.id)}" style="align-self:flex-start">Try it now · ${esc(PLANS[t.start.plan].label)}</button>`:`<a class="link small" href="#study">Add the reviews to your plan</a>`}</section>`).join("")}`;
+}
+function bindLearn(){ $$("[data-try]").forEach(b=>b.onclick=()=>{ const t = TECHNIQUES.find(x=>x.id===b.dataset.try); openFocus("study", null, t.name, t.start.plan); }); }
+
+// ================= Focus =================
+let focusRun = null, unlock = { lockedUntil:0, strikes:0 };
+const SAFE_KEY = "lifeon-run";
+function openFocus(kind, preMode, taskLabel, prePlan){
+  const p = meP(); const groups = myGroups();
+  const places = Object.entries(state.merchants).filter(([mid])=>approved(mid)).sort((a,b)=>km(myTown(),a[1].town)-km(myTown(),b[1].town));
+  const f = { kind, type: MOVE_TYPES[0], plan: prePlan || KIND_PLANS[kind][0], mode: preMode || "solo", group: groups[0]?.[0] || "", venue: places[0]?.[0] || "", task: taskLabel || "" };
+  const el = flow(KIND_NAME[kind], true);
+  const draw = () => {
+    const fm = focusMins(f.plan);
+    el.innerHTML = `<div class="in">
+      <div class="row between"><h2>${esc(KIND_NAME[kind])}</h2><button class="ghost small" data-close>Close</button></div>
+      ${f.task?`<div class="card"><p class="small muted">Working on</p><b>${esc(f.task)}</b></div>`:""}
+      ${kind==="move" ? `<div class="card"><p class="small" style="font-weight:700">What are you doing?</p><div class="chips" id="fType">${MOVE_TYPES.map(t=>`<button type="button" class="chip" data-v="${t}" aria-pressed="${f.type===t}">${t}</button>`).join("")}</div><p class="small muted">Your phone can stay in your pocket. Without a check-in at a partner place, a move session counts up to 30 points.</p></div>` : `<div class="card"><p class="small muted">Locked during the session</p>
+        <div class="blocked">${(p.blocked||[]).map(a=>`<span>${ICON.lock}${esc(a)}</span>`).join("") || `<span>No apps chosen yet. Pick them in Me.</span>`}</div>
+        <p class="small muted">Open any other app for more than 10 seconds and the session stops.${f.plan.startsWith("pomo")?" During Pomodoro breaks you're free.":""}</p></div>`}
+      <div class="card"><p class="small" style="font-weight:700">How long?</p>
+        <div class="chips" id="fPlan">${KIND_PLANS[kind].map(k=>`<button type="button" class="chip" data-v="${k}" aria-pressed="${f.plan===k}">${esc(PLANS[k].label)}</button>`).join("")}</div>
+        <p class="small" style="font-weight:700">Where?</p>
+        <div class="chips" id="fMode">${[["solo","On my own"],["group","With my group"],["venue","At a partner place"]].map(([k,l])=>`<button type="button" class="chip" data-v="${k}" aria-pressed="${f.mode===k}">${l}</button>`).join("")}</div>
+        ${f.mode==="group" ? (groups.length ? `<label for="fGroup">Group<select id="fGroup">${groups.map(([c,g])=>`<option value="${esc(c)}" ${c===f.group?"selected":""}>${esc(g.name)}</option>`).join("")}</select></label><p class="small muted">If a friend in the group finishes a session that starts within 20 minutes of yours, you both get +10.</p>` : `<p class="small muted">Create or join a group in Friends first.</p>`) : ""}
+        ${f.mode==="venue" ? (places.length ? `<label for="fVenue">Place<select id="fVenue">${places.map(([id,m])=>`<option value="${esc(id)}" ${id===f.venue?"selected":""}>${esc(m.name)} · ${esc(distLabel(m.town))}</option>`).join("")}</select></label>
+          <label for="fCode">Code on the poster at the counter<input id="fCode" autocomplete="off" style="font-family:var(--mono);text-transform:uppercase" placeholder="e.g. CAFE24"></label><p class="small muted">Sessions at a partner place earn 60% more.</p>` : `<p class="small muted">No partner places yet.</p>`) : ""}
+      </div>
+      <div class="row between"><span class="muted">${fm} min${kind==="move"?"":" of focus"} · you'll earn${kind==="move"&&f.mode!=="venue"?" up to":""}</span><span style="font-family:var(--display);font-weight:800;font-size:22px">+${sessionPts({ok:true,min:fm,mode:f.mode,kind})}${f.mode==="group"?" (+10)":""} pts</span></div>
+      <button class="full" id="fStart">Start</button></div>`;
+    $("[data-close]", el).onclick = () => el.remove();
+    $$("#fPlan [data-v]", el).forEach(b=>b.onclick=()=>{ f.plan=b.dataset.v; draw(); });
+    $$("#fMode [data-v]", el).forEach(b=>b.onclick=()=>{ f.mode=b.dataset.v; draw(); });
+    $$("#fType [data-v]", el).forEach(b=>b.onclick=()=>{ f.type=b.dataset.v; draw(); });
+    const fg = $("#fGroup", el); if (fg) fg.onchange = () => f.group = fg.value;
+    const fv = $("#fVenue", el); if (fv) fv.onchange = () => f.venue = fv.value;
+    $("#fStart", el).onclick = async () => {
+      if (!S.canWrite) { toast("To join the pilot, ask the team for Contributor access."); return; }
+      if (f.mode==="group" && !f.group) { toast("Join a group first, or choose On my own."); return; }
+      if (f.mode==="venue") { const m = state.merchants[f.venue]; const code = ($("#fCode", el).value||"").trim();
+        if (!m || !code) { toast("Type the code on the poster at the counter."); return; }
+        if (await sha(code) !== m.codeHash) { toast("That code doesn't match. Check the poster."); return; } }
+      runFocus(el, f);
+    };
+  };
+  draw();
+}
+function runFocus(el, f){
+  const p = meP(); const start = Date.now();
+  const phases = []; let t = start; for (const [ty, m] of PLANS[f.plan].parts) { phases.push({ty, from:t, to:t+m*60e3}); t += m*60e3; }
+  const end = t, totalFocus = focusMins(f.plan);
+  const overlapFocus = (a,b) => phases.filter(x=>x.ty==="f").reduce((s,x)=>s+Math.max(0, Math.min(b,x.to)-Math.max(a,x.from)),0);
+  focusRun = { ...f, start, end, hiddenAt:null, timer:null };
+  unlock = { lockedUntil:0, strikes:0 };
+  try { localStorage.setItem(SAFE_KEY, JSON.stringify({start, end})); } catch(e){}
+  S.presence({ focusUntil: end });
+  const R = 118, C = 2*Math.PI*R;
+  const fCount = phases.filter(x=>x.ty==="f").length;
+  el.innerHTML = `<div class="in" style="min-height:100%;justify-content:center">
+    <p class="small muted" id="phaseLbl" style="text-align:center;font-weight:700;letter-spacing:.08em;text-transform:uppercase">${esc(KIND_NAME[f.kind])}</p>
+    ${f.task?`<p style="text-align:center;font-weight:700">${esc(f.task)}</p>`:""}
+    <div class="timer"><svg viewBox="0 0 260 260" aria-hidden="true"><circle cx="130" cy="130" r="${R}" fill="none" stroke="currentColor" stroke-opacity=".15" stroke-width="10"/><circle id="arc" cx="130" cy="130" r="${R}" fill="none" stroke="var(--accent)" stroke-width="10" stroke-linecap="round" transform="rotate(-90 130 130)" stroke-dasharray="${C}" stroke-dashoffset="0"/></svg>
+      <div class="t" id="tLeft">--:--<small id="tSub">stay here</small></div></div>
+    ${f.kind==="move" ? `<p style="text-align:center;font-family:var(--display);font-weight:800;font-size:22px">${esc(f.type)}</p>` : `<div class="blocked" style="justify-content:center">${(p.blocked||[]).map(a=>`<span>${ICON.lock}${esc(a)}</span>`).join("")}</div>`}
+    <p class="muted small" style="text-align:center" id="tTip">Phone face-down. Leave LifeOn for more than 10 seconds and the session stops. Want your apps back early? You'll have to earn it.</p>
+    ${f.kind==="move" ? `<button class="full" id="moveDone" style="background:var(--sport);color:var(--sport-ink)">I'm done</button>` : `<button class="ghost full" id="giveUp">Unlock my apps</button>`}</div>`;
+  const tick = () => {
+    if (!focusRun) return;
+    const now = Date.now(); if (now >= end) { finish(true); return; }
+    const i = phases.findIndex(x=>now < x.to); const ph = phases[i];
+    const left = ph.to - now; const m = Math.floor(left/60e3), s = Math.floor(left/1e3)%60;
+    const tl = $("#tLeft", el); if (tl) tl.firstChild.nodeValue = m+":"+pad(s);
+    const a = $("#arc", el); if (a) { a.setAttribute("stroke-dashoffset", String(C*(1-left/(ph.to-ph.from)))); a.setAttribute("stroke", ph.ty==="b" ? "var(--teal)" : "var(--accent)"); }
+    const fi = phases.slice(0,i+1).filter(x=>x.ty==="f").length;
+    const lbl = $("#phaseLbl", el); if (lbl) lbl.textContent = ph.ty==="b" ? "Break · stretch, drink water" : (fCount>1 ? "Pomodoro "+fi+" of "+fCount : KIND_NAME[f.kind]);
+    const sub = $("#tSub", el); if (sub) sub.textContent = ph.ty==="b" ? "free time" : "stay here";
+    const tip = $("#tTip", el); if (tip) tip.textContent = ph.ty==="b" ? "Break time: you can leave LifeOn. Be back when it ends, or the session stops." : (f.kind==="move" ? "Phone in your pocket is fine. Tap I'm done when you finish." : f.kind==="work" ? "Deep work: one task, notifications off. Every 20 minutes, look 6 m away for 20 seconds." : "Phone face-down. Leave LifeOn for more than 10 seconds and the session stops. Want your apps back early? You'll have to earn it.");
+  };
+  focusRun.timer = setInterval(tick, 1000); tick();
+  const onVis = () => {
+    if (!focusRun) return;
+    if (document.hidden) focusRun.hiddenAt = Date.now();
+    else if (focusRun.hiddenAt) { const away = overlapFocus(focusRun.hiddenAt, Math.min(Date.now(), end)); focusRun.hiddenAt = null; if (away > 10e3) finish(false, "You left LifeOn for "+Math.round(away/1e3)+" seconds of focus time."); else tick(); }
+  };
+  if (f.kind!=="move") document.addEventListener("visibilitychange", onVis);
+  const gu = $("#giveUp", el); if (gu) gu.onclick = () => openUnlock(() => finish(false, "You unlocked your apps early, so no points this time."));
+  const md = $("#moveDone", el); if (md) md.onclick = () => { if (Date.now() - start < 10*60e3) finish(false, "Move sessions count from 10 minutes. Keep going next time!"); else finish(true); };
+  async function finish(ok, why){
+    if (!focusRun) return;
+    clearInterval(focusRun.timer); document.removeEventListener("visibilitychange", onVis);
+    const run = focusRun; focusRun = null;
+    $$('.flow[aria-label="Unlock your apps"]').forEach(x=>x.remove());
+    try { localStorage.removeItem(SAFE_KEY); } catch(e){}
+    S.presence({ focusUntil: null });
+    const mins = ok ? (run.kind==="move" ? Math.min(totalFocus, Math.floor((Date.now()-run.start)/60e3)) : totalFocus) : Math.floor(overlapFocus(run.start, Date.now())/60e3);
+    const s = { id: rid(8), start: run.start, min: mins, mode: run.mode, kind: run.kind, ok };
+    if (run.mode==="group") s.group = run.group; if (run.mode==="venue") s.venueId = run.venue; if (run.kind==="move") s.type = run.type;
+    const np = clone(meP()); np.sessions = [...(np.sessions||[]), s];
+    await writeMe(np);
+    el.innerHTML = `<div class="in" style="min-height:100%;justify-content:center;text-align:center">
+      <h1 style="font-size:42px;line-height:1">${ok?"Done.":"Session stopped"}</h1>
+      <p class="muted">${ok ? (run.kind==="move" ? `You moved for ${fmtMin(mins)}.` : `You stayed focused for ${fmtMin(totalFocus)}.`) : esc(why||"")}</p>
+      ${ok?`<p style="font-family:var(--display);font-weight:800;font-size:56px;color:var(--accent)">+${sessionPts(s,false)}</p><p class="muted small">points${run.mode==="group"?" · +10 more if a friend finishes too":""}</p>`:`<p class="muted small">Next time keep LifeOn open. Breaks under 10 seconds are fine.</p>`}
+      <button class="full" data-close>Back to today</button></div>`;
+    $("[data-close]", el).onclick = () => { el.remove(); render(); };
+  }
+}
+function makePuzzle(){
+  const r = (a,b)=>a+Math.floor(Math.random()*(b-a+1)); const t = r(0,2);
+  if (t===0){ const a=r(12,29), b=r(3,9), c=r(10,60); return {kind:"Mental maths", q:a+" × "+b+" − "+c, a:String(a*b-c)}; }
+  if (t===1){ const s=r(2,9), d=r(3,8); return {kind:"Next number", q:[s, s+d, s+2*d+1, s+3*d+3].join(", ")+", ?", a:String(s+4*d+6), hint:"The gaps grow by 1 each time."}; }
+  const n = String(r(100000,999999)); return {kind:"Memory", q:n, a:n, memory:true};
+}
+function openUnlock(onUnlock){
+  const ov = flow("Unlock your apps", true); ov.style.zIndex = 30;
+  let lives=3, solved=0, cur=null, timer=null, left=0;
+  const heart = on => `<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.5-9.4C1.2 8.3 3.4 5 6.8 5c2 0 3.6 1.1 4.2 2.6h2C13.6 6.1 15.2 5 17.2 5c3.4 0 5.6 3.3 4.3 6.6C19.5 16.4 12 21 12 21z" fill="${on?"var(--accent)":"none"}" stroke="var(--accent)" stroke-width="1.8"/></svg>`;
+  const close = () => { clearInterval(timer); ov.remove(); };
+  const wait = () => (unlock.strikes ? 10 : 5);
+  const locked = () => {
+    clearInterval(timer);
+    const draw = () => { if (!ov.isConnected) { clearInterval(timer); return; } const l = unlock.lockedUntil - Date.now(); if (l<=0) { clearInterval(timer); intro(); return; } const t=$("#lockLeft",ov); if (t) t.textContent = Math.floor(l/60e3)+":"+pad(Math.floor(l/1e3)%60); };
+    ov.innerHTML = `<div class="in" style="min-height:100%;justify-content:center;text-align:center"><h1 style="font-size:34px;line-height:1.05">Out of lives.</h1><p class="muted">Your apps stay locked. You can try again in</p><p style="font-family:var(--display);font-weight:800;font-size:56px;font-variant-numeric:tabular-nums" id="lockLeft">--:--</p><p class="muted small">Your session is still running. Good moment to get back to it.</p><button class="full" data-back>Back to my session</button></div>`;
+    $("[data-back]",ov).onclick = close; draw(); timer = setInterval(draw, 1000);
+  };
+  const intro = () => {
+    if (unlock.lockedUntil > Date.now()) return locked();
+    lives=3; solved=0;
+    ov.innerHTML = `<div class="in" style="min-height:100%;justify-content:center"><h1 style="font-size:36px;line-height:1.05">Want your apps back?<br><span style="color:var(--accent)">Earn it.</span></h1>
+      <p class="muted">Solve 3 brain challenges in a row. You have 3 lives and 25 seconds for each one. Lose all your lives and you wait ${wait()} minutes before trying again.</p>
+      <p class="muted small">If you unlock, the session ends with no points.</p>
+      <button class="full" data-go>Start the challenges</button><button class="ghost full" data-back>Keep going</button></div>`;
+    $("[data-go]",ov).onclick = () => next(); $("[data-back]",ov).onclick = close;
+  };
+  const next = (msg) => {
+    cur = makePuzzle(); left = 25; drawP(msg); clearInterval(timer);
+    timer = setInterval(()=>{ if (!ov.isConnected) { clearInterval(timer); return; } left--; const t=$("#pLeft",ov); if (t) t.textContent = left+"s"; if (left<=0) wrong("Time's up."); }, 1000);
+    if (cur.memory) { const mine = cur; setTimeout(()=>{ if (cur!==mine || !ov.isConnected) return; const q=$("#pQ",ov); if (q) q.textContent="• • • • • •"; const i=$("#pA",ov); if (i) { i.disabled=false; i.focus(); } }, 3000); }
+  };
+  const drawP = (msg) => {
+    ov.innerHTML = `<div class="in" style="min-height:100%;justify-content:center">
+      <div class="row between"><div class="row" style="gap:4px" aria-label="${lives} lives left">${[0,1,2].map(i=>heart(i<lives)).join("")}</div><span class="muted small" style="font-weight:700">${solved}/3 solved · <span id="pLeft">${left}s</span></span></div>
+      <div class="card" style="text-align:center;gap:8px"><p class="small muted" style="font-weight:700;letter-spacing:.08em;text-transform:uppercase">${esc(cur.kind)}</p>
+        <p id="pQ" style="font-family:var(--display);font-weight:800;font-size:${cur.memory?40:32}px;letter-spacing:${cur.memory?".12em":"0"};font-variant-numeric:tabular-nums">${esc(cur.q)}</p>
+        ${cur.memory?`<p class="small muted">Memorise it. It disappears in 3 seconds.</p>`:cur.hint?`<p class="small muted">${esc(cur.hint)}</p>`:""}</div>
+      ${msg?`<p style="text-align:center;font-weight:700;color:var(--accent)">${esc(msg)}</p>`:""}
+      <form id="pForm" class="row"><input id="pA" inputmode="numeric" autocomplete="off" aria-label="Your answer" style="font-family:var(--mono);font-size:22px;text-align:center" ${cur.memory?"disabled":""}><button type="submit">Check</button></form>
+      <button class="ghost full" data-back>Give up and keep going</button></div>`;
+    $("#pForm",ov).onsubmit = e => { e.preventDefault(); const v = ($("#pA",ov).value||"").replace(/\s/g,""); if (!v) return; if (v===cur.a) right(); else wrong("Wrong: it was "+cur.a+"."); };
+    $("[data-back]",ov).onclick = close;
+    const i=$("#pA",ov); if (i && !i.disabled) i.focus();
+  };
+  const right = () => { solved++; if (solved>=3) { close(); onUnlock(); return; } next("Correct. "+(3-solved)+" to go."); };
+  const wrong = (msg) => { lives--; if (lives<=0) { unlock.lockedUntil = Date.now() + wait()*60e3; unlock.strikes++; locked(); return; } next(msg+" You lost a life."); };
+  intro();
+}
+function checkInterrupted(){
+  try { const r = JSON.parse(localStorage.getItem(SAFE_KEY)||"null"); if (!r) return; localStorage.removeItem(SAFE_KEY);
+    if (Date.now() < (r.end || r.start + (r.min||0)*60e3) + 60e3) setTimeout(()=>toast("Your last session stopped because LifeOn was closed."), 800);
+  } catch(e){}
+}
+
+// ================= I'm bored =================
+function openBored(){
+  const b = { time: 60, mood: profile()==="study" ? "relax" : profile()==="active" ? "outdoor" : "move" };
+  const el = flow("I'm bored");
+  const ask = () => {
+    el.innerHTML = `<div class="in">
+      <div class="row between"><h2>I'm bored</h2><button class="ghost small" data-close>Close</button></div>
+      <p class="muted">Two taps and we'll find you something better than scrolling.</p>
+      <div class="card"><p class="small" style="font-weight:700">How much time do you have?</p>
+        <div class="chips" id="bTime">${[[30,"30 min"],[60,"1 hour"],[120,"2 hours +"]].map(([k,l])=>`<button type="button" class="chip" data-v="${k}" aria-pressed="${b.time===k}">${l}</button>`).join("")}</div>
+        <p class="small" style="font-weight:700">What do you feel like?</p>
+        <div class="chips" id="bMood">${MOODS.map(([k,l])=>`<button type="button" class="chip" data-v="${k}" aria-pressed="${b.mood===k}">${l}</button>`).join("")}</div></div>
+      <button class="full" id="bGo">Show me ideas</button></div>`;
+    $("[data-close]", el).onclick = () => el.remove();
+    $$("#bTime [data-v]", el).forEach(x=>x.onclick=()=>{ b.time=Number(x.dataset.v); ask(); });
+    $$("#bMood [data-v]", el).forEach(x=>x.onclick=()=>{ b.mood=x.dataset.v; ask(); });
+    $("#bGo", el).onclick = () => { state.ideaSeed = Date.now(); ideas(); };
+  };
+  const ideas = () => {
+    const kinds = MOOD_KINDS[b.mood];
+    const offers = liveOffers().filter(x=>offerNow(x.o)).map(x=>({...x, d: km(myTown(),x.m.town) + (kinds.includes(x.m.kind)?0:4) + (x.o.flashUntil?-1.5:0)})).sort((a,c)=>a.d-c.d).slice(0,3);
+    const acts = liveActivities().filter(x=>daysTo(x.a.date)<=2).sort((a,c)=>(a.a.date===today()?-1:0)-(c.a.date===today()?-1:0) || km(myTown(),a.m.town)-km(myTown(),c.m.town)).slice(0,2);
+    const pool = IDEAS.filter(x=>x[2]===b.mood && x[3]<=b.time);
+    const extra = IDEAS.filter(x=>x[2]!==b.mood && x[3]<=b.time);
+    const list = [...shuffle(pool, state.ideaSeed), ...shuffle(extra, state.ideaSeed+1)].slice(0,6);
+    const groups = myGroups(); const doneFree = !!(meP().free||{})[today()];
+    const label = b.time===30 ? "the next 30 minutes" : b.time===60 ? "the next hour" : "this afternoon or evening";
+    const firstPlace = offers[0]?.m.name;
+    el.innerHTML = `<div class="in">
+      <div class="row between"><button class="ghost small" data-back>‹ Change</button><button class="ghost small" data-close>Close</button></div>
+      <h2>Ideas for ${label}</h2>
+      <div class="opt"><span class="tag" style="color:var(--accent)">Places open now · ${offers.length}</span>
+        ${offers.length ? `<div class="list">${offers.map(x=>`<div style="display:flex;flex-direction:column;gap:8px"><div class="offer two"><div class="ico">${ICON[x.m.kind]||ICON.other}</div><div><div class="t">${esc(x.o.title)}</div><div class="b">${esc(x.m.name)} · ${esc(distLabel(x.m.town))}</div><div class="chips" style="margin-top:6px"><span class="chip hot">${x.o.flashUntil?"Flash · ":""}${esc(offerWindow(x.o))}</span><span class="chip">${x.o.cost} pts</span>${x.m.example?'<span class="chip ex">Example</span>':""}</div></div></div>
+          <div class="row"><button class="ghost small" data-claim="${esc(x.mid)}|${esc(x.key)}" style="flex:1">Get it</button><button class="small" data-checkin="${esc(x.mid)}" style="flex:1">I'm there: check in</button></div></div>`).join("")}</div>`
+        : `<p class="muted small">No partner offers open right now in your area. Plenty of other ideas below.</p>`}</div>
+      ${acts.length?`<div class="opt"><span class="tag" style="color:var(--plum)">Happening soon</span><div class="list">${activityCards(acts,2)}</div></div>`:""}
+      <div class="opt"><span class="tag" style="color:var(--teal)">Free ideas · +10 pts once a day</span>
+        <div class="list">${list.map((x,i)=>`<div class="offer"><div class="ico">${ICON.walk}</div><div><div class="t">${esc(x[0])}</div><div class="b">${esc(x[1])}</div></div><button class="ghost small" data-free="${i}" ${doneFree?"disabled":""}>${doneFree?"Done":"Did it"}</button></div>`).join("")}</div>
+        <button class="ghost small" id="moreIdeas">Show other ideas</button></div>
+      <div class="opt"><span class="tag" style="color:var(--muted)">With friends</span>
+        ${groups.length ? `<div class="offer two"><div class="ico">${ICON.friends}</div><div><div class="t">Ask your group to join you</div><div class="b">Your plan shows up on their Today screen.</div></div></div>
+          <label for="pText">Your plan<input id="pText" maxlength="80" value="${esc(firstPlace?`${firstPlace} in 20 minutes. Who's in?`:`${list[0]?list[0][0]:"Walk"} in 20 minutes. Who's in?`)}"></label>
+          <div class="row"><select id="pGroup" aria-label="Group">${groups.map(([c,g])=>`<option value="${esc(c)}">${esc(g.name)}</option>`).join("")}</select><button class="teal small" id="pSend">Send</button></div>`
+        : `<p class="muted small">Create a group in Friends to send plans to your friends.</p>`}</div></div>`;
+    $("[data-close]", el).onclick = () => el.remove();
+    $("[data-back]", el).onclick = ask;
+    $("#moreIdeas", el).onclick = () => { state.ideaSeed += 7; ideas(); };
+    $$("[data-claim]", el).forEach(x=>x.onclick=()=>{ const [mid,key] = x.dataset.claim.split("|"); confirmClaim(mid,key); });
+    $$("[data-checkin]", el).forEach(x=>x.onclick=()=>checkIn(x.dataset.checkin));
+    $$("[data-free]", el).forEach(x=>x.onclick=async()=>{ const np = clone(meP()); np.free = {...(np.free||{}), [today()]: true}; if (await writeMe(np)) { toast("+10 points. Enjoy it."); ideas(); } });
+    const ps = $("#pSend", el); if (ps) ps.onclick = async () => {
+      const code = $("#pGroup", el).value, g = clone(state.groups[code]), text = $("#pText", el).value.trim(); if (!text) return;
+      g.plans = [...(g.plans||[]).filter(x=>Date.now()-x.at < 24*3600e3), {by:S.me, text, at:Date.now()}].slice(-10);
+      try { await S.save("groups", code, g); toast("Plan sent to "+g.name); } catch(e){ toast("Couldn't send. Try again."); }
+    };
+  };
+  ask();
+}
+function checkIn(mid){
+  const m = state.merchants[mid]; if (!m) return;
+  const done = (meP().checkins||[]).some(c=>c.venueId===mid && dkey(c.at)===today());
+  const sc = flow("Check in"); sc.style.zIndex = 30;
+  sc.innerHTML = `<div class="in"><div class="row between"><h2>Check in</h2><button class="ghost small" data-close>Close</button></div>
+    <div class="card"><h3>${esc(m.name)}</h3><p class="muted small">${esc(distLabel(m.town))}</p>
+    ${done?`<p>You already checked in here today.</p>`:`<label for="ciCode">Code on the poster at the counter<input id="ciCode" autocomplete="off" style="font-family:var(--mono);text-transform:uppercase;font-size:20px"></label>
+    <button class="full" id="ciGo">Check in · +30 pts</button><p class="small muted">Staying a while? Start a Focus session at this place for 60% more points.</p>`}</div></div>`;
+  $("[data-close]", sc).onclick = () => sc.remove();
+  const go = $("#ciGo", sc); if (go) go.onclick = async () => {
+    if (await sha($("#ciCode", sc).value) !== m.codeHash) { toast("That code doesn't match. Check the poster."); return; }
+    const np = clone(meP()); np.checkins = [...(np.checkins||[]), {at:Date.now(), venueId:mid}];
+    if (await writeMe(np)) { sc.remove(); toast("Checked in at "+m.name+": +30 pts"); }
+  };
+}
+
+// ================= explore / rewards =================
+function offerRow(x){
+  const {mid, key, o, m} = x; const avail = offerNow(o), left = budgetLeft(mid, key, o); const bal = stats(S.me).balance; const already = myWeekAt(mid);
+  return `<div class="offer"><div class="ico">${ICON[m.kind]||ICON.other}</div>
+    <div style="min-width:0"><div class="t">${esc(o.title)}</div><div class="b">${esc(m.name)} · ${esc(distLabel(m.town))}</div>
+      <div class="chips" style="margin-top:6px"><span class="chip on">${esc(TIERS[o.tier]?.label||"Reward")}</span>${o.flashUntil?`<span class="chip hot">Flash · ${esc(offerWindow(o))}</span>`:o.offPeak?`<span class="chip ${avail?"hot":""}">${avail?"Quiet hours now":esc(offerWindow(o))}</span>`:`<span class="chip">Any time</span>`}<span class="chip">${left} left this week</span>${m.example?`<span class="chip ex">Example</span>`:""}</div></div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px"><div class="cost">${o.cost}<small>pts</small></div>
+      <button class="small" data-claim="${esc(mid)}|${esc(key)}" ${(bal<o.cost||left<=0||already||!S.canWrite)?"disabled":""}>${left<=0?"Gone":already?"Next week":"Get"}</button></div></div>`;
+}
+function bindOfferButtons(){ $$("#view [data-claim]").forEach(b=>b.addEventListener("click", ()=>{ const [mid,key] = b.dataset.claim.split("|"); confirmClaim(mid,key); })); }
+function confirmClaim(mid, key){
+  const m = state.merchants[mid], o = m?.offers?.[key]; if (!o) return;
+  const sc = flow("Get reward"); sc.style.zIndex = 30;
+  sc.innerHTML = `<div class="in"><div class="row between"><h2>${esc(o.title)}</h2><button class="ghost small" data-close>Close</button></div>
+    <div class="card"><p><b>${esc(m.name)}</b> · ${esc(distLabel(m.town))}</p>${o.detail?`<p class="muted">${esc(o.detail)}</p>`:""}<p class="small muted">${esc(TIERS[o.tier]?.label||"")} · valid ${esc(offerWindow(o))}</p>
+    <div class="row between"><span class="muted">Cost</span><span style="font-family:var(--display);font-weight:800;font-size:22px;color:var(--accent)">${o.cost} pts</span></div>
+    <p class="small muted">One reward per place per week. At the counter, tap "Show code": it lasts 5 minutes, so screenshots don't work.</p>
+    <button class="full" id="doClaim">Spend ${o.cost} points</button></div></div>`;
+  $("[data-close]", sc).onclick = () => sc.remove();
+  $("#doClaim", sc).onclick = async () => {
+    const st = stats(S.me); if (st.balance < o.cost) { toast("Not enough points yet"); return; }
+    if (budgetLeft(mid, key, o) <= 0) { toast("This week's rewards are gone. Try next week."); return; }
+    if (myWeekAt(mid)) { toast("One reward per place per week. Try another place."); return; }
+    const np = clone(meP()); np.coupons = [...(np.coupons||[]), {id:rid(8), venueId:mid, offerKey:key, title:o.title, tier:o.tier, venue:m.name, town:m.town, window:offerWindow(o), cost:o.cost, at:Date.now()}];
+    $("#doClaim", sc).disabled = true;
+    if (await writeMe(np)) { $$(".flow").forEach(f=>f.remove()); state.exploreTab="wallet"; go("explore"); toast("In your wallet. Show it at the counter."); }
+    else $("#doClaim", sc).disabled = false;
+  };
+}
+function viewExplore(){
+  const t = state.exploreTab, st = stats(S.me);
+  const all = liveOffers().sort((a,b)=>km(myTown(),a.m.town)-km(myTown(),b.m.town) || a.o.cost-b.o.cost);
+  const shown = state.cat==="all" ? all : all.filter(x=>CATS[state.cat][1].includes(x.m.kind));
+  const wallet = (meP().coupons||[]).slice().reverse();
+  const acts = liveActivities();
+  const prof = profile();
+  const actsSorted = acts.slice().sort((a,b)=>((b.a.audience===prof)-(a.a.audience===prof)));
+  let body = "";
+  if (t==="offers") body = `<section class="card"><h2>Rewards near ${esc(myTown())}</h2><div class="chips">${Object.entries(CATS).map(([k,[l]])=>`<button type="button" class="chip" data-cat="${k}" aria-pressed="${state.cat===k}">${l}</button>`).join("")}</div>${shown.length?Object.keys(TIERS).map(tier=>{ const l = shown.filter(x=>x.o.tier===tier); return l.length?`<div style="display:flex;flex-direction:column;gap:10px"><div class="row between"><h3>${esc(TIERS[tier].label)}</h3><span class="small muted">${TIERS[tier].cost} pts</span></div><div class="list">${l.map(offerRow).join("")}</div></div>`:""; }).join(""):`<div class="empty"><p>Rewards from cafés, gyms and study places in the area will appear here.</p></div>`}</section>`;
+  if (t==="activities") body = `<section class="card"><h2>Happening near you</h2><p class="small muted">Courses, events, sport and workshops from local places, with LifeOn deals.</p>${actsSorted.length?`<div class="list">${activityCards(actsSorted, 20)}</div>`:`<div class="empty"><p>No activities yet. Local places will publish them here.</p></div>`}</section>`;
+  if (t==="wallet") body = `<section class="card"><h2>Wallet</h2>${wallet.length?`<div class="list">${wallet.map(c=>{ const used = couponUsed(c); const live = c.liveCode && c.liveExp > Date.now() && !used;
+      return `<div class="coupon ${used?"used":""}"><div><b>${esc(c.title)}</b><div class="small muted">${esc(c.venue)} · ${esc(c.town||"")} · ${esc(c.window||"")}</div></div>
+      ${used?`<span class="chip">Used</span>`: live ? `<div class="row"><div class="qr" data-qr="${esc(c.liveCode)}"></div><div><div class="code">${esc(c.liveCode)}</div><div class="small muted" data-exp="${c.liveExp}">valid 5:00</div></div></div>` : `<button class="full" data-show="${esc(c.id)}">Show code at the counter</button>`}</div>`; }).join("")}</div>`
+      : `<div class="empty"><p>No coupons yet. Spend points on a reward and it lands here.</p></div>`}</section>`;
+  return `${heroBlock(st)}
+  <div class="seg" role="group" aria-label="Nearby">${[["offers","Rewards"],["activities","Activities"],["wallet","Wallet"]].map(([k,l])=>`<button type="button" data-et="${k}" aria-pressed="${t===k}">${l}</button>`).join("")}</div>${body}`;
+}
+let expTimer = null;
+function bindExplore(){
+  $$("[data-et]").forEach(b=>b.onclick=()=>{ state.exploreTab=b.dataset.et; render(); });
+  $$("button[data-cat]").forEach(b=>b.onclick=()=>{ state.cat=b.dataset.cat; render(); });
+  bindOfferButtons();
+  $$("[data-show]").forEach(b=>b.onclick=async()=>{ const np = clone(meP()); const c = (np.coupons||[]).find(x=>x.id===b.dataset.show); if (!c) return; c.liveCode = "LO-"+rid(5); c.liveExp = Date.now()+5*60e3; b.disabled = true; if (await writeMe(np)) render(); else b.disabled = false; });
+  $$("#view [data-qr]").forEach(el => { try { if (window.QRCode) new QRCode(el, {text:el.dataset.qr, width:200, height:200, colorDark:"#13201C", colorLight:"#ffffff"}); } catch(e){} });
+  clearInterval(expTimer);
+  if ($("[data-exp]")) expTimer = setInterval(()=>{ let any=false; $$("[data-exp]").forEach(e=>{ const l = Number(e.dataset.exp)-Date.now(); if (l>0) { any=true; e.textContent = "valid "+Math.floor(l/60e3)+":"+pad(Math.floor(l/1e3)%60); } }); if (!any) { clearInterval(expTimer); if (route()==="explore" && !$(".flow")) render(); } }, 1000);
+}
+
+// ================= friends =================
+function viewFriends(){
+  const mine = myGroups(); const live = liveFriends();
+  return `${live.length?`<section class="card"><div class="row between"><h3>Focusing right now</h3><span class="live">${live.length} live</span></div><div class="list">${liveRows(live)}</div><button class="ghost full" data-join-focus>Join them</button></section>`:""}
+  ${mine.length ? mine.map(([c,g])=>groupCard(c,g)).join("") : `<section class="card"><div class="empty"><h3>Better with friends</h3><p>Create a group, share the code and focus together. Everyone is ranked on their own progress.</p></div></section>`}
+  <section class="card"><h3>Create or join a group</h3>
+    <form id="newGroup" class="row"><input id="gName" maxlength="40" placeholder="e.g. LIUC study group" aria-label="Group name" required><button class="teal" type="submit" ${S.canWrite?"":"disabled"}>Create</button></form>
+    <form id="joinGroup" class="row"><input id="gCode" maxlength="8" placeholder="Code from a friend" aria-label="Group code" style="text-transform:uppercase;font-family:var(--mono)" required><button class="ghost" type="submit" ${S.canWrite?"":"disabled"}>Join</button></form></section>`;
+}
+function groupCard(code, g){
+  const rows = (g.members||[]).filter(id=>state.players[id]).map(id=>({id, st:stats(id)})).sort((a,b)=>b.st.weekPts-a.st.weekPts);
+  const plans = (g.plans||[]).filter(x=>Date.now()-x.at < 12*3600e3).slice().reverse().slice(0,3);
+  return `<section class="card"><div class="row between"><h2>${esc(g.name)}</h2><button class="ghost small" data-copy="${esc(code)}" aria-label="Copy group code"><span style="font-family:var(--mono)">${esc(code)}</span></button></div>
+    <p class="small muted">This week, ranked on points. Points come from your own progress, so anyone can win.</p>
+    <div class="list">${rows.map((r,i)=>`<div class="lb ${r.id===S.me?"me":""}"><span class="rk">${i+1}</span><img alt="" data-uid="${esc(r.id)}" src="${avatar("?")}"><div style="min-width:0"><div class="nm" data-uid="${esc(r.id)}">Someone</div><div class="small muted">${fmtMin(r.st.weekFocus)} offline · ${r.st.streak}-day streak</div></div><span class="sc">${r.st.weekPts}</span></div>`).join("")}</div>
+    ${plans.length?`<div class="banner">${plans.map(x=>`<div><b data-uid="${esc(x.by)}">Someone</b>: ${esc(x.text)}</div>`).join("")}</div>`:""}</section>`;
+}
+function bindFriends(){
+  const j = $("[data-join-focus]"); if (j) j.onclick = () => openFocus(profile()==="work"?"work":profile()==="free"?"evening":"study", "group");
+  $("#newGroup").onsubmit = async e => { e.preventDefault(); const name=$("#gName").value.trim(); if(!name) return; const code=rid(6);
+    try { await S.save("groups", code, {name, members:[S.me], createdBy:S.me, createdAt:Date.now(), plans:[]}); toast("Group created. Share the code "+code); } catch(err){ toast("Couldn't create the group. Try again."); } };
+  $("#joinGroup").onsubmit = async e => { e.preventDefault(); const code=$("#gCode").value.trim().toUpperCase(); const g=state.groups[code];
+    if (!g) { toast("No group with that code. Check it with your friend."); return; }
+    if ((g.members||[]).includes(S.me)) { toast("You're already in this group"); return; }
+    try { await S.save("groups", code, {...clone(g), members:[...(g.members||[]), S.me]}); toast("Joined "+g.name); } catch(err){ toast("Couldn't join. Try again."); } };
+  $$("[data-copy]").forEach(b=>b.onclick=async()=>{ try{ await navigator.clipboard.writeText(b.dataset.copy); toast("Code copied"); }catch(e){ toast("Code: "+b.dataset.copy); } });
+}
+
+// ================= me =================
+function viewMe(){
+  const p = meP(), st = stats(S.me), g = myGoals();
+  return `<section class="card"><div class="row"><img alt="" data-uid="${esc(S.me)}" src="${avatar("?")}" style="width:56px;height:56px;border-radius:50%"><div><h2 data-uid="${esc(S.me)}">You</h2><p class="small muted">${esc(PROFILES[p.profile]?.label||"")} · ${esc(p.town)} · since ${esc(p.joined||"")}</p></div></div>
+    <div class="grid2"><div class="stat"><span class="n">${fmtMin(st.focusMin)}</span><span class="k">time won back</span></div><div class="stat"><span class="n">${st.earned}</span><span class="k">points earned</span></div></div></section>
+  <section class="card"><h3>Your profile</h3><p class="small muted">LifeOn changes its home screen for what you need. Switch any time.</p>
+    <div class="chips" id="mProf">${Object.entries(PROFILES).map(([k,v])=>`<button type="button" class="chip" data-v="${k}" aria-pressed="${p.profile===k}">${esc(v.label)}</button>`).join("")}</div></section>
+  ${progressBlock(st)}
+  <form class="card" id="goalForm"><h3>Weekly goals</h3><p class="small muted">Set your own targets. They show as rings on Today.</p><div class="grid3"><label for="gF">Focus hours<input id="gF" type="number" min="1" max="60" value="${g.focus}"></label><label for="gM">Workouts<input id="gM" type="number" min="0" max="21" value="${g.move}"></label><label for="gP">Points<input id="gP" type="number" min="50" max="1050" step="50" value="${g.points}"></label></div><button class="ghost small" type="submit" style="align-self:flex-start">Save goals</button></form>
+  <form class="card" id="meForm"><h2>Settings</h2>
+    <div><p class="small" style="font-weight:700;margin-bottom:8px">Apps locked during Focus</p><div class="chips" id="mApps">${SOCIAL.map(a=>`<button type="button" class="chip" data-v="${a}" aria-pressed="${(p.blocked||[]).includes(a)}">${a}</button>`).join("")}</div></div>
+    <label for="mTown">Where you live<select id="mTown">${townOptions(p.town)}</select></label>
+    <label for="mBase">Daily time on these apps when you started (minutes)<input id="mBase" type="number" min="10" max="900" value="${p.baseline}"></label>
+    <button class="full ghost" type="submit">Save</button></form>
+  <section class="card"><h2>How points work</h2><p class="small muted">The more an action is verified, the more it's worth.</p>
+    <div class="list">
+      <div class="row between"><span>Focus, every 2 minutes</span><b>+1</b></div>
+      <div class="row between"><span>Focus at a partner place</span><b>+60%</b></div>
+      <div class="row between"><span>Group session, a friend finishes too</span><b>+10</b></div>
+      <div class="row between"><span>Check-in at a partner place</span><b>+30</b></div>
+      <div class="row between"><span>Free idea, self-reported</span><b>+10 once a day</b></div>
+      <div class="row between"><span>Work shutdown routine</span><b>+5 once a day</b></div>
+      <div class="row between"><span>Every 7 days in a row</span><b>+50</b></div>
+      <div class="row between"><span>Move session without check-in</span><b>up to 30</b></div>
+      <div class="row between"><span>Explorer: 3 different places in a month</span><b>+60</b></div>
+      <div class="row between"><span>Daily maximum</span><b>150</b></div></div>
+    <p class="small muted">Rewards come in three levels: ${Object.values(TIERS).map(t=>t.label+" "+t.cost+" pts").join(", ")}. One reward per place per week, so places can keep offering them.</p></section>
+  <section class="card"><h3>Your data</h3><div class="list small"><div>No ads, ever.</div><div>Your screen time stays on your phone: LifeOn only knows if a session was completed.</div><div>Friends see only your name, points and streak.</div><div>Shops see that a coupon was used, not your name.</div></div><div class="row wrap"><button class="ghost small" data-guide>How LifeOn works</button><button class="ghost small" id="delMe" style="color:var(--bad)">Delete my data</button></div></section>
+  <section class="card"><h3>About locking apps</h3><p class="small muted">In this pilot LifeOn runs in the browser. During Focus the other apps are locked by one rule: leave LifeOn and the session stops. To unlock early you must pass 3 brain challenges in a row with 3 lives; lose them all and you wait 5 minutes, then 10. The iPhone and Android versions will lock the chosen apps for real.</p></section>
+  ${state.merchants[S.me]?"":`<section class="card"><h3>Have a business?</h3><p class="small muted">Bring new customers in your quiet hours.</p><button class="ghost small" id="goShop" style="align-self:flex-start">Register your business</button></section>`}`;
+}
+function bindMe(){
+  toggleChips($("#mApps"), false);
+  $("#goalForm").onsubmit = async e => { e.preventDefault(); const np = clone(meP()); np.goals = {focus:Math.max(1, Number($("#gF").value)||1), move:Math.max(0, Number($("#gM").value)||0), points:Math.max(50, Number($("#gP").value)||50)}; if (await writeMe(np)) toast("Goals saved"); };
+  const dm = $("#delMe"); if (dm) dm.onclick = async () => { if (dm.dataset.armed!=="1") { dm.dataset.armed="1"; dm.textContent="Tap again to delete everything"; return; } try { await S.remove("players", S.me); toast("Your data has been deleted"); } catch(e){ toast("Couldn't delete. Try again."); } };
+  $$("#mProf [data-v]").forEach(b=>b.onclick=async()=>{ const np = clone(meP()); np.profile = b.dataset.v; if (await writeMe(np)) toast("Profile: "+PROFILES[np.profile].label); });
+  $("#meForm").onsubmit = async e => { e.preventDefault(); const np = clone(meP()); np.blocked = picked($("#mApps")); np.town = $("#mTown").value; np.baseline = Math.max(10, Number($("#mBase").value)||np.baseline); if (await writeMe(np)) toast("Saved"); };
+  const gs = $("#goShop"); if (gs) gs.onclick = () => { state.shopMid = S.me; go("shop"); };
+}
+
+// ================= shop =================
+function shopNumbers(mid){
+  const m = state.merchants[mid]; const ms = monthStart(); const seenBefore = new Set(); const seenMonth = new Set();
+  let checkins=0, focus=0, claimed=0;
+  const firstSeen = {};
+  const note = (pid, at) => { if (!(pid in firstSeen) || at < firstSeen[pid]) firstSeen[pid] = at; };
+  for (const [pid,p] of Object.entries(state.players)) {
+    for (const c of (p.checkins||[])) if (c.venueId===mid) { note(pid, c.at); if (c.at>=ms) { checkins++; seenMonth.add(pid); } }
+    for (const s of (p.sessions||[])) if (s.mode==="venue" && s.venueId===mid && s.ok) { note(pid, s.start); if (s.start>=ms) { focus++; seenMonth.add(pid); } }
+    for (const c of (p.coupons||[])) if (c.venueId===mid && c.at>=ms) claimed++;
+  }
+  const red = (m.redeemed||[]).filter(r=>r.at>=ms);
+  for (const r of red) { note(r.player, r.at); seenMonth.add(r.player); }
+  const newCustomers = [...seenMonth].filter(pid => firstSeen[pid] >= ms).length;
+  const visits = checkins + focus + red.length;
+  const revenue = visits * Number(m.avgTicket||0);
+  const discountCost = red.reduce((s,r)=>s+Number(r.cost||0),0);
+  const fees = isPro(mid) ? PRO_PRICE : red.length*FEE;
+  return {checkins, focus, claimed, used:red.length, visits, newCustomers, people:seenMonth.size, revenue, discountCost, fees, net: revenue - discountCost - fees, feesIfFree: red.length*FEE};
+}
+const lockBox = (title, text) => `<div class="lock"><h3>${ICON.lock}${esc(title)} <span class="chip pro">Pro</span></h3><p class="small muted">${esc(text)}</p><button class="small" data-st="plan" style="align-self:flex-start;background:var(--plum);color:var(--plum-ink)">See Pro</button></div>`;
+function viewShop(){
+  const mid = state.shopMid || S.me; const m = state.merchants[mid];
+  if (!m) {
+    if (mid !== S.me) return `<section class="card"><p class="muted">This place no longer exists.</p></section>`;
+    return `<section class="card" style="background:var(--teal);color:var(--teal-ink)"><h2>Bring people in when you're empty</h2><p class="small" style="opacity:.9">LifeOn users earn points by putting the phone down. They spend them at places like yours, in the hours you choose.</p></section>
+    <form class="card" id="regForm"><h2>Register your business</h2>
+      <label for="rName">Business name<input id="rName" maxlength="60" required placeholder="e.g. Bar Centrale"></label>
+      <div class="grid2"><label for="rKind">Type<select id="rKind">${Object.entries(KIND).map(([k,l])=>`<option value="${k}">${esc(l)}</option>`).join("")}</select></label><label for="rTown">Town<select id="rTown">${townOptions("Castellanza")}</select></label></div>
+      <label for="rAddr">Address<input id="rAddr" maxlength="100" required placeholder="Street and number"></label>
+      <div class="grid2"><label for="rPiva">VAT number (Partita IVA)<input id="rPiva" inputmode="numeric" maxlength="11" required placeholder="11 digits"></label><label for="rAteco">ATECO code<input id="rAteco" maxlength="8" required placeholder="e.g. 56.30.00"></label></div>
+      <label for="rContact">Phone or email for the LifeOn team<input id="rContact" maxlength="80" required></label>
+      <label for="rTicket">Average spend per customer (€)<input id="rTicket" type="number" min="1" max="500" step="0.5" value="6"></label>
+      <p class="small muted">We check your details before you go live. You start on the Free plan: no monthly fee, €${FEE.toFixed(2)} only when a LifeOn coupon is used.</p>
+      <button class="full" type="submit" ${S.canWrite?"":"disabled"}>Send registration</button></form>`;
+  }
+  const b = billing(mid), pro = isPro(mid), mine = mid===S.me;
+  if (b.status !== "approved") return `<section class="card"><h2>${esc(m.name)}</h2><p class="muted small">${esc(m.address||"")} · ${esc(m.town)}</p>
+    ${b.status==="rejected"?`<div class="banner bad"><b>Registration not approved.</b> ${esc(b.note||"Contact the LifeOn team for details.")}</div>`:`<div class="banner warn"><b>Under review.</b> The LifeOn team is checking your VAT number and ATECO code. You'll go live as soon as it's approved.</div>`}
+    <div class="grid2"><div class="stat"><span class="k">VAT number</span><span style="font-family:var(--mono)">${esc(m.piva)}</span></div><div class="stat"><span class="k">ATECO</span><span style="font-family:var(--mono)">${esc(m.ateco)}</span></div></div></section>`;
+  const t = state.shopTab, n = shopNumbers(mid);
+  const offers = Object.entries(m.offers||{}).sort((a,c)=>(a[1].createdAt||0)-(c[1].createdAt||0));
+  const acts = Object.entries(m.activities||{}).sort((a,c)=>(a[1].date||"").localeCompare(c[1].date||""));
+  const code = mine ? state.myCode : state.teamkeys[mid]?.code;
+  const head = `<section class="card" style="background:var(--teal);color:var(--teal-ink)"><div class="row between"><div><h2>${esc(m.name)}</h2><p class="small" style="opacity:.9">${esc(KIND[m.kind]||"")} · ${esc(m.town)}${m.example?" · Example":""}</p></div><span class="chip ${pro?"pro":""}" style="${pro?"":"background:rgba(255,255,255,.2);color:inherit;box-shadow:none"}">${pro?"Pro":"Free"}</span></div></section>
+  ${mid!==S.me?`<div class="row"><a href="#team" class="link small">‹ Back to Team</a></div>`:""}
+  <div class="seg" role="group" aria-label="Shop">${[["results","Results"],["check","Check code"],["offers","Rewards"],["acts","Activities"],["plan","Plan"]].map(([k,l])=>`<button type="button" data-st="${k}" aria-pressed="${t===k}">${l}</button>`).join("")}</div>`;
+  let body = "";
+  if (t==="results") body = `<section class="card"><h2>This month</h2>
+      <div class="grid2"><div class="stat"><span class="n">${n.visits}</span><span class="k">visits from LifeOn</span></div><div class="stat"><span class="n">${n.newCustomers}</span><span class="k">new customers</span></div>
+      <div class="stat"><span class="n">${n.used}/${n.claimed}</span><span class="k">coupons used / claimed</span></div><div class="stat"><span class="n">${n.focus}</span><span class="k">Focus sessions here</span></div></div></section>
+    <section class="card"><h3>Is it worth it? Estimated month</h3>
+      <div class="list"><div class="row between"><span>${n.visits} visits × ${eur(m.avgTicket||0)} average spend</span><b>${eur(n.revenue)}</b></div>
+      <div class="row between"><span>Cost of the rewards you gave</span><b>−${eur(n.discountCost)}</b></div>
+      <div class="row between"><span>${pro?"Pro plan":"Fees, "+eur(FEE)+" per used coupon"}</span><b>−${eur(n.fees)}</b></div>
+      <div class="row between"><span style="font-weight:800">Estimated net</span><span class="big" style="font-size:26px;color:${n.net>=0?"var(--good)":"var(--bad)"}">${eur(n.net)}</span></div></div>
+      <p class="small muted">An estimate: it assumes each visit spends your average. Change the average in Plan.</p>
+      ${!pro && n.feesIfFree > PRO_PRICE ? `<div class="banner"><b>Pro would save you ${eur(n.feesIfFree-PRO_PRICE)} this month</b> and unlock flash offers and more rewards.</div>`:""}</section>
+    <section class="card"><h3>Check-in code</h3><div class="poster"><div><div class="small" style="opacity:.8;font-weight:700;text-transform:uppercase;letter-spacing:.08em">LifeOn check-in</div><div class="code">${esc(code||"····")}</div><div class="small" style="opacity:.8">Put it at the counter. Change it if it gets shared online.</div></div>${code?`<div class="qr" data-qr="${esc(code)}"></div>`:""}</div>
+      <button class="ghost small" id="rotate" style="align-self:flex-start">New code</button></section>`;
+  if (t==="check") body = `<form class="card" id="valForm"><h2>Check a coupon</h2><p class="muted small">Type the code on the customer's phone. Codes last 5 minutes.</p>
+    <input id="valCode" placeholder="LO-XXXXX" aria-label="Coupon code" style="font-family:var(--mono);text-transform:uppercase;font-size:20px" required>
+    <button class="full teal" type="submit">Check</button><div id="valOut"></div></form>`;
+  if (t==="offers") {
+    const activeCount = offers.filter(([,o])=>o.active && !o.flashUntil).length;
+    body = `${pro?`<section class="card" style="background:var(--accent);color:var(--accent-ink)"><h2>Fill now</h2><p class="small">Empty right now? Launch a 1-hour flash reward. It's shown first to people nearby who press "I'm bored".</p>
+      <select id="flWhat" aria-label="Flash reward"><option value="−50% on any drink|1">−50% on any drink · costs you about €1</option><option value="Free class for a newcomer|0">Free class for a newcomer · empty spot</option><option value="2-for-1 coffee|0.4">2-for-1 coffee · about €0.40</option></select>
+      <button class="full" id="flGo" style="background:var(--accent-ink);color:var(--accent)">Launch for 1 hour</button></section>`:lockBox("Fill now","Launch a 1-hour flash reward when you're empty. Shown first to people nearby who are bored right now.")}
+    ${!pro && activeCount>=1 ? lockBox("More rewards","The Free plan shows 1 active reward. Pro lets you run one per tier and per time slot.") : `<form class="card" id="offerForm"><h2>New reward</h2>
+      <div><p class="small" style="font-weight:700;margin-bottom:8px">Level</p><div class="chips" id="oTier">${Object.entries(TIERS).map(([k,v],i)=>`<button type="button" class="chip" data-v="${k}" aria-pressed="${i===0}">${esc(v.label)} · ${v.cost} pts</button>`).join("")}</div><p class="small muted" id="tierHint">${esc(TIERS.small.example)}</p></div>
+      <label for="oTitle">Reward<input id="oTitle" maxlength="60" required placeholder="e.g. Biscuit with your coffee"></label>
+      <label for="oDetail">How to use it<input id="oDetail" maxlength="120" placeholder="e.g. Show the code at the counter"></label>
+      <div class="grid2"><label for="oCostYou">What it costs you (€)<input id="oCostYou" type="number" min="0" max="100" step="0.05" value="0.3"></label><label for="oBudget">Max per week<input id="oBudget" type="number" min="1" max="200" value="${TIERS.small.budget}"></label></div>
+      <label class="row" style="flex-direction:row;color:var(--ink)"><input id="oPeak" type="checkbox" checked> Only in my quiet hours</label>
+      <div id="peakBox" style="display:flex;flex-direction:column;gap:10px"><div class="chips" id="oDays">${DAYS.map((d,i)=>`<button type="button" class="chip" data-v="${i}" aria-pressed="${i<5}">${d}</button>`).join("")}</div>
+        <div class="grid2"><label for="oFrom">From<input id="oFrom" type="time" value="14:30"></label><label for="oTo">To<input id="oTo" type="time" value="17:30"></label></div></div>
+      <p class="small muted">Each person can get one reward from you per week. When the weekly maximum is reached, the reward pauses until Monday.</p>
+      <button class="full" type="submit">Publish reward</button></form>`}
+    <section class="card"><h3>Your rewards</h3>${offers.length?`<div class="list">${offers.map(([k,o])=>`<div class="row between"><div style="min-width:0"><b>${esc(o.title)}</b><div class="small muted">${esc(TIERS[o.tier]?.label||"")} · ${o.cost} pts · ${esc(offerWindow(o))} · ${weekClaims(mid,k)}/${o.budgetWeek||TIERS[o.tier]?.budget} this week</div></div><div class="row" style="gap:6px"><button class="ghost small" data-toggle="${esc(k)}">${o.active?"Pause":"Resume"}</button><button class="ghost small" data-del="${esc(k)}">Delete</button></div></div>`).join("")}</div>`:`<p class="muted small">No rewards yet.</p>`}</section>`;
+  }
+  if (t==="acts") body = `${!pro && acts.filter(([,a])=>a.active && a.date>=today()).length>=1 ? lockBox("More activities","The Free plan shows 1 upcoming activity. Pro lets you publish your whole calendar.") : `<form class="card" id="actForm"><h2>New activity</h2><p class="small muted">Courses, events, sport, workshops. LifeOn users see them in Activities and in "I'm bored".</p>
+      <label for="aTitle">What<input id="aTitle" maxlength="60" required placeholder="e.g. Yoga in the park"></label>
+      <label for="aType">Type<select id="aType"><option value="event">Event</option><option value="course">Course / workshop</option><option value="sport">Sport class</option><option value="team">Team looking for players</option><option value="outdoor">Outdoor / trip</option></select></label>
+      <div class="grid2"><label for="aDate">Day<input id="aDate" type="date" required></label><label for="aTime">Time<input id="aTime" type="time" required value="18:30"></label></div>
+      <label for="aNote">Details<input id="aNote" maxlength="120" placeholder="e.g. Max 10 people, beginners welcome"></label>
+      <label for="aDeal">LifeOn deal<input id="aDeal" maxlength="60" placeholder="e.g. −20% for LifeOn users"></label>
+      <label for="aAud">Mostly for<select id="aAud"><option value="all">Everyone</option><option value="study">Students</option><option value="work">Workers</option><option value="free">Free time</option></select></label>
+      <button class="full" type="submit">Publish activity</button></form>`}
+    <section class="card"><h3>Your activities</h3>${acts.length?`<div class="list">${acts.map(([k,a])=>`<div class="row between"><div style="min-width:0"><b>${esc(a.title)}</b><div class="small muted">${esc(fmtDate(a.date))} ${esc(a.time)}${a.deal?" · "+esc(a.deal):""}${a.date<today()?" · past":""}</div></div><button class="ghost small" data-delact="${esc(k)}">Delete</button></div>`).join("")}</div>`:`<p class="muted small">No activities yet.</p>`}</section>`;
+  if (t==="plan") body = `<section class="card"><h2>Your plan</h2>
+      <div class="plan ${pro?"":""}"><div class="row between"><b>Free</b>${pro?"":'<span class="chip on">Current</span>'}</div><div class="price">€0 <span class="small" style="font-family:var(--body);font-weight:600">/ month</span></div><ul><li>1 active reward and 1 activity</li><li>Check-in code and coupon check</li><li>Results and estimated net</li><li>€${FEE.toFixed(2)} per coupon used</li></ul></div>
+      <div class="plan pro"><div class="row between"><b>Pro</b>${pro?'<span class="chip" style="background:var(--plum-ink);color:var(--plum)">Current</span>':""}</div><div class="price">€${PRO_PRICE} <span class="small" style="font-family:var(--body);font-weight:600">/ month</span></div><ul><li>Unlimited rewards on all three levels</li><li>Fill now: 1-hour flash rewards when you're empty</li><li>Your whole calendar of activities</li><li>No fee per coupon</li></ul>
+        ${pro?"":m.proRequested?`<p class="small">Request sent. The LifeOn team will contact you to activate Pro.</p>`:`<button class="full" id="reqPro" style="background:var(--plum-ink);color:var(--plum)">Ask for Pro</button>`}</div>
+      <p class="small muted">Payment by bank transfer or payment link from the LifeOn team. Cancel any time.</p></section>
+    <form class="card" id="ticketForm"><h3>Average spend per customer</h3><p class="small muted">Used for your estimated net.</p><div class="row"><input id="tkVal" type="number" min="1" max="500" step="0.5" value="${esc(m.avgTicket||6)}" aria-label="Average spend in euro"><button class="teal small" type="submit">Save</button></div></form>`;
+  return head + body;
+}
+function bindShop(){
+  const mid = state.shopMid || S.me; const m = state.merchants[mid]; const mine = mid===S.me;
+  const rf = $("#regForm"); if (rf) { rf.onsubmit = async e => { e.preventDefault();
+    const piva = $("#rPiva").value.replace(/\s/g,""), ateco = $("#rAteco").value.trim();
+    if (!pivaValid(piva)) { toast("That VAT number doesn't look valid. Check the 11 digits."); return; }
+    if (!atecoValid(ateco)) { toast("ATECO code format: e.g. 56.30.00"); return; }
+    const code = rid(5);
+    const doc = {name:$("#rName").value.trim(), kind:$("#rKind").value, town:$("#rTown").value, address:$("#rAddr").value.trim(), piva, ateco, contact:$("#rContact").value.trim(), avgTicket:Number($("#rTicket").value)||6, codeHash: await sha(code), owner:S.me, createdAt:Date.now(), offers:{}, activities:{}, redeemed:[]};
+    if (await saveShop(S.me, doc)) { try { await S.setPrivate("shop", {code}); state.myCode = code; } catch(e){} toast("Registration sent. We'll check it soon."); } }; return; }
+  if (!m) return;
+  $$("[data-st]").forEach(b=>b.onclick=()=>{ state.shopTab=b.dataset.st; render(); });
+  $$("#view [data-qr]").forEach(el => { try { if (window.QRCode) new QRCode(el, {text:el.dataset.qr, width:200, height:200, colorDark:"#13201C", colorLight:"#ffffff"}); } catch(e){} });
+  const save = async upd => { const nm = clone(state.merchants[mid]); upd(nm); return saveShop(mid, nm); };
+  const rot = $("#rotate"); if (rot) rot.onclick = async () => { const code = rid(5); const h = await sha(code);
+    if (await save(nm => { nm.codeHash = h; })) { try { if (mine) { await S.setPrivate("shop", {code}); state.myCode = code; } else await S.save("teamkeys", mid, {code}); } catch(e){} toast("New code: "+code); render(); } };
+  const vf = $("#valForm"); if (vf) vf.onsubmit = async e => {
+    e.preventDefault(); const code = $("#valCode").value.trim().toUpperCase(); const out = $("#valOut");
+    let hit = null; for (const [pid,p] of Object.entries(state.players)) for (const c of (p.coupons||[])) if (c.liveCode===code && c.venueId===mid) hit={pid,p,c};
+    if (!hit) { out.innerHTML = `<div class="banner bad"><b>Not found.</b> Check the code, and that the coupon is for this place.</div>`; return; }
+    if (couponUsed(hit.c)) { out.innerHTML = `<div class="banner warn"><b>Already used.</b></div>`; return; }
+    if (hit.c.liveExp < Date.now()) { out.innerHTML = `<div class="banner warn"><b>Expired.</b> Ask the customer to tap "Show code" again.</div>`; return; }
+    out.innerHTML = `<div class="banner"><b>Valid:</b> ${esc(hit.c.title)}.</div><button type="button" class="full" id="markUsed">Mark as used</button>`;
+    $("#markUsed").onclick = async () => {
+      const before = (m.redeemed||[]).some(r=>r.player===hit.pid) || (hit.p.checkins||[]).some(c=>c.venueId===mid) || (hit.p.sessions||[]).some(s=>s.venueId===mid);
+      const off = m.offers?.[hit.c.offerKey];
+      if (await save(nm => { nm.redeemed = [...(nm.redeemed||[]), {coupon:hit.c.id, player:hit.pid, at:Date.now(), offerKey:hit.c.offerKey, newCustomer:!before, cost:Number(off?.costToYou||0)}].slice(-500); }))
+        out.innerHTML = `<div class="banner"><b>Done.</b> ${before?"Returning customer.":"New customer for you."}${isPro(mid)?"":" Fee: "+eur(FEE)+"."}</div>`;
+    };
+  };
+  const fl = $("#flGo"); if (fl) fl.onclick = async () => { const [title, cy] = $("#flWhat").value.split("|");
+    if (await save(nm => { nm.offers = nm.offers||{}; nm.offers["f"+rid(6)] = {title, detail:"Flash reward, valid for one hour.", tier:"small", cost:TIERS.small.cost, costToYou:Number(cy), budgetWeek:10, offPeak:false, days:[], from:"", to:"", flashUntil:Date.now()+3600e3, active:true, createdAt:Date.now()}; })) toast("Flash reward live for 1 hour"); };
+  const tierBox = $("#oTier"); if (tierBox) { toggleChips(tierBox, true); $$("[data-v]", tierBox).forEach(b=>b.addEventListener("click",()=>{ const t = TIERS[b.dataset.v]; $("#tierHint").textContent = t.example; $("#oBudget").value = t.budget; })); }
+  const pk = $("#oPeak"); if (pk) pk.onchange = () => { $("#peakBox").hidden = !pk.checked; };
+  toggleChips($("#oDays"), false);
+  const of = $("#offerForm"); if (of) of.onsubmit = async e => { e.preventDefault();
+    const tier = picked($("#oTier"))[0]||"small"; const days = picked($("#oDays")).map(Number);
+    if (pk.checked && !days.length) { toast("Pick at least one day"); return; }
+    const o = {title:$("#oTitle").value.trim(), detail:$("#oDetail").value.trim(), tier, cost:TIERS[tier].cost, costToYou:Number($("#oCostYou").value)||0, budgetWeek:Math.max(1,Number($("#oBudget").value)||TIERS[tier].budget), offPeak:pk.checked, days:pk.checked?days:[], from:pk.checked?$("#oFrom").value:"", to:pk.checked?$("#oTo").value:"", active:true, createdAt:Date.now()};
+    if (await save(nm => { nm.offers = nm.offers||{}; nm.offers["k"+rid(6)] = o; })) toast("Reward published"); };
+  $$("[data-toggle]").forEach(b=>b.onclick=()=>save(nm=>{ nm.offers[b.dataset.toggle].active = !nm.offers[b.dataset.toggle].active; }));
+  $$("[data-del]").forEach(b=>b.onclick=async()=>{ if (b.dataset.armed!=="1"){ b.dataset.armed="1"; b.textContent="Tap again"; setTimeout(()=>{ if(b.isConnected){b.dataset.armed="";b.textContent="Delete";} },3000); return; } if (await save(nm=>{ delete nm.offers[b.dataset.del]; })) toast("Deleted"); });
+  const af = $("#actForm"); if (af) af.onsubmit = async e => { e.preventDefault();
+    const a = {title:$("#aTitle").value.trim(), type:$("#aType").value, date:$("#aDate").value, time:$("#aTime").value, note:$("#aNote").value.trim(), deal:$("#aDeal").value.trim(), audience:$("#aAud").value, active:true, createdAt:Date.now()};
+    if (a.date < today()) { toast("Pick a day from today on"); return; }
+    if (await save(nm => { nm.activities = nm.activities||{}; nm.activities["a"+rid(6)] = a; })) toast("Activity published"); };
+  $$("[data-delact]").forEach(b=>b.onclick=async()=>{ if (await save(nm=>{ delete nm.activities[b.dataset.delact]; })) toast("Deleted"); });
+  const rp = $("#reqPro"); if (rp) rp.onclick = async () => { if (await save(nm => { nm.proRequested = Date.now(); })) toast("Request sent to the LifeOn team"); };
+  const tf = $("#ticketForm"); if (tf) tf.onsubmit = async e => { e.preventDefault(); if (await save(nm => { nm.avgTicket = Math.max(1, Number($("#tkVal").value)||6); })) toast("Saved"); };
+}
+
+// ================= team =================
+function viewTeam(){
+  const t = state.teamTab; const all = Object.entries(state.merchants);
+  const pending = all.filter(([mid])=>!billing(mid).status || billing(mid).status==="pending");
+  const live = all.filter(([mid])=>approved(mid));
+  let users=0, active=0, sessions=0, done=0, mins=0, used=0, claimed=0;
+  for (const p of Object.values(state.players)) { users++; let a=false; for (const s of (p.sessions||[])) if (inThisWeek(s.start)) { sessions++; a=true; if (s.ok){ done++; mins+=s.min; } } for (const c of (p.checkins||[])) if (inThisWeek(c.at)) a=true; for (const c of (p.coupons||[])) { claimed++; if (couponUsed(c)) used++; } if (a) active++; }
+  const fees = live.reduce((s,[mid])=> s + (isPro(mid) ? PRO_PRICE : ((state.merchants[mid].redeemed||[]).filter(r=>r.at>=monthStart()).length*FEE)), 0);
+  const tabsH = `<div class="seg" role="group" aria-label="Team">${[["apps","Requests"+(pending.length?" ("+pending.length+")":"")],["places","Places"],["pilot","Pilot"]].map(([k,l])=>`<button type="button" data-tt="${k}" aria-pressed="${t===k}">${l}</button>`).join("")}</div>`;
+  let body = "";
+  if (t==="apps") body = pending.length ? pending.map(([mid,m])=>`<section class="card"><div class="row between"><h3>${esc(m.name)}</h3><span class="chip">${esc(KIND[m.kind]||"")}</span></div>
+      <p class="small muted">${esc(m.address||"")}, ${esc(m.town)} · ${esc(m.contact||"")}</p>
+      <div class="grid2"><div class="stat"><span class="k">VAT number</span><span style="font-family:var(--mono)">${esc(m.piva)}</span><span class="small" style="color:${pivaValid(m.piva)?"var(--good)":"var(--bad)"}">${pivaValid(m.piva)?"Check digit OK":"Check digit wrong"}</span></div><div class="stat"><span class="k">ATECO</span><span style="font-family:var(--mono)">${esc(m.ateco)}</span></div></div>
+      <p class="small muted">Before approving, check the VAT number on the EU VIES service (ec.europa.eu/taxation_customs/vies) and that the ATECO code matches the type of business.</p>
+      <div class="row"><button class="teal small" data-approve="${esc(mid)}" style="flex:1">Approve on Free</button><button class="ghost small" data-reject="${esc(mid)}" style="flex:1">Reject</button></div></section>`).join("")
+    : `<section class="card"><div class="empty"><p>No registrations waiting.</p></div></section>`;
+  if (t==="places") body = `<section class="card"><h3>Live places</h3>${live.length?`<div class="list">${live.map(([mid,m])=>`<div class="row between"><div style="min-width:0"><b>${esc(m.name)}</b><div class="small muted">${esc(m.town)} · ${m.owner==="team"?"managed by the team":"self-managed"}${m.example?" · Example":""}${m.proRequested&&!isPro(mid)?" · asked for Pro":""}</div></div><div class="row" style="gap:6px">${m.owner==="team"||mid===S.me?`<button class="ghost small" data-manage="${esc(mid)}">Manage</button>`:""}<button class="small ${isPro(mid)?"ghost":""}" data-plan="${esc(mid)}" style="${isPro(mid)?"":"background:var(--plum);color:var(--plum-ink)"}">${isPro(mid)?"Set Free":"Set Pro"}</button></div></div>`).join("")}</div>`:`<p class="muted small">No live places yet.</p>`}</section>
+    <form class="card" id="teamPlace"><h3>Add a place for a shop</h3><p class="small muted">For shops that prefer the team to manage LifeOn for them.</p>
+      <label for="tpName">Name<input id="tpName" maxlength="60" required></label>
+      <div class="grid2"><label for="tpKind">Type<select id="tpKind">${Object.entries(KIND).map(([k,l])=>`<option value="${k}">${esc(l)}</option>`).join("")}</select></label><label for="tpTown">Town<select id="tpTown">${townOptions("Castellanza")}</select></label></div>
+      <div class="grid2"><label for="tpPiva">VAT number<input id="tpPiva" inputmode="numeric" maxlength="11"></label><label for="tpAteco">ATECO<input id="tpAteco" maxlength="8"></label></div>
+      <button class="full" type="submit">Add and approve</button></form>
+    ${live.length?"":`<button class="ghost small" id="addExamples" style="align-self:flex-start">Add 3 example places for a demo</button>`}`;
+  if (t==="pilot") body = `<section class="card"><h2>Pilot this week</h2><div class="grid2">
+      <div class="stat"><span class="n">${active}/${users}</span><span class="k">active / joined</span></div>
+      <div class="stat"><span class="n">${done}/${sessions}</span><span class="k">sessions completed</span></div>
+      <div class="stat"><span class="n">${fmtMin(mins)}</span><span class="k">time won back</span></div>
+      <div class="stat"><span class="n">${used}/${claimed}</span><span class="k">coupons used / claimed (all time)</span></div>
+      <div class="stat"><span class="n">${live.length}</span><span class="k">live places (${live.filter(([mid])=>isPro(mid)).length} Pro)</span></div>
+      <div class="stat"><span class="n">${eur(fees)}</span><span class="k">LifeOn revenue this month</span></div></div></section>
+    <section class="card"><h3>By profile</h3><div class="list">${Object.entries(PROFILES).map(([k,v])=>`<div class="row between"><span>${esc(v.label)}</span><b>${Object.values(state.players).filter(p=>p.profile===k).length}</b></div>`).join("")}</div></section>`;
+  return `<section class="card" style="background:var(--night);color:var(--night-ink)"><h2>LifeOn team</h2><p class="small" style="opacity:.85">Approve shops, manage plans and follow the pilot.</p></section>${tabsH}${body}`;
+}
+async function addTeamPlace(d, offers, activities, plan){
+  const mid = "t"+rid(7), code = rid(5);
+  await S.save("merchants", mid, {name:d.name, kind:d.kind, town:d.town, address:d.address||"", piva:d.piva||"", ateco:d.ateco||"", contact:"team", avgTicket:d.avgTicket||6, codeHash: await sha(code), owner:"team", example:!!d.example, createdAt:Date.now(), offers:offers||{}, activities:activities||{}, redeemed:[]});
+  await S.save("teamkeys", mid, {code});
+  await S.save("billing", mid, {status:"approved", plan:plan||"free", since:Date.now()});
+  return mid;
+}
+function bindTeam(){
+  $$("[data-tt]").forEach(b=>b.onclick=()=>{ state.teamTab=b.dataset.tt; render(); });
+  $$("[data-approve]").forEach(b=>b.onclick=async()=>{ try { await S.save("billing", b.dataset.approve, {status:"approved", plan:"free", since:Date.now()}); toast("Approved"); } catch(e){ toast("Couldn't approve."); } });
+  $$("[data-reject]").forEach(b=>b.onclick=async()=>{ if (b.dataset.armed!=="1"){ b.dataset.armed="1"; b.textContent="Tap again"; return; } try { await S.save("billing", b.dataset.reject, {status:"rejected", plan:"free", note:"Details could not be verified."}); toast("Rejected"); } catch(e){ toast("Couldn't update."); } });
+  $$("[data-plan]").forEach(b=>b.onclick=async()=>{ const mid = b.dataset.plan; const cur = billing(mid); try { await S.save("billing", mid, {...cur, status:"approved", plan: isPro(mid) ? "free" : "pro", since:Date.now()}); toast(isPro(mid)?"Set to Free":"Pro activated"); } catch(e){ toast("Couldn't update."); } });
+  $$("[data-manage]").forEach(b=>b.onclick=()=>{ state.shopMid = b.dataset.manage; state.shopTab = "results"; go("shop"); });
+  const tp = $("#teamPlace"); if (tp) tp.onsubmit = async e => { e.preventDefault(); try { await addTeamPlace({name:$("#tpName").value.trim(), kind:$("#tpKind").value, town:$("#tpTown").value, piva:$("#tpPiva").value.trim(), ateco:$("#tpAteco").value.trim()}); toast("Place added. Open Manage to get its code."); } catch(err){ toast("Couldn't add the place."); } };
+  const ex = $("#addExamples"); if (ex) ex.onclick = async () => { ex.disabled = true; const now = Date.now(); const day = k => dkey(now + k*864e5);
+    try {
+      await addTeamPlace({name:"Example café", kind:"cafe", town:"Castellanza", example:true}, {k1:{title:"Biscuit with your coffee", tier:"small", cost:100, costToYou:0.3, budgetWeek:20, offPeak:true, days:[0,1,2,3,4], from:"14:00", to:"18:00", active:true, createdAt:now}, k2:{title:"−30% on breakfast", tier:"discount", cost:300, costToYou:1.5, budgetWeek:10, offPeak:true, days:[0,1,2,3,4], from:"09:30", to:"11:30", active:true, createdAt:now+1}}, {a1:{title:"Latte art workshop", type:"workshop", date:day(3), time:"18:30", note:"Max 8 people.", deal:"−20% for LifeOn users", audience:"all", active:true}}, "pro");
+      await addTeamPlace({name:"Example gym", kind:"gym", town:"Legnano", example:true}, {k1:{title:"Free trial class", tier:"reward", cost:800, costToYou:0, budgetWeek:3, offPeak:true, days:[0,1,2,3,4], from:"10:00", to:"16:00", active:true, createdAt:now}}, {a1:{title:"Yoga in the park", type:"sport", date:day(4), time:"10:00", note:"Beginners welcome.", deal:"First session free with LifeOn", audience:"all", active:true}}, "free");
+      await addTeamPlace({name:"Example study café", kind:"library", town:"Busto Arsizio", example:true}, {k1:{title:"2 hours study table + drink", tier:"discount", cost:300, costToYou:1.2, budgetWeek:10, offPeak:false, days:[], from:"", to:"", active:true, createdAt:now}}, {a1:{title:"Silent study room, exam week", type:"study", date:day(1), time:"14:00", note:"Phones in a box at the door.", deal:"Table reserved for LifeOn users", audience:"study", active:true}}, "pro");
+      toast("Example places added");
+    } catch(e){ toast("Couldn't add examples."); ex.disabled = false; } };
+}
+
+// ================= boot =================
+let gen = 0;
+function boot(store){
+  S = store; const my = ++gen;
+  COLS.forEach(c => { state[c] = {}; state.ready[c] = false; }); state.live = []; state.myCode = null;
+  COLS.forEach(c => S.on(c, m => { if (my!==gen) return; state[c] = m; state.ready[c] = true; if (!$(".flow")) render(); }));
+  S.onLive(peers => { if (my!==gen) return; state.live = peers; if (!$(".flow") && (route()==="today"||route()==="friends")) render(); });
+  S.getPrivate("shop").then(d => { if (my!==gen) return; state.myCode = d?.code || null; if (!$(".flow") && route()==="shop") render(); });
+  if (route()==="shop" && !state.shopMid) state.shopMid = S.me;
+  render();
+}
+checkInterrupted();
+makeDemo().then(d => { if (!S || S.demo) boot(d); });
+makeLive().then(live => { if (live) boot(live); });
+})();
+</script>
+<script>
+// Offline support + automatic updates (version 202611020828)
+if ("serviceWorker" in navigator && location.protocol === "https:") {
+  navigator.serviceWorker.register("sw.js").catch(function(){});
+  var reloaded = false;
+  navigator.serviceWorker.addEventListener("controllerchange", function(){ if (!reloaded && !document.querySelector(".flow")) { reloaded = true; location.reload(); } });
+}
+</script>
+</body>
+</html>
