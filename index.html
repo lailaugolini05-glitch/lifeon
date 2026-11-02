@@ -208,7 +208,699 @@ nav.tabs a[aria-current="page"]{color:var(--accent)}
 .qbar{height:8px;border-radius:99px;background:var(--sunk);overflow:hidden}
 .qbar i{display:block;height:100%;background:var(--sport);border-radius:99px}
 .pickrow{display:grid!important;grid-template-columns:44px 1fr;gap:12px;align-items:center;width:100%;background:none!important;color:inherit!important;border-radius:0!important;padding:12px 0!important;text-align:left;font-weight:500!important}
+button svg{width:18px;height:18px;flex:none}
+.btn.small{padding:8px 12px;font-size:13px}
+.btn.ghostlink{background:var(--sunk);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
+a.chip{text-decoration:none;padding:8px 12px;font-size:13px}
+body.onboarding header.top, body.onboarding nav.tabs{display:none}
+body.ob-dark, body.ob-dark .app{background:var(--night);color:var(--night-ink)}
+.ob{display:flex;flex-direction:column;gap:14px;padding-top:calc(12px + env(safe-area-inset-top, 0px))}
+.ob h1{font-size:34px;font-weight:800;line-height:1.05;letter-spacing:-.02em}
+.ob-intro{text-align:center;min-height:calc(100vh - 60px);justify-content:space-between;gap:18px}
+.ob-intro p{opacity:.85;font-size:16px;max-width:340px;margin:0 auto}
+.ob-top{display:flex;align-items:center;gap:8px;font-family:var(--display);font-size:22px;font-weight:800}
+.ob-logo{width:30px;height:30px;display:inline-block}
+.ob-skip{margin-left:auto;background:none;color:inherit;opacity:.75;padding:6px 4px;font-size:14px}
+.ob-art{display:grid;place-items:center;padding:12px 0}
+.ob-circle{width:210px;height:210px;border-radius:50%;display:grid;place-items:center}
+.ob-circle svg{width:100px;height:100px}
+.ob-dots{display:flex;gap:8px;justify-content:center}
+.ob-dots i{width:8px;height:8px;border-radius:99px;background:currentColor;opacity:.3}
+.ob-dots i.on{width:26px;opacity:1;background:var(--accent)}
+.ob-link{background:none;color:inherit;opacity:.8;font-weight:600}
+.ob-progress{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.ob-progress i{height:5px;border-radius:99px;background:var(--line)}
+.ob-progress i.on{background:var(--accent)}
+.ob-or{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:13px}
+.ob-or::before,.ob-or::after{content:"";flex:1;height:1px;background:var(--line)}
+.pick.sel{box-shadow:0 0 0 2px var(--accent)}
+.verify{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;padding:6px 12px;border-radius:999px}
+#map{height:300px;border-radius:14px;overflow:hidden;background:var(--sunk);z-index:0}
+.leaflet-popup-content{font-family:var(--body)}
 @media (prefers-reduced-motion: no-preference){.card,.hero,.bigbtn,.opt,.pick{animation:rise .3s ease both}@keyframes rise{from{transform:translateY(6px);opacity:.6}to{transform:none;opacity:1}}}
+/* Leaflet 1.9.4 (BSD-2-Clause) */
+/* required styles */
+
+.leaflet-pane,
+.leaflet-tile,
+.leaflet-marker-icon,
+.leaflet-marker-shadow,
+.leaflet-tile-container,
+.leaflet-pane > svg,
+.leaflet-pane > canvas,
+.leaflet-zoom-box,
+.leaflet-image-layer,
+.leaflet-layer {
+	position: absolute;
+	left: 0;
+	top: 0;
+	}
+.leaflet-container {
+	overflow: hidden;
+	}
+.leaflet-tile,
+.leaflet-marker-icon,
+.leaflet-marker-shadow {
+	-webkit-user-select: none;
+	   -moz-user-select: none;
+	        user-select: none;
+	  -webkit-user-drag: none;
+	}
+/* Prevents IE11 from highlighting tiles in blue */
+.leaflet-tile::selection {
+	background: transparent;
+}
+/* Safari renders non-retina tile on retina better with this, but Chrome is worse */
+.leaflet-safari .leaflet-tile {
+	image-rendering: -webkit-optimize-contrast;
+	}
+/* hack that prevents hw layers "stretching" when loading new tiles */
+.leaflet-safari .leaflet-tile-container {
+	width: 1600px;
+	height: 1600px;
+	-webkit-transform-origin: 0 0;
+	}
+.leaflet-marker-icon,
+.leaflet-marker-shadow {
+	display: block;
+	}
+/* .leaflet-container svg: reset svg max-width decleration shipped in Joomla! (joomla.org) 3.x */
+/* .leaflet-container img: map is broken in FF if you have max-width: 100% on tiles */
+.leaflet-container .leaflet-overlay-pane svg {
+	max-width: none !important;
+	max-height: none !important;
+	}
+.leaflet-container .leaflet-marker-pane img,
+.leaflet-container .leaflet-shadow-pane img,
+.leaflet-container .leaflet-tile-pane img,
+.leaflet-container img.leaflet-image-layer,
+.leaflet-container .leaflet-tile {
+	max-width: none !important;
+	max-height: none !important;
+	width: auto;
+	padding: 0;
+	}
+
+.leaflet-container img.leaflet-tile {
+	/* See: https://bugs.chromium.org/p/chromium/issues/detail?id=600120 */
+	mix-blend-mode: plus-lighter;
+}
+
+.leaflet-container.leaflet-touch-zoom {
+	-ms-touch-action: pan-x pan-y;
+	touch-action: pan-x pan-y;
+	}
+.leaflet-container.leaflet-touch-drag {
+	-ms-touch-action: pinch-zoom;
+	/* Fallback for FF which doesn't support pinch-zoom */
+	touch-action: none;
+	touch-action: pinch-zoom;
+}
+.leaflet-container.leaflet-touch-drag.leaflet-touch-zoom {
+	-ms-touch-action: none;
+	touch-action: none;
+}
+.leaflet-container {
+	-webkit-tap-highlight-color: transparent;
+}
+.leaflet-container a {
+	-webkit-tap-highlight-color: rgba(51, 181, 229, 0.4);
+}
+.leaflet-tile {
+	filter: inherit;
+	visibility: hidden;
+	}
+.leaflet-tile-loaded {
+	visibility: inherit;
+	}
+.leaflet-zoom-box {
+	width: 0;
+	height: 0;
+	-moz-box-sizing: border-box;
+	     box-sizing: border-box;
+	z-index: 800;
+	}
+/* workaround for https://bugzilla.mozilla.org/show_bug.cgi?id=888319 */
+.leaflet-overlay-pane svg {
+	-moz-user-select: none;
+	}
+
+.leaflet-pane         { z-index: 400; }
+
+.leaflet-tile-pane    { z-index: 200; }
+.leaflet-overlay-pane { z-index: 400; }
+.leaflet-shadow-pane  { z-index: 500; }
+.leaflet-marker-pane  { z-index: 600; }
+.leaflet-tooltip-pane   { z-index: 650; }
+.leaflet-popup-pane   { z-index: 700; }
+
+.leaflet-map-pane canvas { z-index: 100; }
+.leaflet-map-pane svg    { z-index: 200; }
+
+.leaflet-vml-shape {
+	width: 1px;
+	height: 1px;
+	}
+.lvml {
+	behavior: url(#default#VML);
+	display: inline-block;
+	position: absolute;
+	}
+
+
+/* control positioning */
+
+.leaflet-control {
+	position: relative;
+	z-index: 800;
+	pointer-events: visiblePainted; /* IE 9-10 doesn't have auto */
+	pointer-events: auto;
+	}
+.leaflet-top,
+.leaflet-bottom {
+	position: absolute;
+	z-index: 1000;
+	pointer-events: none;
+	}
+.leaflet-top {
+	top: 0;
+	}
+.leaflet-right {
+	right: 0;
+	}
+.leaflet-bottom {
+	bottom: 0;
+	}
+.leaflet-left {
+	left: 0;
+	}
+.leaflet-control {
+	float: left;
+	clear: both;
+	}
+.leaflet-right .leaflet-control {
+	float: right;
+	}
+.leaflet-top .leaflet-control {
+	margin-top: 10px;
+	}
+.leaflet-bottom .leaflet-control {
+	margin-bottom: 10px;
+	}
+.leaflet-left .leaflet-control {
+	margin-left: 10px;
+	}
+.leaflet-right .leaflet-control {
+	margin-right: 10px;
+	}
+
+
+/* zoom and fade animations */
+
+.leaflet-fade-anim .leaflet-popup {
+	opacity: 0;
+	-webkit-transition: opacity 0.2s linear;
+	   -moz-transition: opacity 0.2s linear;
+	        transition: opacity 0.2s linear;
+	}
+.leaflet-fade-anim .leaflet-map-pane .leaflet-popup {
+	opacity: 1;
+	}
+.leaflet-zoom-animated {
+	-webkit-transform-origin: 0 0;
+	    -ms-transform-origin: 0 0;
+	        transform-origin: 0 0;
+	}
+svg.leaflet-zoom-animated {
+	will-change: transform;
+}
+
+.leaflet-zoom-anim .leaflet-zoom-animated {
+	-webkit-transition: -webkit-transform 0.25s cubic-bezier(0,0,0.25,1);
+	   -moz-transition:    -moz-transform 0.25s cubic-bezier(0,0,0.25,1);
+	        transition:         transform 0.25s cubic-bezier(0,0,0.25,1);
+	}
+.leaflet-zoom-anim .leaflet-tile,
+.leaflet-pan-anim .leaflet-tile {
+	-webkit-transition: none;
+	   -moz-transition: none;
+	        transition: none;
+	}
+
+.leaflet-zoom-anim .leaflet-zoom-hide {
+	visibility: hidden;
+	}
+
+
+/* cursors */
+
+.leaflet-interactive {
+	cursor: pointer;
+	}
+.leaflet-grab {
+	cursor: -webkit-grab;
+	cursor:    -moz-grab;
+	cursor:         grab;
+	}
+.leaflet-crosshair,
+.leaflet-crosshair .leaflet-interactive {
+	cursor: crosshair;
+	}
+.leaflet-popup-pane,
+.leaflet-control {
+	cursor: auto;
+	}
+.leaflet-dragging .leaflet-grab,
+.leaflet-dragging .leaflet-grab .leaflet-interactive,
+.leaflet-dragging .leaflet-marker-draggable {
+	cursor: move;
+	cursor: -webkit-grabbing;
+	cursor:    -moz-grabbing;
+	cursor:         grabbing;
+	}
+
+/* marker & overlays interactivity */
+.leaflet-marker-icon,
+.leaflet-marker-shadow,
+.leaflet-image-layer,
+.leaflet-pane > svg path,
+.leaflet-tile-container {
+	pointer-events: none;
+	}
+
+.leaflet-marker-icon.leaflet-interactive,
+.leaflet-image-layer.leaflet-interactive,
+.leaflet-pane > svg path.leaflet-interactive,
+svg.leaflet-image-layer.leaflet-interactive path {
+	pointer-events: visiblePainted; /* IE 9-10 doesn't have auto */
+	pointer-events: auto;
+	}
+
+/* visual tweaks */
+
+.leaflet-container {
+	background: #ddd;
+	outline-offset: 1px;
+	}
+.leaflet-container a {
+	color: #0078A8;
+	}
+.leaflet-zoom-box {
+	border: 2px dotted #38f;
+	background: rgba(255,255,255,0.5);
+	}
+
+
+/* general typography */
+.leaflet-container {
+	font-family: "Helvetica Neue", Arial, Helvetica, sans-serif;
+	font-size: 12px;
+	font-size: 0.75rem;
+	line-height: 1.5;
+	}
+
+
+/* general toolbar styles */
+
+.leaflet-bar {
+	box-shadow: 0 1px 5px rgba(0,0,0,0.65);
+	border-radius: 4px;
+	}
+.leaflet-bar a {
+	background-color: #fff;
+	border-bottom: 1px solid #ccc;
+	width: 26px;
+	height: 26px;
+	line-height: 26px;
+	display: block;
+	text-align: center;
+	text-decoration: none;
+	color: black;
+	}
+.leaflet-bar a,
+.leaflet-control-layers-toggle {
+	background-position: 50% 50%;
+	background-repeat: no-repeat;
+	display: block;
+	}
+.leaflet-bar a:hover,
+.leaflet-bar a:focus {
+	background-color: #f4f4f4;
+	}
+.leaflet-bar a:first-child {
+	border-top-left-radius: 4px;
+	border-top-right-radius: 4px;
+	}
+.leaflet-bar a:last-child {
+	border-bottom-left-radius: 4px;
+	border-bottom-right-radius: 4px;
+	border-bottom: none;
+	}
+.leaflet-bar a.leaflet-disabled {
+	cursor: default;
+	background-color: #f4f4f4;
+	color: #bbb;
+	}
+
+.leaflet-touch .leaflet-bar a {
+	width: 30px;
+	height: 30px;
+	line-height: 30px;
+	}
+.leaflet-touch .leaflet-bar a:first-child {
+	border-top-left-radius: 2px;
+	border-top-right-radius: 2px;
+	}
+.leaflet-touch .leaflet-bar a:last-child {
+	border-bottom-left-radius: 2px;
+	border-bottom-right-radius: 2px;
+	}
+
+/* zoom control */
+
+.leaflet-control-zoom-in,
+.leaflet-control-zoom-out {
+	font: bold 18px 'Lucida Console', Monaco, monospace;
+	text-indent: 1px;
+	}
+
+.leaflet-touch .leaflet-control-zoom-in, .leaflet-touch .leaflet-control-zoom-out  {
+	font-size: 22px;
+	}
+
+
+/* layers control */
+
+.leaflet-control-layers {
+	box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+	background: #fff;
+	border-radius: 5px;
+	}
+.leaflet-control-layers-toggle {
+	background-image: url(images/layers.png);
+	width: 36px;
+	height: 36px;
+	}
+.leaflet-retina .leaflet-control-layers-toggle {
+	background-image: url(images/layers-2x.png);
+	background-size: 26px 26px;
+	}
+.leaflet-touch .leaflet-control-layers-toggle {
+	width: 44px;
+	height: 44px;
+	}
+.leaflet-control-layers .leaflet-control-layers-list,
+.leaflet-control-layers-expanded .leaflet-control-layers-toggle {
+	display: none;
+	}
+.leaflet-control-layers-expanded .leaflet-control-layers-list {
+	display: block;
+	position: relative;
+	}
+.leaflet-control-layers-expanded {
+	padding: 6px 10px 6px 6px;
+	color: #333;
+	background: #fff;
+	}
+.leaflet-control-layers-scrollbar {
+	overflow-y: scroll;
+	overflow-x: hidden;
+	padding-right: 5px;
+	}
+.leaflet-control-layers-selector {
+	margin-top: 2px;
+	position: relative;
+	top: 1px;
+	}
+.leaflet-control-layers label {
+	display: block;
+	font-size: 13px;
+	font-size: 1.08333em;
+	}
+.leaflet-control-layers-separator {
+	height: 0;
+	border-top: 1px solid #ddd;
+	margin: 5px -10px 5px -6px;
+	}
+
+/* Default icon URLs */
+.leaflet-default-icon-path { /* used only in path-guessing heuristic, see L.Icon.Default */
+	background-image: url(images/marker-icon.png);
+	}
+
+
+/* attribution and scale controls */
+
+.leaflet-container .leaflet-control-attribution {
+	background: #fff;
+	background: rgba(255, 255, 255, 0.8);
+	margin: 0;
+	}
+.leaflet-control-attribution,
+.leaflet-control-scale-line {
+	padding: 0 5px;
+	color: #333;
+	line-height: 1.4;
+	}
+.leaflet-control-attribution a {
+	text-decoration: none;
+	}
+.leaflet-control-attribution a:hover,
+.leaflet-control-attribution a:focus {
+	text-decoration: underline;
+	}
+.leaflet-attribution-flag {
+	display: inline !important;
+	vertical-align: baseline !important;
+	width: 1em;
+	height: 0.6669em;
+	}
+.leaflet-left .leaflet-control-scale {
+	margin-left: 5px;
+	}
+.leaflet-bottom .leaflet-control-scale {
+	margin-bottom: 5px;
+	}
+.leaflet-control-scale-line {
+	border: 2px solid #777;
+	border-top: none;
+	line-height: 1.1;
+	padding: 2px 5px 1px;
+	white-space: nowrap;
+	-moz-box-sizing: border-box;
+	     box-sizing: border-box;
+	background: rgba(255, 255, 255, 0.8);
+	text-shadow: 1px 1px #fff;
+	}
+.leaflet-control-scale-line:not(:first-child) {
+	border-top: 2px solid #777;
+	border-bottom: none;
+	margin-top: -2px;
+	}
+.leaflet-control-scale-line:not(:first-child):not(:last-child) {
+	border-bottom: 2px solid #777;
+	}
+
+.leaflet-touch .leaflet-control-attribution,
+.leaflet-touch .leaflet-control-layers,
+.leaflet-touch .leaflet-bar {
+	box-shadow: none;
+	}
+.leaflet-touch .leaflet-control-layers,
+.leaflet-touch .leaflet-bar {
+	border: 2px solid rgba(0,0,0,0.2);
+	background-clip: padding-box;
+	}
+
+
+/* popup */
+
+.leaflet-popup {
+	position: absolute;
+	text-align: center;
+	margin-bottom: 20px;
+	}
+.leaflet-popup-content-wrapper {
+	padding: 1px;
+	text-align: left;
+	border-radius: 12px;
+	}
+.leaflet-popup-content {
+	margin: 13px 24px 13px 20px;
+	line-height: 1.3;
+	font-size: 13px;
+	font-size: 1.08333em;
+	min-height: 1px;
+	}
+.leaflet-popup-content p {
+	margin: 17px 0;
+	margin: 1.3em 0;
+	}
+.leaflet-popup-tip-container {
+	width: 40px;
+	height: 20px;
+	position: absolute;
+	left: 50%;
+	margin-top: -1px;
+	margin-left: -20px;
+	overflow: hidden;
+	pointer-events: none;
+	}
+.leaflet-popup-tip {
+	width: 17px;
+	height: 17px;
+	padding: 1px;
+
+	margin: -10px auto 0;
+	pointer-events: auto;
+
+	-webkit-transform: rotate(45deg);
+	   -moz-transform: rotate(45deg);
+	    -ms-transform: rotate(45deg);
+	        transform: rotate(45deg);
+	}
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+	background: white;
+	color: #333;
+	box-shadow: 0 3px 14px rgba(0,0,0,0.4);
+	}
+.leaflet-container a.leaflet-popup-close-button {
+	position: absolute;
+	top: 0;
+	right: 0;
+	border: none;
+	text-align: center;
+	width: 24px;
+	height: 24px;
+	font: 16px/24px Tahoma, Verdana, sans-serif;
+	color: #757575;
+	text-decoration: none;
+	background: transparent;
+	}
+.leaflet-container a.leaflet-popup-close-button:hover,
+.leaflet-container a.leaflet-popup-close-button:focus {
+	color: #585858;
+	}
+.leaflet-popup-scrolled {
+	overflow: auto;
+	}
+
+.leaflet-oldie .leaflet-popup-content-wrapper {
+	-ms-zoom: 1;
+	}
+.leaflet-oldie .leaflet-popup-tip {
+	width: 24px;
+	margin: 0 auto;
+
+	-ms-filter: "progid:DXImageTransform.Microsoft.Matrix(M11=0.70710678, M12=0.70710678, M21=-0.70710678, M22=0.70710678)";
+	filter: progid:DXImageTransform.Microsoft.Matrix(M11=0.70710678, M12=0.70710678, M21=-0.70710678, M22=0.70710678);
+	}
+
+.leaflet-oldie .leaflet-control-zoom,
+.leaflet-oldie .leaflet-control-layers,
+.leaflet-oldie .leaflet-popup-content-wrapper,
+.leaflet-oldie .leaflet-popup-tip {
+	border: 1px solid #999;
+	}
+
+
+/* div icon */
+
+.leaflet-div-icon {
+	background: #fff;
+	border: 1px solid #666;
+	}
+
+
+/* Tooltip */
+/* Base styles for the element that has a tooltip */
+.leaflet-tooltip {
+	position: absolute;
+	padding: 6px;
+	background-color: #fff;
+	border: 1px solid #fff;
+	border-radius: 3px;
+	color: #222;
+	white-space: nowrap;
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+	pointer-events: none;
+	box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+	}
+.leaflet-tooltip.leaflet-interactive {
+	cursor: pointer;
+	pointer-events: auto;
+	}
+.leaflet-tooltip-top:before,
+.leaflet-tooltip-bottom:before,
+.leaflet-tooltip-left:before,
+.leaflet-tooltip-right:before {
+	position: absolute;
+	pointer-events: none;
+	border: 6px solid transparent;
+	background: transparent;
+	content: "";
+	}
+
+/* Directions */
+
+.leaflet-tooltip-bottom {
+	margin-top: 6px;
+}
+.leaflet-tooltip-top {
+	margin-top: -6px;
+}
+.leaflet-tooltip-bottom:before,
+.leaflet-tooltip-top:before {
+	left: 50%;
+	margin-left: -6px;
+	}
+.leaflet-tooltip-top:before {
+	bottom: 0;
+	margin-bottom: -12px;
+	border-top-color: #fff;
+	}
+.leaflet-tooltip-bottom:before {
+	top: 0;
+	margin-top: -12px;
+	margin-left: -6px;
+	border-bottom-color: #fff;
+	}
+.leaflet-tooltip-left {
+	margin-left: -6px;
+}
+.leaflet-tooltip-right {
+	margin-left: 6px;
+}
+.leaflet-tooltip-left:before,
+.leaflet-tooltip-right:before {
+	top: 50%;
+	margin-top: -6px;
+	}
+.leaflet-tooltip-left:before {
+	right: 0;
+	margin-right: -12px;
+	border-left-color: #fff;
+	}
+.leaflet-tooltip-right:before {
+	left: 0;
+	margin-left: -12px;
+	border-right-color: #fff;
+	}
+
+/* Printing */
+
+@media print {
+	/* Prevent printers from removing background-images of controls. */
+	.leaflet-control {
+		-webkit-print-color-adjust: exact;
+		print-color-adjust: exact;
+		}
+	}
+
 
 @media (display-mode: standalone){ header.top{padding-top:max(14px, env(safe-area-inset-top, 0px))} }
 </style>
@@ -292,6 +984,25 @@ const ICON = {
 const TAB_ICON = { today:ICON.focus, explore:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg>', friends:ICON.friends, shop:ICON.shop, team:ICON.team, me:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>' };
 
 ICON.sport = ICON.gym; ICON.services = ICON.other;
+ICON.pin = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>';
+ICON.check = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/><path d="M9 12l2 2 4-4"/></svg>';
+const MARK = (c1, c2) => `<svg viewBox="0 0 100 100" aria-hidden="true"><path d="M32 24 A34 34 0 1 0 68 24" fill="none" stroke="${c1}" stroke-width="13" stroke-linecap="round"/><line x1="50" y1="12" x2="50" y2="46" stroke="${c2}" stroke-width="13" stroke-linecap="round"/></svg>`;
+// ================= location =================
+const HERE_KEY = "lifeon-here";
+function loadHere(){ try { const h = JSON.parse(localStorage.getItem(HERE_KEY)||"null"); return h && Date.now()-h.at < 7*864e5 ? h : null; } catch(e){ return null; } }
+function hav(a, b){ const R=6371, toR=x=>x*Math.PI/180; const dLa=toR(b[0]-a[0]), dLo=toR(b[1]-a[1]); const q=Math.sin(dLa/2)**2+Math.cos(toR(a[0]))*Math.cos(toR(b[0]))*Math.sin(dLo/2)**2; return 2*R*Math.asin(Math.sqrt(q)); }
+const placeCoords = m => (m && typeof m.lat==="number") ? [m.lat, m.lng] : (TOWNS[m && m.town] || TOWNS.Castellanza);
+const dist = m => state.here ? hav([state.here.lat, state.here.lng], placeCoords(m)) : km(myTown(), m.town);
+function placeDist(m){ if (!state.here) return distLabel(m.town); const d = dist(m); return (d < 1 ? Math.max(50, Math.round(d*20)*50)+" m" : (Math.round(d*10)/10)+" km")+" · "+m.town; }
+function nearestTown(lat, lng){ let best="Castellanza", bd=1e9; for (const [t,c] of Object.entries(TOWNS)) { const d = hav([lat,lng], c); if (d < bd) { bd = d; best = t; } } return {town:best, km:bd}; }
+function getPos(opts){ return new Promise(res => { if (!navigator.geolocation) return res(null); try { navigator.geolocation.getCurrentPosition(p=>res(p), ()=>res(null), {enableHighAccuracy:true, timeout:12000, maximumAge:60000, ...(opts||{})}); } catch(e){ res(null); } }); }
+async function locate(){ const p = await getPos(); if (!p) return null; state.here = {lat:p.coords.latitude, lng:p.coords.longitude, at:Date.now()}; try { localStorage.setItem(HERE_KEY, JSON.stringify(state.here)); } catch(e){} return nearestTown(state.here.lat, state.here.lng); }
+async function nearCheck(m){ if (!m || typeof m.lat!=="number") return {ok:true, geo:false}; const p = await getPos({maximumAge:0}); if (!p) return {ok:true, geo:false}; const d = hav([p.coords.latitude, p.coords.longitude], [m.lat, m.lng]); return d <= 0.3 ? {ok:true, geo:true} : {ok:false, d}; }
+const mapsUrl = m => typeof m.lat==="number" ? `https://www.google.com/maps/dir/?api=1&destination=${m.lat},${m.lng}` : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([m.name, m.address, m.town].filter(Boolean).join(" "))}`;
+function searchUrl(q){ const c = state.here ? [state.here.lat, state.here.lng] : (TOWNS[myTown()] || TOWNS.Castellanza); return `https://www.google.com/maps/search/${encodeURIComponent(q)}/@${c[0].toFixed(5)},${c[1].toFixed(5)},14z`; }
+const NEAR_SEARCH = [["palestra","Gyms"],["parco","Parks"],["sentieri escursionismo","Trails"],["campo sportivo","Sports fields"],["piscina","Swimming pools"],["biblioteca","Libraries"],["caffetteria","Cafés"]];
+let leafletP = null;
+function loadLeaflet(){ if (window.L) return Promise.resolve(window.L); if (!leafletP) leafletP = new Promise((res, rej) => { const sc = document.createElement("script"); sc.src = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"; sc.onload = () => window.L ? res(window.L) : rej(); sc.onerror = () => { leafletP = null; rej(); }; document.head.appendChild(sc); }); return leafletP; }
 // Ideas for "I'm bored": [title, detail, mood, minutes, outdoor]
 const IDEAS = [
   ["30-minute walk","Phone in your pocket. The Parco Alto Milanese sits between Castellanza, Legnano and Busto Arsizio.","move",30,1],
@@ -372,7 +1083,7 @@ const focusMins = plan => PLANS[plan].parts.filter(p=>p[0]==="f").reduce((s,p)=>
 
 // ================= scoring =================
 const DAILY_CAP = 150;
-function sessionPts(s, groupBonus){ if (!s.ok) return 0; let p = Math.round(s.min*0.5); if (s.kind==="move" && s.mode!=="venue") p = Math.min(30, p); if (s.mode==="venue") p = Math.round(p*1.6); if (groupBonus) p += 10; return p; }
+function sessionPts(s, groupBonus){ if (!s.ok) return 0; let p = Math.round(s.min*0.5); if (s.kind==="move" && s.mode!=="venue" && !s.verified) p = Math.min(30, p); if (s.mode==="venue") p = Math.round(p*1.6); if (groupBonus) p += 10; return p; }
 function groupBonusFor(pid, s){
   if (s.mode!=="group" || !s.ok || !s.group) return false;
   const g = state.groups[s.group]; if (!g) return false;
@@ -414,7 +1125,7 @@ function shopActivities(mid){
   return list;
 }
 function liveOffers(){ const out=[]; for (const mid of Object.keys(state.merchants)) if (approved(mid)) for (const [key,o] of shopOffers(mid)) out.push({mid, key, o, m:state.merchants[mid]}); return out; }
-function liveActivities(){ const out=[]; for (const mid of Object.keys(state.merchants)) if (approved(mid)) for (const [key,a] of shopActivities(mid)) out.push({mid, key, a, m:state.merchants[mid]}); return out.sort((x,y)=>(x.a.date+x.a.time).localeCompare(y.a.date+y.a.time) || km(myTown(),x.m.town)-km(myTown(),y.m.town)); }
+function liveActivities(){ const out=[]; for (const mid of Object.keys(state.merchants)) if (approved(mid)) for (const [key,a] of shopActivities(mid)) out.push({mid, key, a, m:state.merchants[mid]}); return out.sort((x,y)=>(x.a.date+x.a.time).localeCompare(y.a.date+y.a.time) || dist(x.m)-dist(y.m)); }
 function offerWindow(o){
   if (o.flashUntil) return "until "+new Date(o.flashUntil).toTimeString().slice(0,5);
   if (!o.offPeak) return "Any time";
@@ -444,7 +1155,7 @@ function avatar(name){
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" rx="32" fill="#0F6B5E"/><text x="32" y="41" font-family="Arial" font-size="24" font-weight="700" fill="#fff" text-anchor="middle">${esc(ini)}</text></svg>`;
   return "data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg);
 }
-const DEMO_KEY = "lifeon-demo-v4", BANNER_KEY = "lifeon-banner-off";
+const DEMO_KEY = "lifeon-demo-v5", BANNER_KEY = "lifeon-banner-off";
 const bannerOff = () => { try { return localStorage.getItem(BANNER_KEY) === "1"; } catch(e){ return false; } };
 async function makeDemo(){
   const me = "demo-me", now = Date.now(), H = 3600e3, D = 24*H;
@@ -483,6 +1194,8 @@ async function makeDemo(){
        a2:{title:"After-work board games", type:"event", date:ex(4), time:"19:00", note:"Meet new people, no phones on the table.", deal:"Free drink with check-in", audience:"work", active:true}}),
     [me]: {...shop("Your shop (demo)","cafe","Castellanza", await sha("SHOP1"), {k1:{title:"Free extra shot", tier:"small", cost:100, costToYou:0.25, budgetWeek:15, offPeak:true, days:[0,1,2,3,4], from:"15:00", to:"17:00", active:true, createdAt:now-4e5}}, {}), owner:me}
   };
+  Object.assign(merchants.d1, {lat:45.6105, lng:8.8936}); Object.assign(merchants.d2, {lat:45.5978, lng:8.9152}); Object.assign(merchants.d3, {lat:45.6117, lng:8.8503}); Object.assign(merchants.d4, {lat:45.5941, lng:8.9106}); Object.assign(merchants[me], {lat:45.6126, lng:8.8991});
+  const sampleMe = players[me]; delete players[me];
   const billing = { d1:{status:"approved", plan:"pro"}, d2:{status:"approved", plan:"pro"}, d3:{status:"approved", plan:"pro"}, d4:{status:"approved", plan:"free"}, [me]:{status:"approved", plan:"free"} };
   const teamkeys = { d1:{code:"CAFE24"}, d2:{code:"GYM77"}, d3:{code:"STUDY5"}, d4:{code:"RUN10"} };
   const groups = { DEMO42:{name:"Study group (example)", members:[me,"demo-1","demo-2","demo-3"], createdBy:me, createdAt:now-9*D, plans:[{by:"demo-1", text:"Studying at Example study café from 15:00. Who's in?", at: now-40*60e3}]} };
@@ -493,7 +1206,8 @@ async function makeDemo(){
   const subs = {}; const emit = c => (subs[c]||[]).forEach(f=>f(data[c]));
   return {
     demo:true, me, canEdit:true, canWrite:true,
-    names: async ids => Object.fromEntries(ids.map(id=>[id,{name:names[id]||"Someone", avatarUrl:avatar(names[id]||"?"), isMe:id===me}])),
+    names: async ids => Object.fromEntries(ids.map(id=>{ const nm = (id===me && data.players[me] && data.players[me].name) || names[id] || "Someone"; return [id,{name:nm, avatarUrl:avatar(nm), isMe:id===me}]; })),
+    async loadGuest(){ data.players[me] = JSON.parse(JSON.stringify(sampleMe)); persist(); emit("players"); },
     on(c, f){ (subs[c]=subs[c]||[]).push(f); f(data[c]); },
     async save(c, id, body){ data[c][id] = JSON.parse(JSON.stringify(body)); persist(); emit(c); },
     async remove(c, id){ delete data[c][id]; persist(); emit(c); },
@@ -527,7 +1241,7 @@ async function makeLive(){
 // ================= state =================
 let S = null;
 const COLS = ["players","merchants","billing","teamkeys","groups"];
-const state = { players:{}, merchants:{}, billing:{}, teamkeys:{}, groups:{}, ready:{}, live:[], exploreTab:"offers", cat:"all", shopTab:"results", teamTab:"apps", shopMid:null, myCode:null, setup:null, ideaSeed:Date.now() };
+const state = { players:{}, merchants:{}, billing:{}, teamkeys:{}, groups:{}, ready:{}, live:[], exploreTab:"offers", cat:"all", shopTab:"results", teamTab:"apps", shopMid:null, myCode:null, setup:null, ob:{step:0, slide:0}, here:null, ideaSeed:Date.now() };
 const meP = () => state.players[S.me];
 const profile = () => (meP()||{}).profile || "study";
 const myTown = () => (meP()||{}).town || "Castellanza";
@@ -557,13 +1271,14 @@ const ALL_ROUTES = ["today","explore","friends","shop","team","me","study","lear
 function tabs(){
   const t = [];
   if (meP()) t.push(["today","Today"],["explore","Nearby"],["friends","Friends"]);
-  if (state.merchants[S.me]) t.push(["shop","My shop"]);
-  if (S.canEdit) t.push(["team","Team"]);
+  const fresh = S.demo && meP() && meP().name;
+  if (state.merchants[S.me] && !fresh) t.push(["shop","My shop"]);
+  if (S.canEdit && !fresh) t.push(["team","Team"]);
   if (meP()) t.push(["me","Me"]);
   return t;
 }
 let CUR = (() => { try { const h=(location.hash||"").slice(1); return ALL_ROUTES.includes(h) ? h : null; } catch(e){ return null; } })();
-const route = () => ALL_ROUTES.includes(CUR) ? CUR : (meP() ? "today" : state.merchants[S.me] ? "shop" : "today");
+const route = () => ALL_ROUTES.includes(CUR) ? CUR : "today";
 function go(r){ if (!ALL_ROUTES.includes(r)) return; CUR = r; if (r==="shop" && !state.shopMid) state.shopMid = S.me; try { history.replaceState(null, "", "#"+r); } catch(e){} render(); try { window.scrollTo(0,0); } catch(e){} }
 window.addEventListener("hashchange", () => { const h = (location.hash||"").slice(1); if (h !== CUR && ALL_ROUTES.includes(h)) go(h); });
 document.addEventListener("click", e => { const a = e.target.closest && e.target.closest('a[href^="#"]'); if (!a) return; e.preventDefault(); go(a.getAttribute("href").slice(1)); });
@@ -577,6 +1292,8 @@ function render(){
   if (!state.ready.players || !state.ready.merchants) { v.innerHTML = `<div class="card"><p class="muted">Loading…</p></div>`; return; }
   const r = route();
   const needSetup = !meP() || !meP().profile;
+  document.body.classList.toggle("onboarding", needSetup && r!=="team" && r!=="shop");
+  if (!(needSetup && r!=="team" && r!=="shop")) document.body.classList.remove("ob-dark");
   if (r==="team") { v.innerHTML = S.canEdit ? viewTeam() : `<div class="card"><h2>Team</h2><p class="muted">Only the LifeOn team can open this section.</p></div>`; if (S.canEdit) bindTeam(); }
   else if (r==="shop") { v.innerHTML = viewShop(); bindShop(); }
   else if (needSetup) { v.innerHTML = viewWelcome(); bindWelcome(); }
@@ -586,7 +1303,7 @@ function render(){
   else if (r==="explore") { v.innerHTML = viewExplore(); bindExplore(); }
   else if (r==="friends") { v.innerHTML = viewFriends(); bindFriends(); }
   else { v.innerHTML = viewMe(); bindMe(); }
-  if (S.demo && !bannerOff()) {
+  if (S.demo && !bannerOff() && !document.body.classList.contains("onboarding")) {
     v.insertAdjacentHTML("afterbegin", '<div class="banner row between" style="align-items:flex-start"><span><b>Demo mode.</b> Example people and places, saved only on this device. Place codes: CAFE24, GYM77, STUDY5, RUN10.</span><span class="row" style="gap:6px;flex:none"><button class="ghost small" data-demo-reset>Reset</button><button class="ghost small" data-demo-hide aria-label="Hide this message">✕</button></span></div>');
     const rs = $("[data-demo-reset]", v); if (rs) rs.onclick = () => { if (rs.dataset.armed!=="1") { rs.dataset.armed="1"; rs.textContent="Sure?"; return; } try { localStorage.removeItem(DEMO_KEY); } catch(e){} location.reload(); };
     const hd = $("[data-demo-hide]", v); if (hd) hd.onclick = () => { try { localStorage.setItem(BANNER_KEY, "1"); } catch(e){} render(); };
@@ -604,39 +1321,70 @@ function toggleChips(container, single){ if (!container) return; $$("[data-v]", 
 const picked = c => $$('[aria-pressed="true"]', c).map(b=>b.dataset.v);
 function flow(label, night){ const el = document.createElement("div"); el.className = "flow"+(night?" night":""); el.setAttribute("role","dialog"); el.setAttribute("aria-modal","true"); el.setAttribute("aria-label",label); document.body.appendChild(el); return el; }
 
-// ================= welcome =================
+// ================= welcome / onboarding =================
+const INTRO = [
+  {icon:"lock", color:"var(--accent)", title:"Phone down.", text:"Lock Instagram, TikTok and the apps that steal your time. Leave LifeOn during a session and it stops: no tricks."},
+  {icon:"walk", color:"var(--sport)", title:"Focus. Move. Earn.", text:"Study, work or get moving. Every real minute turns into points, checked with codes at the counter and GPS for your runs."},
+  {icon:"shop", color:"var(--teal)", title:"Life on.", text:"Spend your points in cafés, gyms and shops near you: free coffee, discounts, trial classes."}
+];
 function viewWelcome(){
-  const st = state.setup;
-  if (!st) return `<section class="welcome">
-    <h1>Phone down.<br><span>Life on.</span></h1>
-    <p class="muted">Lock the apps that eat your time, focus on what matters, and get rewards from places around you. What brings you here?</p>
-    ${[["study",ICON.book,"Study","University or high school (18+). Focus, study plan, techniques."],["work",ICON.brief,"Work","Office or remote. Deep work, lunch offline, end-of-day routine."],["active",ICON.walk,"Stay active","Move more, scroll less. Workouts, sport, fitness rewards."],["free",ICON.leaf,"Free time","Less scrolling, more life. Ideas and activities near you."],["shop",ICON.shop,"I have a business","Bring new customers in your quiet hours."]].map(([k,ic,t,s])=>`<button class="pick" data-pick="${k}"><span class="ico">${ic}</span><span><b>${t}</b><span class="s">${s}</span></span><span class="muted">›</span></button>`).join("")}
-  </section>`;
-  return `<section class="welcome">
-    <button class="ghost small" data-back style="align-self:flex-start">‹ Back</button>
-    <h1>${esc(PROFILES[st].label)}<br><span>set-up.</span></h1>
-    <form class="card" id="welcomeForm">
-      <div><p class="small" style="font-weight:700;margin-bottom:8px">Apps to lock during ${esc(PROFILES[st].focusName.toLowerCase())}</p>
-        <div class="chips" id="wApps">${SOCIAL.map(a=>`<button type="button" class="chip" data-v="${a}" aria-pressed="${["Instagram","TikTok","YouTube"].includes(a)}">${a}</button>`).join("")}</div></div>
-      <label for="wBase">Your daily time on these apps today (minutes)<input id="wBase" type="number" inputmode="numeric" min="10" max="900" value="180"></label>
-      <p class="small muted">Find it in Screen Time (iPhone) or Digital Wellbeing (Android). It's your personal starting point.</p>
-      <label for="wTown">Where do you live?<select id="wTown">${townOptions(meP()?.town||"Castellanza")}</select></label>
-      <button class="full" type="submit" ${S.canWrite?"":"disabled"}>Start</button>
-      ${S.canWrite?"":`<p class="small muted">To join the pilot, ask the LifeOn team for Contributor access.</p>`}
-    </form></section>`;
+  const ob = state.ob;
+  document.body.classList.toggle("ob-dark", ob.step===0);
+  if (ob.step===1 && !S.demo) ob.step = 2;
+  if (ob.step===0) { const sl = INTRO[ob.slide];
+    return `<section class="ob ob-intro">
+      <div class="ob-top"><span class="ob-logo">${MARK("#EE5A2F","#EAF4F1")}</span>Life<span style="color:var(--accent)">On</span><button class="ob-skip" data-ob="skip">Skip</button></div>
+      <div class="ob-art"><span class="ob-circle" style="background:color-mix(in srgb, ${sl.color} 22%, transparent);color:${sl.color}">${ICON[sl.icon]}</span></div>
+      <div style="display:flex;flex-direction:column;gap:12px"><h1>${esc(sl.title)}</h1><p>${esc(sl.text)}</p></div>
+      <div class="ob-dots" aria-label="Step ${ob.slide+1} of ${INTRO.length}">${INTRO.map((_,i)=>`<i class="${i===ob.slide?"on":""}"></i>`).join("")}</div>
+      <div style="display:flex;flex-direction:column;gap:10px"><button class="full" data-ob="next">${ob.slide<INTRO.length-1?"Next":"Get started"}</button>
+      <button class="ob-link" data-ob="shop">I have a business</button></div></section>`; }
+  const bar = `<div class="ob-progress" aria-label="Step ${ob.step} of 4">${[1,2,3,4].map(i=>`<i class="${i<=ob.step?"on":""}"></i>`).join("")}</div>`;
+  const back = `<button class="ghost small" data-ob="back" style="align-self:flex-start">‹ Back</button>`;
+  if (ob.step===1) return `<section class="ob">${back}${bar}<h1>Create your profile</h1><p class="muted">Pick a name your friends will recognise, or look around first as a guest.</p>
+    <form class="card" id="obAcc"><label for="obName">Your name<input id="obName" maxlength="30" autocomplete="given-name" required placeholder="e.g. Laila" value="${esc(ob.name||"")}"></label>
+      <label class="row" style="flex-direction:row;color:var(--ink);font-weight:500"><input type="checkbox" id="obAge" required> I'm 18 or older</label>
+      <button class="full" type="submit">Create profile</button>
+      <p class="small muted">In this preview your profile is saved on this phone. Sign in with Apple, Google or email comes with the App Store version.</p></form>
+    <div class="ob-or"><span>or</span></div>
+    <button class="ghost full" data-ob="guest">Continue as guest</button><p class="small muted" style="text-align:center">Guest mode: try everything with example points, friends and places.</p></section>`;
+  if (ob.step===2) return `<section class="ob">${back}${bar}<h1>Who are you?</h1><p class="muted">LifeOn adapts to what you need. You can change it any time.</p>
+    ${[["study",ICON.book,"Student","Focus, study plan, Pomodoro, study techniques"],["work",ICON.brief,"Worker","Deep work, Top 3 of the day, lunch offline"],["active",ICON.walk,"I want to move more","Workouts with GPS, sport nearby, fitness rewards"],["free",ICON.leaf,"Less phone, more life","Ideas, events and places near you"]].map(([k,ic,t,d])=>`<button class="pick ${ob.profile===k?"sel":""}" data-prof="${k}"><span class="ico">${ic}</span><span><b>${t}</b><span class="s">${d}</span></span><span class="muted">›</span></button>`).join("")}</section>`;
+  if (ob.step===3) return `<section class="ob">${back}${bar}<h1>What distracts you?</h1><p class="muted">These apps are locked during your sessions.</p>
+    <form class="card" id="obApps"><div class="chips" id="wApps">${SOCIAL.map(a=>`<button type="button" class="chip" data-v="${a}" aria-pressed="${(ob.apps||["Instagram","TikTok","YouTube"]).includes(a)}">${a}</button>`).join("")}</div>
+      <label for="wBase">Minutes a day you spend on them<input id="wBase" type="number" inputmode="numeric" min="10" max="900" value="${ob.base||180}"></label>
+      <p class="small muted">Find it in Screen Time (iPhone) or Digital Wellbeing (Android). Only you see it.</p>
+      <button class="full" type="submit">Continue</button></form></section>`;
+  return `<section class="ob">${back}${bar}<h1>Where are you?</h1><p class="muted">We show the places, rewards and activities closest to you.</p>
+    <div class="card"><button class="full teal" data-ob="locate">${ICON.pin} Use my location</button>
+      <p class="small muted">${ob.locMsg ? esc(ob.locMsg) : "Your exact position stays on your phone. We only save your town."}</p>
+      <label for="wTown">Or choose your town<select id="wTown">${townOptions(ob.town||"Castellanza")}</select></label></div>
+    <button class="full" data-ob="finish" ${S.canWrite?"":"disabled"}>Start using LifeOn</button>
+    ${S.canWrite?"":`<p class="small muted">To join the pilot, ask the LifeOn team for Contributor access.</p>`}</section>`;
 }
 function bindWelcome(){
-  $$("[data-pick]").forEach(b=>b.onclick=()=>{ if (b.dataset.pick==="shop") { state.shopMid = S.me; go("shop"); return; } state.setup = b.dataset.pick; render(); });
-  const bk = $("[data-back]"); if (bk) bk.onclick = () => { state.setup = null; render(); };
-  const f = $("#welcomeForm"); if (!f) return;
-  toggleChips($("#wApps"), false);
-  f.addEventListener("submit", async e => {
-    e.preventDefault();
-    const p = { ...clone(meP()), profile: state.setup, blocked: picked($("#wApps")), baseline: Math.max(10, Number($("#wBase").value)||180), town: $("#wTown").value, joined: meP()?.joined || today() };
-    for (const k of ["sessions","checkins","coupons"]) p[k] = p[k] || [];
-    p.free = p.free || {}; p.ritual = p.ritual || {};
-    if (await writeMe(p)) { state.setup = null; openGuide(); }
+  const ob = state.ob, v = $("#view");
+  $$("[data-ob]", v).forEach(b=>b.onclick=async()=>{ const a = b.dataset.ob;
+    if (a==="next") { if (ob.slide < INTRO.length-1) ob.slide++; else ob.step = 1; render(); }
+    else if (a==="skip") { ob.step = 1; render(); }
+    else if (a==="back") { ob.step = Math.max(0, ob.step-1); if (ob.step===1 && !S.demo) ob.step = 0; render(); }
+    else if (a==="shop") { document.body.classList.remove("ob-dark"); state.shopMid = S.me; go("shop"); }
+    else if (a==="guest") { if (S.loadGuest) { await S.loadGuest(); document.body.classList.remove("ob-dark"); go("today"); toast("Guest mode: example data loaded"); } }
+    else if (a==="locate") { b.disabled = true; const n = await locate(); if (n) { ob.town = n.town; ob.locMsg = n.km > 15 ? "You're outside the pilot area, so we picked the closest town: "+n.town+"." : "Found you near "+n.town+"."; } else ob.locMsg = "We couldn't get your location. Choose your town below."; render(); }
+    else if (a==="finish") { ob.town = $("#wTown").value; await finishOnboarding(); }
   });
+  $$("[data-prof]", v).forEach(b=>b.onclick=()=>{ ob.profile = b.dataset.prof; ob.step = 3; render(); });
+  const acc = $("#obAcc"); if (acc) acc.onsubmit = e => { e.preventDefault(); ob.name = $("#obName").value.trim(); ob.step = 2; render(); };
+  const ap = $("#obApps"); if (ap) { toggleChips($("#wApps"), false); ap.onsubmit = e => { e.preventDefault(); ob.apps = picked($("#wApps")); ob.base = Math.max(10, Number($("#wBase").value)||180); ob.step = 4; render(); }; }
+  const wt = $("#wTown"); if (wt) wt.onchange = () => { ob.town = wt.value; };
+}
+async function finishOnboarding(){
+  const ob = state.ob;
+  const p = { ...clone(meP()), profile: ob.profile||"study", blocked: ob.apps||["Instagram","TikTok","YouTube"], baseline: ob.base||180, town: ob.town||"Castellanza", joined: meP()?.joined || today() };
+  if (ob.name && S.demo) p.name = ob.name.slice(0,30);
+  for (const k of ["sessions","checkins","coupons"]) p[k] = p[k] || [];
+  p.free = p.free || {}; p.ritual = p.ritual || {};
+  if (await writeMe(p)) { const nm = ob.name; document.body.classList.remove("ob-dark"); state.ob = {step:0, slide:0}; go("today"); toast("Welcome to LifeOn"+(nm?", "+nm:"")); }
 }
 
 // ================= today =================
@@ -655,7 +1403,7 @@ function bigFocus(kind, sub){ return `<button class="bigbtn ${kind==="move"?"mov
 const boredBtn = small => small ? `<button class="bigbtn soft" id="goBored"><span class="bi">${ICON.spark}</span><span><span class="bt">I'm bored</span><span class="bs">${IDEAS.length}+ ideas and places near ${esc(myTown())}</span></span><span class="go">›</span></button>`
   : `<button class="bigbtn bored" id="goBored"><span class="bi">${ICON.spark}</span><span><span class="bt">I'm bored</span><span class="bs">Ideas, places and activities near ${esc(myTown())}, right now</span></span><span class="go">›</span></button>`;
 function lockedLine(){ const b = meP().blocked||[]; return b.length ? b.slice(0,3).join(", ")+(b.length>3?" +"+(b.length-3):"")+" locked" : "Lock distractions"; }
-function activityCards(list, n){ return list.slice(0,n).map(({mid,a,m})=>`<div class="offer two"><div class="ico">${ICON[m.kind]||ICON.cal}</div><div style="min-width:0"><div class="t">${esc(a.title)}</div>${a.type==="team"?`<div class="chips" style="margin:4px 0"><span class="chip" style="background:color-mix(in srgb, var(--sport) 15%, transparent);color:var(--sport);box-shadow:none">Looking for players</span></div>`:""}<div class="b">${esc(fmtDate(a.date))} · ${esc(a.time)} · ${esc(m.name)}, ${esc(distLabel(m.town))}</div>${a.deal?`<div class="chips" style="margin-top:6px"><span class="chip hot">${esc(a.deal)}</span>${m.example?'<span class="chip ex">Example</span>':""}</div>`:""}</div></div>`).join(""); }
+function activityCards(list, n){ return list.slice(0,n).map(({mid,a,m})=>`<div class="offer two"><div class="ico">${ICON[m.kind]||ICON.cal}</div><div style="min-width:0"><div class="t">${esc(a.title)}</div>${a.type==="team"?`<div class="chips" style="margin:4px 0"><span class="chip" style="background:color-mix(in srgb, var(--sport) 15%, transparent);color:var(--sport);box-shadow:none">Looking for players</span></div>`:""}<div class="b">${esc(fmtDate(a.date))} · ${esc(a.time)} · ${esc(m.name)}, ${esc(placeDist(m))}</div>${a.deal?`<div class="chips" style="margin-top:6px"><span class="chip hot">${esc(a.deal)}</span>${m.example?'<span class="chip ex">Example</span>':""}</div>`:""}</div></div>`).join(""); }
 function hello(){ const h = new Date().getHours(); return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening"; }
 function quickTiles(){
   const prof = profile(); const fk = prof==="work"?"work":prof==="free"?"evening":"study";
@@ -668,7 +1416,7 @@ function goalsBlock(st){ const g = myGoals(); return `<section class="card"><div
 function explorerCount(){ const ms = dkey(Date.now()).slice(0,7); return new Set(((meP()||{}).checkins||[]).filter(c=>dkey(c.at).slice(0,7)===ms).map(c=>c.venueId)).size; }
 function explorerCard(){ const n = Math.min(3, explorerCount()); return `<section class="card"><div class="row between"><h3>Explorer quest</h3><span class="chip ${n>=3?"on":""}">${n>=3?"Done · +60":"+60 pts"}</span></div><p class="small muted">Check in at 3 different places this month. A café, a gym, a shop you've never tried.</p><div class="qbar"><i style="width:${Math.round(n/3*100)}%"></i></div><p class="small" style="font-weight:700">${n}/3 places this month</p></section>`; }
 function activeMain(p){
-  const fit = liveOffers().filter(x=>["gym","sport"].includes(x.m.kind)).sort((a,b)=>km(myTown(),a.m.town)-km(myTown(),b.m.town)).slice(0,3);
+  const fit = liveOffers().filter(x=>["gym","sport"].includes(x.m.kind)).sort((a,b)=>dist(a.m)-dist(b.m)).slice(0,3);
   const sport = liveActivities().filter(x=>["sport","team","outdoor"].includes(x.a.type)).slice(0,3);
   return `${bigFocus("move", "Walk, run, bike, gym · phone in your pocket")}
   <section class="card"><div class="row between"><h3>Sport and teams nearby</h3><a class="link small" href="#explore" data-tab="activities">All</a></div>${sport.length?`<div class="list">${activityCards(sport,3)}</div>`:`<p class="muted small">Classes, teams looking for players and outdoor events will show up here.</p>`}</section>
@@ -677,15 +1425,15 @@ function activeMain(p){
   ${boredBtn(true)}`;
 }
 function openCheckinPicker(){
-  const places = Object.entries(state.merchants).filter(([mid])=>approved(mid)).sort((a,b)=>km(myTown(),a[1].town)-km(myTown(),b[1].town));
+  const places = Object.entries(state.merchants).filter(([mid])=>approved(mid)).sort((a,b)=>dist(a[1])-dist(b[1]));
   const el = flow("Check in");
-  el.innerHTML = `<div class="in"><div class="row between"><h2>Where are you?</h2><button class="ghost small" data-close>Close</button></div><p class="muted">Pick the place, then type the code on the poster at the counter. +30 points, and it counts for the Explorer quest.</p><div class="card"><div class="list">${places.map(([mid,m])=>`<button class="pickrow" data-ci="${esc(mid)}"><span class="ico">${ICON[m.kind]||ICON.other}</span><span><span class="t" style="display:block;font-weight:700">${esc(m.name)}</span><span class="small muted">${esc(KIND[m.kind]||"")} · ${esc(distLabel(m.town))}</span></span></button>`).join("") || '<p class="muted">No partner places yet.</p>'}</div></div></div>`;
+  el.innerHTML = `<div class="in"><div class="row between"><h2>Where are you?</h2><button class="ghost small" data-close>Close</button></div><p class="muted">Pick the place, then type the code on the poster at the counter. +30 points, and it counts for the Explorer quest.</p><div class="card"><div class="list">${places.map(([mid,m])=>`<button class="pickrow" data-ci="${esc(mid)}"><span class="ico">${ICON[m.kind]||ICON.other}</span><span><span class="t" style="display:block;font-weight:700">${esc(m.name)}</span><span class="small muted">${esc(KIND[m.kind]||"")} · ${esc(placeDist(m))}</span></span></button>`).join("") || '<p class="muted">No partner places yet.</p>'}</div></div></div>`;
   $("[data-close]", el).onclick = () => el.remove();
   $$("[data-ci]", el).forEach(b=>b.onclick=()=>{ el.remove(); checkIn(b.dataset.ci); });
 }
 function openGuide(){
   const el = flow("How LifeOn works");
-  const steps = [["Lock the apps that distract you","Start a Focus or a Move session. Leave LifeOn during focus and the session stops. Want your apps back early? Solve 3 brain challenges."],["Earn points","2 minutes of focus = 1 point. Check in at a partner place with the code on the counter poster = +30. The more an action is verified, the more it's worth. Max 150 a day."],["Spend them nearby","Gyms, cafés, restaurants and shops around you, at 100, 300 and 800 points. Show the 5-minute code at the counter."],["Your data stays yours","No ads, ever. Your screen time never leaves your phone. Your group only sees your points and streak."]];
+  const steps = [["Lock the apps that distract you","Start a Focus or a Move session. Leave LifeOn during focus and the session stops. Want your apps back early? Solve 3 brain challenges."],["Earn points","2 minutes of focus = 1 point. Check in at a partner place with the code on the counter poster and your location = +30. Walks, runs and rides are measured by GPS. The more an action is verified, the more it's worth. Max 150 a day."],["Spend them nearby","Gyms, cafés, restaurants and shops around you, at 100, 300 and 800 points. Show the 5-minute code at the counter."],["Your data stays yours","No ads, ever. Your screen time never leaves your phone. Your group only sees your points and streak."]];
   el.innerHTML = `<div class="in"><div class="row between"><h2>How LifeOn works</h2><button class="ghost small" data-close>Close</button></div><div class="card steps">${steps.map(([t,d],i)=>`<div class="step"><span class="n">${i+1}</span><div><b>${esc(t)}</b><p class="small muted" style="margin-top:4px">${esc(d)}</p></div></div>`).join("")}</div><button class="full" data-close>Got it</button></div>`;
   $$("[data-close]", el).forEach(b=>b.onclick = () => el.remove());
 }
@@ -699,7 +1447,7 @@ function viewToday(){
   const p = meP(), st = stats(S.me), prof = profile();
   const live = liveFriends();
   const plans = myGroups().flatMap(([,g])=>(g.plans||[]).map(x=>({...x, g:g.name}))).filter(x=>Date.now()-x.at < 6*3600e3).sort((a,b)=>b.at-a.at).slice(0,2);
-  const nearOffers = liveOffers().filter(x=>offerNow(x.o)).sort((a,b)=>km(myTown(),a.m.town)-km(myTown(),b.m.town)).slice(0,2);
+  const nearOffers = liveOffers().filter(x=>offerNow(x.o)).sort((a,b)=>dist(a.m)-dist(b.m)).slice(0,2);
   let main = "";
   if (prof==="study") {
     const exams = (p.study?.exams||[]).filter(e=>e.date>=today()).sort((a,b)=>a.date.localeCompare(b.date));
@@ -787,7 +1535,7 @@ let focusRun = null, unlock = { lockedUntil:0, strikes:0 };
 const SAFE_KEY = "lifeon-run";
 function openFocus(kind, preMode, taskLabel, prePlan){
   const p = meP(); const groups = myGroups();
-  const places = Object.entries(state.merchants).filter(([mid])=>approved(mid)).sort((a,b)=>km(myTown(),a[1].town)-km(myTown(),b[1].town));
+  const places = Object.entries(state.merchants).filter(([mid])=>approved(mid)).sort((a,b)=>dist(a[1])-dist(b[1]));
   const f = { kind, type: MOVE_TYPES[0], plan: prePlan || KIND_PLANS[kind][0], mode: preMode || "solo", group: groups[0]?.[0] || "", venue: places[0]?.[0] || "", task: taskLabel || "" };
   const el = flow(KIND_NAME[kind], true);
   const draw = () => {
@@ -795,7 +1543,7 @@ function openFocus(kind, preMode, taskLabel, prePlan){
     el.innerHTML = `<div class="in">
       <div class="row between"><h2>${esc(KIND_NAME[kind])}</h2><button class="ghost small" data-close>Close</button></div>
       ${f.task?`<div class="card"><p class="small muted">Working on</p><b>${esc(f.task)}</b></div>`:""}
-      ${kind==="move" ? `<div class="card"><p class="small" style="font-weight:700">What are you doing?</p><div class="chips" id="fType">${MOVE_TYPES.map(t=>`<button type="button" class="chip" data-v="${t}" aria-pressed="${f.type===t}">${t}</button>`).join("")}</div><p class="small muted">Your phone can stay in your pocket. Without a check-in at a partner place, a move session counts up to 30 points.</p></div>` : `<div class="card"><p class="small muted">Locked during the session</p>
+      ${kind==="move" ? `<div class="card"><p class="small" style="font-weight:700">What are you doing?</p><div class="chips" id="fType">${MOVE_TYPES.map(t=>`<button type="button" class="chip" data-v="${t}" aria-pressed="${f.type===t}">${t}</button>`).join("")}</div><p class="small muted">${["Walk","Run","Bike"].includes(f.type) ? "GPS checks your distance and speed: keep LifeOn open (the screen stays on) for full points. Without GPS it counts up to 30 points." : "For full points choose At a partner place and check in with the code. Otherwise it counts up to 30 points."}</p></div>` : `<div class="card"><p class="small muted">Locked during the session</p>
         <div class="blocked">${(p.blocked||[]).map(a=>`<span>${ICON.lock}${esc(a)}</span>`).join("") || `<span>No apps chosen yet. Pick them in Me.</span>`}</div>
         <p class="small muted">Open any other app for more than 10 seconds and the session stops.${f.plan.startsWith("pomo")?" During Pomodoro breaks you're free.":""}</p></div>`}
       <div class="card"><p class="small" style="font-weight:700">How long?</p>
@@ -803,10 +1551,10 @@ function openFocus(kind, preMode, taskLabel, prePlan){
         <p class="small" style="font-weight:700">Where?</p>
         <div class="chips" id="fMode">${[["solo","On my own"],["group","With my group"],["venue","At a partner place"]].map(([k,l])=>`<button type="button" class="chip" data-v="${k}" aria-pressed="${f.mode===k}">${l}</button>`).join("")}</div>
         ${f.mode==="group" ? (groups.length ? `<label for="fGroup">Group<select id="fGroup">${groups.map(([c,g])=>`<option value="${esc(c)}" ${c===f.group?"selected":""}>${esc(g.name)}</option>`).join("")}</select></label><p class="small muted">If a friend in the group finishes a session that starts within 20 minutes of yours, you both get +10.</p>` : `<p class="small muted">Create or join a group in Friends first.</p>`) : ""}
-        ${f.mode==="venue" ? (places.length ? `<label for="fVenue">Place<select id="fVenue">${places.map(([id,m])=>`<option value="${esc(id)}" ${id===f.venue?"selected":""}>${esc(m.name)} · ${esc(distLabel(m.town))}</option>`).join("")}</select></label>
+        ${f.mode==="venue" ? (places.length ? `<label for="fVenue">Place<select id="fVenue">${places.map(([id,m])=>`<option value="${esc(id)}" ${id===f.venue?"selected":""}>${esc(m.name)} · ${esc(placeDist(m))}</option>`).join("")}</select></label>
           <label for="fCode">Code on the poster at the counter<input id="fCode" autocomplete="off" style="font-family:var(--mono);text-transform:uppercase" placeholder="e.g. CAFE24"></label><p class="small muted">Sessions at a partner place earn 60% more.</p>` : `<p class="small muted">No partner places yet.</p>`) : ""}
       </div>
-      <div class="row between"><span class="muted">${fm} min${kind==="move"?"":" of focus"} · you'll earn${kind==="move"&&f.mode!=="venue"?" up to":""}</span><span style="font-family:var(--display);font-weight:800;font-size:22px">+${sessionPts({ok:true,min:fm,mode:f.mode,kind})}${f.mode==="group"?" (+10)":""} pts</span></div>
+      <div class="row between"><span class="muted">${fm} min${kind==="move"?"":" of focus"} · you'll earn${kind==="move"&&f.mode!=="venue"?" up to":""}</span><span style="font-family:var(--display);font-weight:800;font-size:22px">+${sessionPts({ok:true,min:fm,mode:f.mode,kind,verified:kind==="move"&&["Walk","Run","Bike"].includes(f.type)})}${f.mode==="group"?" (+10)":""} pts</span></div>
       <button class="full" id="fStart">Start</button></div>`;
     $("[data-close]", el).onclick = () => el.remove();
     $$("#fPlan [data-v]", el).forEach(b=>b.onclick=()=>{ f.plan=b.dataset.v; draw(); });
@@ -819,7 +1567,8 @@ function openFocus(kind, preMode, taskLabel, prePlan){
       if (f.mode==="group" && !f.group) { toast("Join a group first, or choose On my own."); return; }
       if (f.mode==="venue") { const m = state.merchants[f.venue]; const code = ($("#fCode", el).value||"").trim();
         if (!m || !code) { toast("Type the code on the poster at the counter."); return; }
-        if (await sha(code) !== m.codeHash) { toast("That code doesn't match. Check the poster."); return; } }
+        if (await sha(code) !== m.codeHash) { toast("That code doesn't match. Check the poster."); return; }
+        const nc = await nearCheck(m); if (!nc.ok) { toast("You seem to be "+(Math.round(nc.d*10)/10)+" km away from "+m.name+"."); return; } }
       runFocus(el, f);
     };
   };
@@ -830,7 +1579,12 @@ function runFocus(el, f){
   const phases = []; let t = start; for (const [ty, m] of PLANS[f.plan].parts) { phases.push({ty, from:t, to:t+m*60e3}); t += m*60e3; }
   const end = t, totalFocus = focusMins(f.plan);
   const overlapFocus = (a,b) => phases.filter(x=>x.ty==="f").reduce((s,x)=>s+Math.max(0, Math.min(b,x.to)-Math.max(a,x.from)),0);
-  focusRun = { ...f, start, end, hiddenAt:null, timer:null };
+  focusRun = { ...f, start, end, hiddenAt:null, timer:null, track:null, wake:null };
+  if (f.kind==="move" && ["Walk","Run","Bike"].includes(f.type) && navigator.geolocation) {
+    const track = focusRun.track = {km:0, last:null, fixes:0, watch:null};
+    try { track.watch = navigator.geolocation.watchPosition(pos => { const c = pos.coords; if (c.accuracy > 60) return; const pt = [c.latitude, c.longitude]; track.fixes++; track.denied = false; if (!track.last) { track.last = pt; return; } const d = hav(track.last, pt); if (d > 0.01) { track.km += d; track.last = pt; } }, err => { if (err && err.code === 1) track.denied = true; }, {enableHighAccuracy:true, maximumAge:5000}); } catch(e){}
+    try { if (navigator.wakeLock) navigator.wakeLock.request("screen").then(w => { if (focusRun) focusRun.wake = w; else w.release(); }).catch(()=>{}); } catch(e){}
+  }
   unlock = { lockedUntil:0, strikes:0 };
   try { localStorage.setItem(SAFE_KEY, JSON.stringify({start, end})); } catch(e){}
   S.presence({ focusUntil: end });
@@ -853,8 +1607,8 @@ function runFocus(el, f){
     const a = $("#arc", el); if (a) { a.setAttribute("stroke-dashoffset", String(C*(1-left/(ph.to-ph.from)))); a.setAttribute("stroke", ph.ty==="b" ? "var(--teal)" : "var(--accent)"); }
     const fi = phases.slice(0,i+1).filter(x=>x.ty==="f").length;
     const lbl = $("#phaseLbl", el); if (lbl) lbl.textContent = ph.ty==="b" ? "Break · stretch, drink water" : (fCount>1 ? "Pomodoro "+fi+" of "+fCount : KIND_NAME[f.kind]);
-    const sub = $("#tSub", el); if (sub) sub.textContent = ph.ty==="b" ? "free time" : "stay here";
-    const tip = $("#tTip", el); if (tip) tip.textContent = ph.ty==="b" ? "Break time: you can leave LifeOn. Be back when it ends, or the session stops." : (f.kind==="move" ? "Phone in your pocket is fine. Tap I'm done when you finish." : f.kind==="work" ? "Deep work: one task, notifications off. Every 20 minutes, look 6 m away for 20 seconds." : "Phone face-down. Leave LifeOn for more than 10 seconds and the session stops. Want your apps back early? You'll have to earn it.");
+    const sub = $("#tSub", el); if (sub) sub.textContent = ph.ty==="b" ? "free time" : f.kind==="move" ? (focusRun.track ? (focusRun.track.denied ? "GPS off" : focusRun.track.fixes ? focusRun.track.km.toFixed(2)+" km" : "finding GPS…") : "keep going") : "stay here";
+    const tip = $("#tTip", el); if (tip) tip.textContent = ph.ty==="b" ? "Break time: you can leave LifeOn. Be back when it ends, or the session stops." : (f.kind==="move" ? (focusRun.track ? "Keep LifeOn open: GPS is measuring your distance. Tap I'm done when you finish." : "Tap I'm done when you finish. Check in at a partner place for full points.") : f.kind==="work" ? "Deep work: one task, notifications off. Every 20 minutes, look 6 m away for 20 seconds." : "Phone face-down. Leave LifeOn for more than 10 seconds and the session stops. Want your apps back early? You'll have to earn it.");
   };
   focusRun.timer = setInterval(tick, 1000); tick();
   const onVis = () => {
@@ -869,18 +1623,28 @@ function runFocus(el, f){
     if (!focusRun) return;
     clearInterval(focusRun.timer); document.removeEventListener("visibilitychange", onVis);
     const run = focusRun; focusRun = null;
+    try { if (run.track && run.track.watch != null) navigator.geolocation.clearWatch(run.track.watch); } catch(e){}
+    try { if (run.wake) run.wake.release(); } catch(e){}
     $$('.flow[aria-label="Unlock your apps"]').forEach(x=>x.remove());
     try { localStorage.removeItem(SAFE_KEY); } catch(e){}
     S.presence({ focusUntil: null });
     const mins = ok ? (run.kind==="move" ? Math.min(totalFocus, Math.floor((Date.now()-run.start)/60e3)) : totalFocus) : Math.floor(overlapFocus(run.start, Date.now())/60e3);
     const s = { id: rid(8), start: run.start, min: mins, mode: run.mode, kind: run.kind, ok };
     if (run.mode==="group") s.group = run.group; if (run.mode==="venue") s.venueId = run.venue; if (run.kind==="move") s.type = run.type;
+    let vNote = "";
+    if (run.kind==="move" && ok) {
+      if (run.mode==="venue") vNote = "Verified by check-in at the place";
+      else if (run.track && run.track.fixes) { const kmv = Math.round(run.track.km*100)/100, spd = mins > 0 ? kmv/(mins/60) : 0, R = {Walk:[2,8], Run:[5,20], Bike:[8,40]}[run.type];
+        s.km = kmv; s.verified = !!R && spd >= R[0] && spd <= R[1];
+        vNote = s.verified ? `GPS verified · ${kmv.toFixed(2)} km · ${spd.toFixed(1)} km/h` : spd > (R?R[1]:99) ? `Too fast for a ${run.type.toLowerCase()} (${spd.toFixed(0)} km/h): counted as not verified` : `Only ${kmv.toFixed(2)} km tracked: counted as not verified`; }
+      else vNote = "Not verified (no GPS or check-in): counts up to 30 points";
+    }
     const np = clone(meP()); np.sessions = [...(np.sessions||[]), s];
     await writeMe(np);
     el.innerHTML = `<div class="in" style="min-height:100%;justify-content:center;text-align:center">
       <h1 style="font-size:42px;line-height:1">${ok?"Done.":"Session stopped"}</h1>
       <p class="muted">${ok ? (run.kind==="move" ? `You moved for ${fmtMin(mins)}.` : `You stayed focused for ${fmtMin(totalFocus)}.`) : esc(why||"")}</p>
-      ${ok?`<p style="font-family:var(--display);font-weight:800;font-size:56px;color:var(--accent)">+${sessionPts(s,false)}</p><p class="muted small">points${run.mode==="group"?" · +10 more if a friend finishes too":""}</p>`:`<p class="muted small">Next time keep LifeOn open. Breaks under 10 seconds are fine.</p>`}
+      ${ok?`<p style="font-family:var(--display);font-weight:800;font-size:56px;color:var(--accent)">+${sessionPts(s,false)}</p><p class="muted small">points${run.mode==="group"?" · +10 more if a friend finishes too":""}</p>${vNote?`<p><span class="verify" style="background:color-mix(in srgb, ${s.verified||run.mode==="venue"?"var(--good)":"var(--sun)"} 18%, transparent)">${ICON.check}${esc(vNote)}</span></p>`:""}`:`<p class="muted small">Next time keep LifeOn open. Breaks under 10 seconds are fine.</p>`}
       <button class="full" data-close>Back to today</button></div>`;
     $("[data-close]", el).onclick = () => { el.remove(); render(); };
   }
@@ -960,8 +1724,8 @@ function openBored(){
   };
   const ideas = () => {
     const kinds = MOOD_KINDS[b.mood];
-    const offers = liveOffers().filter(x=>offerNow(x.o)).map(x=>({...x, d: km(myTown(),x.m.town) + (kinds.includes(x.m.kind)?0:4) + (x.o.flashUntil?-1.5:0)})).sort((a,c)=>a.d-c.d).slice(0,3);
-    const acts = liveActivities().filter(x=>daysTo(x.a.date)<=2).sort((a,c)=>(a.a.date===today()?-1:0)-(c.a.date===today()?-1:0) || km(myTown(),a.m.town)-km(myTown(),c.m.town)).slice(0,2);
+    const offers = liveOffers().filter(x=>offerNow(x.o)).map(x=>({...x, d: dist(x.m) + (kinds.includes(x.m.kind)?0:4) + (x.o.flashUntil?-1.5:0)})).sort((a,c)=>a.d-c.d).slice(0,3);
+    const acts = liveActivities().filter(x=>daysTo(x.a.date)<=2).sort((a,c)=>(a.a.date===today()?-1:0)-(c.a.date===today()?-1:0) || dist(a.m)-dist(c.m)).slice(0,2);
     const pool = IDEAS.filter(x=>x[2]===b.mood && x[3]<=b.time);
     const extra = IDEAS.filter(x=>x[2]!==b.mood && x[3]<=b.time);
     const list = [...shuffle(pool, state.ideaSeed), ...shuffle(extra, state.ideaSeed+1)].slice(0,6);
@@ -972,7 +1736,7 @@ function openBored(){
       <div class="row between"><button class="ghost small" data-back>‹ Change</button><button class="ghost small" data-close>Close</button></div>
       <h2>Ideas for ${label}</h2>
       <div class="opt"><span class="tag" style="color:var(--accent)">Places open now · ${offers.length}</span>
-        ${offers.length ? `<div class="list">${offers.map(x=>`<div style="display:flex;flex-direction:column;gap:8px"><div class="offer two"><div class="ico">${ICON[x.m.kind]||ICON.other}</div><div><div class="t">${esc(x.o.title)}</div><div class="b">${esc(x.m.name)} · ${esc(distLabel(x.m.town))}</div><div class="chips" style="margin-top:6px"><span class="chip hot">${x.o.flashUntil?"Flash · ":""}${esc(offerWindow(x.o))}</span><span class="chip">${x.o.cost} pts</span>${x.m.example?'<span class="chip ex">Example</span>':""}</div></div></div>
+        ${offers.length ? `<div class="list">${offers.map(x=>`<div style="display:flex;flex-direction:column;gap:8px"><div class="offer two"><div class="ico">${ICON[x.m.kind]||ICON.other}</div><div><div class="t">${esc(x.o.title)}</div><div class="b">${esc(x.m.name)} · ${esc(placeDist(x.m))}</div><div class="chips" style="margin-top:6px"><span class="chip hot">${x.o.flashUntil?"Flash · ":""}${esc(offerWindow(x.o))}</span><span class="chip">${x.o.cost} pts</span>${x.m.example?'<span class="chip ex">Example</span>':""}</div></div></div>
           <div class="row"><button class="ghost small" data-claim="${esc(x.mid)}|${esc(x.key)}" style="flex:1">Get it</button><button class="small" data-checkin="${esc(x.mid)}" style="flex:1">I'm there: check in</button></div></div>`).join("")}</div>`
         : `<p class="muted small">No partner offers open right now in your area. Plenty of other ideas below.</p>`}</div>
       ${acts.length?`<div class="opt"><span class="tag" style="color:var(--plum)">Happening soon</span><div class="list">${activityCards(acts,2)}</div></div>`:""}
@@ -1003,14 +1767,17 @@ function checkIn(mid){
   const done = (meP().checkins||[]).some(c=>c.venueId===mid && dkey(c.at)===today());
   const sc = flow("Check in"); sc.style.zIndex = 30;
   sc.innerHTML = `<div class="in"><div class="row between"><h2>Check in</h2><button class="ghost small" data-close>Close</button></div>
-    <div class="card"><h3>${esc(m.name)}</h3><p class="muted small">${esc(distLabel(m.town))}</p>
+    <div class="card"><h3>${esc(m.name)}</h3><p class="muted small">${esc(placeDist(m))}</p>
     ${done?`<p>You already checked in here today.</p>`:`<label for="ciCode">Code on the poster at the counter<input id="ciCode" autocomplete="off" style="font-family:var(--mono);text-transform:uppercase;font-size:20px"></label>
-    <button class="full" id="ciGo">Check in · +30 pts</button><p class="small muted">Staying a while? Start a Focus session at this place for 60% more points.</p>`}</div></div>`;
+    <button class="full" id="ciGo">Check in · +30 pts</button><p class="small muted">We check the code and, if you allow it, that you are within 300 m of the place. Your position is not saved. Staying a while? Start a Focus session here for 60% more points.</p><a class="btn small ghostlink" href="${esc(mapsUrl(m))}" target="_blank" rel="noopener" style="align-self:flex-start">${ICON.pin} Directions</a>`}</div></div>`;
   $("[data-close]", sc).onclick = () => sc.remove();
   const go = $("#ciGo", sc); if (go) go.onclick = async () => {
     if (await sha($("#ciCode", sc).value) !== m.codeHash) { toast("That code doesn't match. Check the poster."); return; }
-    const np = clone(meP()); np.checkins = [...(np.checkins||[]), {at:Date.now(), venueId:mid}];
-    if (await writeMe(np)) { sc.remove(); toast("Checked in at "+m.name+": +30 pts"); }
+    go.disabled = true; go.textContent = "Checking your location…";
+    const nc = await nearCheck(m);
+    if (!nc.ok) { go.disabled = false; go.textContent = "Check in · +30 pts"; toast("You seem to be "+(Math.round(nc.d*10)/10)+" km away. Check in when you're there."); return; }
+    const np = clone(meP()); np.checkins = [...(np.checkins||[]), {at:Date.now(), venueId:mid, geo:nc.geo}];
+    if (await writeMe(np)) { sc.remove(); toast("Checked in at "+m.name+": +30 pts"+(nc.geo?" · location verified":"")); } else { go.disabled = false; go.textContent = "Check in · +30 pts"; }
   };
 }
 
@@ -1018,7 +1785,7 @@ function checkIn(mid){
 function offerRow(x){
   const {mid, key, o, m} = x; const avail = offerNow(o), left = budgetLeft(mid, key, o); const bal = stats(S.me).balance; const already = myWeekAt(mid);
   return `<div class="offer"><div class="ico">${ICON[m.kind]||ICON.other}</div>
-    <div style="min-width:0"><div class="t">${esc(o.title)}</div><div class="b">${esc(m.name)} · ${esc(distLabel(m.town))}</div>
+    <div style="min-width:0"><div class="t">${esc(o.title)}</div><div class="b">${esc(m.name)} · ${esc(placeDist(m))}</div>
       <div class="chips" style="margin-top:6px"><span class="chip on">${esc(TIERS[o.tier]?.label||"Reward")}</span>${o.flashUntil?`<span class="chip hot">Flash · ${esc(offerWindow(o))}</span>`:o.offPeak?`<span class="chip ${avail?"hot":""}">${avail?"Quiet hours now":esc(offerWindow(o))}</span>`:`<span class="chip">Any time</span>`}<span class="chip">${left} left this week</span>${m.example?`<span class="chip ex">Example</span>`:""}</div></div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px"><div class="cost">${o.cost}<small>pts</small></div>
       <button class="small" data-claim="${esc(mid)}|${esc(key)}" ${(bal<o.cost||left<=0||already||!S.canWrite)?"disabled":""}>${left<=0?"Gone":already?"Next week":"Get"}</button></div></div>`;
@@ -1028,7 +1795,7 @@ function confirmClaim(mid, key){
   const m = state.merchants[mid], o = m?.offers?.[key]; if (!o) return;
   const sc = flow("Get reward"); sc.style.zIndex = 30;
   sc.innerHTML = `<div class="in"><div class="row between"><h2>${esc(o.title)}</h2><button class="ghost small" data-close>Close</button></div>
-    <div class="card"><p><b>${esc(m.name)}</b> · ${esc(distLabel(m.town))}</p>${o.detail?`<p class="muted">${esc(o.detail)}</p>`:""}<p class="small muted">${esc(TIERS[o.tier]?.label||"")} · valid ${esc(offerWindow(o))}</p>
+    <div class="card"><p><b>${esc(m.name)}</b> · ${esc(placeDist(m))}</p>${o.detail?`<p class="muted">${esc(o.detail)}</p>`:""}<p class="small muted">${esc(TIERS[o.tier]?.label||"")} · valid ${esc(offerWindow(o))}</p>
     <div class="row between"><span class="muted">Cost</span><span style="font-family:var(--display);font-weight:800;font-size:22px;color:var(--accent)">${o.cost} pts</span></div>
     <p class="small muted">One reward per place per week. At the counter, tap "Show code": it lasts 5 minutes, so screenshots don't work.</p>
     <button class="full" id="doClaim">Spend ${o.cost} points</button></div></div>`;
@@ -1045,7 +1812,7 @@ function confirmClaim(mid, key){
 }
 function viewExplore(){
   const t = state.exploreTab, st = stats(S.me);
-  const all = liveOffers().sort((a,b)=>km(myTown(),a.m.town)-km(myTown(),b.m.town) || a.o.cost-b.o.cost);
+  const all = liveOffers().sort((a,b)=>dist(a.m)-dist(b.m) || a.o.cost-b.o.cost);
   const shown = state.cat==="all" ? all : all.filter(x=>CATS[state.cat][1].includes(x.m.kind));
   const wallet = (meP().coupons||[]).slice().reverse();
   const acts = liveActivities();
@@ -1054,15 +1821,37 @@ function viewExplore(){
   let body = "";
   if (t==="offers") body = `<section class="card"><h2>Rewards near ${esc(myTown())}</h2><div class="chips">${Object.entries(CATS).map(([k,[l]])=>`<button type="button" class="chip" data-cat="${k}" aria-pressed="${state.cat===k}">${l}</button>`).join("")}</div>${shown.length?Object.keys(TIERS).map(tier=>{ const l = shown.filter(x=>x.o.tier===tier); return l.length?`<div style="display:flex;flex-direction:column;gap:10px"><div class="row between"><h3>${esc(TIERS[tier].label)}</h3><span class="small muted">${TIERS[tier].cost} pts</span></div><div class="list">${l.map(offerRow).join("")}</div></div>`:""; }).join(""):`<div class="empty"><p>Rewards from cafés, gyms and study places in the area will appear here.</p></div>`}</section>`;
   if (t==="activities") body = `<section class="card"><h2>Happening near you</h2><p class="small muted">Courses, events, sport and workshops from local places, with LifeOn deals.</p>${actsSorted.length?`<div class="list">${activityCards(actsSorted, 20)}</div>`:`<div class="empty"><p>No activities yet. Local places will publish them here.</p></div>`}</section>`;
+  if (t==="map") { const pl = mapPlaces();
+    body = `<section class="card"><div class="row between"><h2>Around you</h2><button class="ghost small" id="locBtn">${ICON.pin} ${state.here?"Update":"Use my location"}</button></div>
+      <div id="map" role="img" aria-label="Map of partner places"></div>
+      <p class="small muted">${state.here?"Distances from where you are now.":"Distances from the centre of "+esc(myTown())+". Use your location for exact ones."} Map © OpenStreetMap contributors.</p></section>
+    <section class="card"><h3>Partner places</h3>${pl.length?`<div class="list">${pl.map(([mid,m])=>`<div class="offer"><div class="ico">${ICON[m.kind]||ICON.other}</div><div style="min-width:0"><div class="t">${esc(m.name)}</div><div class="b">${esc(KIND[m.kind]||"")} · ${esc(placeDist(m))}</div></div><div style="display:flex;flex-direction:column;gap:6px"><a class="btn small ghostlink" href="${esc(mapsUrl(m))}" target="_blank" rel="noopener">Directions</a><button class="small" data-checkin="${esc(mid)}">Check in</button></div></div>`).join("")}</div>`:`<p class="muted small">No partner places yet.</p>`}</section>
+    <section class="card"><h3>More places nearby</h3><p class="small muted">Not partners yet, but good places to go. Opens Google Maps around you.</p><div class="chips">${NEAR_SEARCH.map(([q,l])=>`<a class="chip" href="${esc(searchUrl(q))}" target="_blank" rel="noopener">${l}</a>`).join("")}</div></section>`; }
   if (t==="wallet") body = `<section class="card"><h2>Wallet</h2>${wallet.length?`<div class="list">${wallet.map(c=>{ const used = couponUsed(c); const live = c.liveCode && c.liveExp > Date.now() && !used;
       return `<div class="coupon ${used?"used":""}"><div><b>${esc(c.title)}</b><div class="small muted">${esc(c.venue)} · ${esc(c.town||"")} · ${esc(c.window||"")}</div></div>
       ${used?`<span class="chip">Used</span>`: live ? `<div class="row"><div class="qr" data-qr="${esc(c.liveCode)}"></div><div><div class="code">${esc(c.liveCode)}</div><div class="small muted" data-exp="${c.liveExp}">valid 5:00</div></div></div>` : `<button class="full" data-show="${esc(c.id)}">Show code at the counter</button>`}</div>`; }).join("")}</div>`
       : `<div class="empty"><p>No coupons yet. Spend points on a reward and it lands here.</p></div>`}</section>`;
   return `${heroBlock(st)}
-  <div class="seg" role="group" aria-label="Nearby">${[["offers","Rewards"],["activities","Activities"],["wallet","Wallet"]].map(([k,l])=>`<button type="button" data-et="${k}" aria-pressed="${t===k}">${l}</button>`).join("")}</div>${body}`;
+  <div class="seg" role="group" aria-label="Nearby">${[["offers","Rewards"],["map","Map"],["activities","Activities"],["wallet","Wallet"]].map(([k,l])=>`<button type="button" data-et="${k}" aria-pressed="${t===k}">${l}</button>`).join("")}</div>${body}`;
 }
 let expTimer = null;
+function mapPlaces(){ return Object.entries(state.merchants).filter(([mid])=>approved(mid)).sort((a,b)=>dist(a[1])-dist(b[1])); }
+async function drawMap(){
+  const el = $("#map"); if (!el) return;
+  let L; try { L = await loadLeaflet(); } catch(e){ el.innerHTML = '<p class="small muted" style="padding:16px">The map is not available here. Use the list and the Google Maps links below.</p>'; return; }
+  if (!el.isConnected) return;
+  const c = state.here ? [state.here.lat, state.here.lng] : (TOWNS[myTown()] || TOWNS.Castellanza);
+  const map = L.map(el, {zoomControl:false}).setView(c, 13);
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:19, attribution:"© OpenStreetMap"}).addTo(map);
+  const pts = [];
+  for (const [mid,m] of mapPlaces()) { const p = placeCoords(m); pts.push(p); L.circleMarker(p, {radius:9, color:"#fff", weight:2, fillColor:"#EE5A2F", fillOpacity:1}).addTo(map).bindPopup(`<b>${esc(m.name)}</b><br>${esc(KIND[m.kind]||"")}<br><a href="${esc(mapsUrl(m))}" target="_blank" rel="noopener">Directions</a>`); }
+  if (state.here) { L.circleMarker(c, {radius:8, color:"#fff", weight:3, fillColor:"#2563C9", fillOpacity:1}).addTo(map).bindPopup("You are here"); pts.push(c); }
+  if (pts.length > 1) map.fitBounds(pts, {padding:[30,30], maxZoom:15});
+}
 function bindExplore(){
+  if ($("#map")) drawMap();
+  const lb = $("#locBtn"); if (lb) lb.onclick = async () => { lb.disabled = true; const n = await locate(); if (!n) { lb.disabled = false; toast("Couldn't get your location. Check the permission in your browser settings."); return; } render(); };
+  $$("#view [data-checkin]").forEach(b=>b.onclick=()=>checkIn(b.dataset.checkin));
   $$("[data-et]").forEach(b=>b.onclick=()=>{ state.exploreTab=b.dataset.et; render(); });
   $$("button[data-cat]").forEach(b=>b.onclick=()=>{ state.cat=b.dataset.cat; render(); });
   bindOfferButtons();
@@ -1112,6 +1901,7 @@ function viewMe(){
   <form class="card" id="meForm"><h2>Settings</h2>
     <div><p class="small" style="font-weight:700;margin-bottom:8px">Apps locked during Focus</p><div class="chips" id="mApps">${SOCIAL.map(a=>`<button type="button" class="chip" data-v="${a}" aria-pressed="${(p.blocked||[]).includes(a)}">${a}</button>`).join("")}</div></div>
     <label for="mTown">Where you live<select id="mTown">${townOptions(p.town)}</select></label>
+    <button type="button" class="ghost small" id="meLoc" style="align-self:flex-start">${ICON.pin} Use my location</button>
     <label for="mBase">Daily time on these apps when you started (minutes)<input id="mBase" type="number" min="10" max="900" value="${p.baseline}"></label>
     <button class="full ghost" type="submit">Save</button></form>
   <section class="card"><h2>How points work</h2><p class="small muted">The more an action is verified, the more it's worth.</p>
@@ -1127,15 +1917,21 @@ function viewMe(){
       <div class="row between"><span>Explorer: 3 different places in a month</span><b>+60</b></div>
       <div class="row between"><span>Daily maximum</span><b>150</b></div></div>
     <p class="small muted">Rewards come in three levels: ${Object.values(TIERS).map(t=>t.label+" "+t.cost+" pts").join(", ")}. One reward per place per week, so places can keep offering them.</p></section>
+  <section class="card"><h3>How we check it's real</h3><div class="list small">
+    <div class="row between" style="align-items:flex-start"><span><b>Verified</b> · check-in code on the counter poster plus your location within 300 m; coupons with a 5-minute code</span><span class="chip on">Full points</span></div>
+    <div class="row between" style="align-items:flex-start"><span><b>Tracked</b> · Focus stops if you leave the app; walks, runs and rides measured by GPS at a realistic speed</span><span class="chip on">Full points</span></div>
+    <div class="row between" style="align-items:flex-start"><span><b>Self-reported</b> · free ideas, workouts without GPS or check-in</span><span class="chip">Capped</span></div></div>
+    <p class="small muted">Coming with the App Store version: steps and workouts from Apple Health and Google Fit, and real app blocking with Screen Time.</p></section>
   <section class="card"><h3>Your data</h3><div class="list small"><div>No ads, ever.</div><div>Your screen time stays on your phone: LifeOn only knows if a session was completed.</div><div>Friends see only your name, points and streak.</div><div>Shops see that a coupon was used, not your name.</div></div><div class="row wrap"><button class="ghost small" data-guide>How LifeOn works</button><button class="ghost small" id="delMe" style="color:var(--bad)">Delete my data</button></div></section>
   <section class="card"><h3>About locking apps</h3><p class="small muted">In this pilot LifeOn runs in the browser. During Focus the other apps are locked by one rule: leave LifeOn and the session stops. To unlock early you must pass 3 brain challenges in a row with 3 lives; lose them all and you wait 5 minutes, then 10. The iPhone and Android versions will lock the chosen apps for real.</p></section>
-  ${state.merchants[S.me]?"":`<section class="card"><h3>Have a business?</h3><p class="small muted">Bring new customers in your quiet hours.</p><button class="ghost small" id="goShop" style="align-self:flex-start">Register your business</button></section>`}`;
+  ${(state.merchants[S.me] && !(S.demo && meP().name))?"":`<section class="card"><h3>Have a business?</h3><p class="small muted">Bring new customers in your quiet hours.</p><button class="ghost small" id="goShop" style="align-self:flex-start">Register your business</button></section>`}`;
 }
 function bindMe(){
   toggleChips($("#mApps"), false);
   $("#goalForm").onsubmit = async e => { e.preventDefault(); const np = clone(meP()); np.goals = {focus:Math.max(1, Number($("#gF").value)||1), move:Math.max(0, Number($("#gM").value)||0), points:Math.max(50, Number($("#gP").value)||50)}; if (await writeMe(np)) toast("Goals saved"); };
   const dm = $("#delMe"); if (dm) dm.onclick = async () => { if (dm.dataset.armed!=="1") { dm.dataset.armed="1"; dm.textContent="Tap again to delete everything"; return; } try { await S.remove("players", S.me); toast("Your data has been deleted"); } catch(e){ toast("Couldn't delete. Try again."); } };
   $$("#mProf [data-v]").forEach(b=>b.onclick=async()=>{ const np = clone(meP()); np.profile = b.dataset.v; if (await writeMe(np)) toast("Profile: "+PROFILES[np.profile].label); });
+  const ml = $("#meLoc"); if (ml) ml.onclick = async () => { ml.disabled = true; const n = await locate(); ml.disabled = false; if (n) { $("#mTown").value = n.town; toast("Near "+n.town+". Tap Save to keep it."); } else toast("Couldn't get your location."); };
   $("#meForm").onsubmit = async e => { e.preventDefault(); const np = clone(meP()); np.blocked = picked($("#mApps")); np.town = $("#mTown").value; np.baseline = Math.max(10, Number($("#mBase").value)||np.baseline); if (await writeMe(np)) toast("Saved"); };
   const gs = $("#goShop"); if (gs) gs.onclick = () => { state.shopMid = S.me; go("shop"); };
 }
@@ -1234,7 +2030,8 @@ function viewShop(){
       <div class="plan pro"><div class="row between"><b>Pro</b>${pro?'<span class="chip" style="background:var(--plum-ink);color:var(--plum)">Current</span>':""}</div><div class="price">€${PRO_PRICE} <span class="small" style="font-family:var(--body);font-weight:600">/ month</span></div><ul><li>Unlimited rewards on all three levels</li><li>Fill now: 1-hour flash rewards when you're empty</li><li>Your whole calendar of activities</li><li>No fee per coupon</li></ul>
         ${pro?"":m.proRequested?`<p class="small">Request sent. The LifeOn team will contact you to activate Pro.</p>`:`<button class="full" id="reqPro" style="background:var(--plum-ink);color:var(--plum)">Ask for Pro</button>`}</div>
       <p class="small muted">Payment by bank transfer or payment link from the LifeOn team. Cancel any time.</p></section>
-    <form class="card" id="ticketForm"><h3>Average spend per customer</h3><p class="small muted">Used for your estimated net.</p><div class="row"><input id="tkVal" type="number" min="1" max="500" step="0.5" value="${esc(m.avgTicket||6)}" aria-label="Average spend in euro"><button class="teal small" type="submit">Save</button></div></form>`;
+    <form class="card" id="ticketForm"><h3>Average spend per customer</h3><p class="small muted">Used for your estimated net.</p><div class="row"><input id="tkVal" type="number" min="1" max="500" step="0.5" value="${esc(m.avgTicket||6)}" aria-label="Average spend in euro"><button class="teal small" type="submit">Save</button></div></form>
+    <section class="card"><h3>Your place on the map</h3><p class="small muted">${typeof m.lat==="number" ? "Location set. Customers see you on the map, and check-ins count only within 300 m." : "Not set yet: we use the centre of "+esc(m.town)+". Set it so customers find you and check-ins are verified."}</p><button class="teal small" id="shopLoc" style="align-self:flex-start">${ICON.pin} I'm at the shop: use my location</button></section>`;
   return head + body;
 }
 function bindShop(){
@@ -1284,6 +2081,7 @@ function bindShop(){
     if (await save(nm => { nm.activities = nm.activities||{}; nm.activities["a"+rid(6)] = a; })) toast("Activity published"); };
   $$("[data-delact]").forEach(b=>b.onclick=async()=>{ if (await save(nm=>{ delete nm.activities[b.dataset.delact]; })) toast("Deleted"); });
   const rp = $("#reqPro"); if (rp) rp.onclick = async () => { if (await save(nm => { nm.proRequested = Date.now(); })) toast("Request sent to the LifeOn team"); };
+  const sl = $("#shopLoc"); if (sl) sl.onclick = async () => { sl.disabled = true; const p = await getPos({maximumAge:0}); if (!p) { sl.disabled = false; toast("Couldn't get your location."); return; } if (await save(nm => { nm.lat = Math.round(p.coords.latitude*1e5)/1e5; nm.lng = Math.round(p.coords.longitude*1e5)/1e5; })) toast("Location saved"); else sl.disabled = false; };
   const tf = $("#ticketForm"); if (tf) tf.onsubmit = async e => { e.preventDefault(); if (await save(nm => { nm.avgTicket = Math.max(1, Number($("#tkVal").value)||6); })) toast("Saved"); };
 }
 
@@ -1346,7 +2144,7 @@ function bindTeam(){
 // ================= boot =================
 let gen = 0;
 function boot(store){
-  S = store; const my = ++gen;
+  S = store; const my = ++gen; state.here = loadHere();
   COLS.forEach(c => { state[c] = {}; state.ready[c] = false; }); state.live = []; state.myCode = null;
   COLS.forEach(c => S.on(c, m => { if (my!==gen) return; state[c] = m; state.ready[c] = true; if (!$(".flow")) render(); }));
   S.onLive(peers => { if (my!==gen) return; state.live = peers; if (!$(".flow") && (route()==="today"||route()==="friends")) render(); });
@@ -1389,7 +2187,7 @@ makeLive().then(live => { if (live) boot(live); });
 })();
 </script>
 <script>
-// Offline support + automatic updates (version 202611020845)
+// Offline support + automatic updates (version 202611020857)
 if ("serviceWorker" in navigator && location.protocol === "https:") {
   navigator.serviceWorker.register("sw.js").catch(function(){});
   var reloaded = false;
